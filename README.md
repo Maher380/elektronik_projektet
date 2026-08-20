@@ -1,4 +1,4 @@
-# CnB - Crash and Burn
+# 🔥 CnB - Crash and Burn
 
 Autonomous car school project built with C++ and ESP-IDF for the ESP32-S3.
 
@@ -17,24 +17,36 @@ The project starts from an ESP32-S3 driver library and includes:
 
 ```text
 .
-+-- CMakeLists.txt
-+-- main/
-|   +-- CMakeLists.txt
-|   +-- Kconfig.projbuild
-|   +-- include/
-|   |   +-- driver/
-|   |   +-- system/
-|   +-- source/
-|       +-- driver/
-|       +-- system/
-|       +-- main.cpp
++-- 📁 firmware/                  ESP-IDF firmware project for the ESP32-S3
+|   +-- CMakeLists.txt             Firmware project entry point
+|   +-- 📁 main/                   Main ESP-IDF component
+|       +-- CMakeLists.txt         Component source list and dependencies
+|       +-- Kconfig.projbuild      Project configuration used by menuconfig
+|       +-- 📁 include/            Public C++ headers
+|       |   +-- 📁 driver/         Hardware driver interfaces and implementations
+|       |   +-- 📁 system/         System-level interfaces and logic headers
+|       +-- 📁 source/             C++ source files
+|           +-- 📁 driver/         ADC, GPIO, timer, WiFi and serial drivers
+|           +-- 📁 system/         Application logic and pin manager
+|           +-- main.cpp           ESP-IDF application entry point
++-- 📁 hardware/                  Hardware design files
+|   +-- 📁 kicad/                  KiCad schematics, PCB layout and exports
+|   +-- 📁 ltspice/                LTspice simulations and component models
++-- README.md                      Project overview and workflow rules
++-- THIRD_PARTY_NOTICES.md         Attribution for imported starter code
 ```
+
+The repository is split into two main areas:
+
+- 📁 `firmware/` contains all software and embedded code.
+- 📁 `hardware/` contains electronics design files, simulations and exports.
 
 ## Build
 
 Use the ESP-IDF shell to build and flash:
 
 ```bash
+cd firmware
 idf.py set-target esp32s3
 idf.py build
 idf.py -p <PORT> flash monitor
@@ -51,6 +63,13 @@ idf.py menuconfig
 
 Open `Autonomous car network configuration` and set SSID and password. Do not
 commit generated `sdkconfig` files with private credentials.
+
+## Hardware
+
+Hardware files are stored in `hardware/`.
+
+- 📁 `hardware/kicad/` - KiCad project files for schematics, PCB layout, symbols, footprints and generated exports.
+- 📁 `hardware/ltspice/` - LTspice simulation files, component models and circuit experiments.
 
 ## Branch Naming
 
