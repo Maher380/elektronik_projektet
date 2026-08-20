@@ -1,0 +1,25 @@
+idf_component_register(
+    SRCS
+        "source/main.cpp"
+        "source/driver/adc/esp32s3.cpp"
+        "source/driver/factory/esp32s3.cpp"
+        "source/driver/gpio/esp32s3.cpp"
+        "source/driver/serial/esp32s3.cpp"
+        "source/driver/serial/stub.cpp"
+        "source/driver/timer/esp32s3.cpp"
+        "source/system/pin_manager/esp32s3.cpp"
+        "source/driver/wifi/esp32s3.cpp"
+        "source/system/logic/logic.cpp"
+        # Add EEPROM and watchdog drivers here if the project needs them later.
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        esp_event
+        esp_netif
+        esp_wifi
+        esp_driver_gptimer
+        esp_driver_gpio
+        esp_driver_uart
+        esp_driver_usb_serial_jtag
+        esp_adc
+        nvs_flash)

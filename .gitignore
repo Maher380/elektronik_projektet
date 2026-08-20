@@ -1,0 +1,44 @@
+# --- PlatformIO & ESP-IDF ---
+.pio/
+.pioenvs/
+.piolibdeps/
+build/
+build-*/
+sdkconfig
+sdkconfig.old
+dependencies.lock
+managed_components/
+
+# --- Compiled Object Files & Binaries ---
+*.o
+*.obj
+*.a
+*.lib
+*.so
+*.dll
+*.exe
+*.bin
+*.elf
+*.map
+
+# --- VS Code & IDEs ---
+.vscode/
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+*.user
+
+# --- Unit Test & Simulations ---
+bin/
+gen/
+
+# --- System Files ---
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# --- Python (used by ESP-IDF tools) ---
+__pycache__/
+*.py[cod]
+*$py.class

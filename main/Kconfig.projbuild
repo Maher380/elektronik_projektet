@@ -1,0 +1,21 @@
+menu "Autonomous car network configuration"
+
+    config CNB_ENABLE_WIFI
+        bool "Enable WiFi"
+        default y
+        help
+            Enable WiFi support for the ESP32-S3 application.
+
+    config CNB_WIFI_SSID
+        string "WiFi SSID"
+        default "CHANGE_ME_WIFI_SSID"
+        help
+            WiFi network SSID used by the ESP32-S3 client.
+
+    config CNB_WIFI_PASSWORD
+        string "WiFi password"
+        default "CHANGE_ME_WIFI_PASSWORD"
+        help
+            WiFi network password used by the ESP32-S3 client.
+
+endmenu
