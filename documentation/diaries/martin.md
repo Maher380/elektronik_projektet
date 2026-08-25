@@ -26,3 +26,9 @@ _Cirka 3 timmar arbete._
 **TODO:** Stämma av skiftet med Henrik.
 
 _Cirka 3 timmar arbete._
+
+
+## 2026-08-21 - 25
+- Inledande granskning av PR chore: import ESP-IDF driver library startpoint enhancement
+- Jobbat med DoD
+- skissat på enklaste lösningen på köra fram och stoppa vid hinder, med hjälp av IR-sensorer och en enkel pwm-reglering.
