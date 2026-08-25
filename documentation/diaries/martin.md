@@ -32,3 +32,6 @@ _Cirka 3 timmar arbete._
 - Inledande granskning av PR chore: import ESP-IDF driver library startpoint enhancement
 - Jobbat med DoD
 - skissat på enklaste lösningen på köra fram och stoppa vid hinder, med hjälp av IR-sensorer och en enkel pwm-reglering.
+- skapade struktur för dagbok.
+
+_Cirka 6 timmar arbete._
