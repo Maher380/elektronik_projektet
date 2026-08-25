@@ -4,7 +4,7 @@
  */
 
 #pragma once
-#include "interface.h"
+#include "driver/timer/interface.h"
 #include "driver/gptimer.h"
 #include "esp_attr.h"
 
