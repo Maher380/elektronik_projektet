@@ -71,5 +71,7 @@ private:
     const Direction myDirection;
     /** @brief Flag indicating if the hardware was successfully initialized. */
     bool myInitialized;
+    /** @brief Last state written to an output pin. */
+    bool myState;
 };
 } // namespace driver::gpio

@@ -10,6 +10,24 @@
 namespace driver::gpio
 {
 // -----------------------------------------------------------------------------
+namespace
+{
+gpio_mode_t gpioModeFromDirection(const Direction direction) noexcept
+{
+    switch (direction)
+    {
+    case Direction::Input:
+    case Direction::InputPullup:
+        return GPIO_MODE_INPUT;
+    case Direction::Output:
+        return GPIO_MODE_OUTPUT;
+    }
+
+    return GPIO_MODE_DISABLE;
+}
+} // namespace
+
+// -----------------------------------------------------------------------------
 
 /** Singleton pin manager instance. */
 auto& myPinManager = sys::pin_manager::Esp32s3::instance();
@@ -19,6 +37,7 @@ Esp32s3::Esp32s3(std::uint8_t pin, Direction direction) noexcept
     : myPin{pin}
     , myDirection{direction}
     , myInitialized{false}
+    , myState{false}
 {
     // Validate and reserve pin.
     if (!myPinManager.reservePin(myPin)) { return; }
@@ -27,7 +46,7 @@ Esp32s3::Esp32s3(std::uint8_t pin, Direction direction) noexcept
     // Configure GPIO mode based on direction.
     gpio_config_t config{};
     config.pin_bit_mask = (1ULL << pin);
-    config.mode = GPIO_MODE_INPUT_OUTPUT;
+    config.mode = gpioModeFromDirection(direction);
 
     // Disable pull-down resistor and interrupts.
     config.pull_down_en = GPIO_PULLDOWN_DISABLE;
@@ -61,7 +80,11 @@ void Esp32s3::write(bool state) noexcept
 {
     // Check data direction, ignore if input.
     if (Direction::Output != myDirection) { return; }
-    gpio_set_level(static_cast<gpio_num_t>(myPin), state);
+
+    if (ESP_OK == gpio_set_level(static_cast<gpio_num_t>(myPin), state))
+    {
+        myState = state;
+    }
 }
 
 // -----------------------------------------------------------------------------
@@ -77,9 +100,8 @@ bool Esp32s3::read() const noexcept
 // -----------------------------------------------------------------------------
 void Esp32s3::toggle() noexcept
 {
-    // Read the pin, toggle the state.
-    const auto state = read();
-    write(!state);
+    // Toggle the last commanded output state.
+    write(!myState);
 }
 
 // -----------------------------------------------------------------------------
