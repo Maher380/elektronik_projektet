@@ -8,6 +8,7 @@ sdkconfig
 sdkconfig.old
 dependencies.lock
 managed_components/
+firmware/.cache/
 
 # --- Compiled Object Files & Binaries ---
 *.o
