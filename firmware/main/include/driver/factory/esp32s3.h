@@ -37,6 +37,14 @@ public:
     std::unique_ptr<adc::Interface> adc(std::uint8_t pin) noexcept override;
 
     /**
+     * @brief Create a real ESP32-S3 IR-Sensor hardware instance.
+     * 
+     * @param[in] adc Reference to the initialized ADC driver instance to use for reading.
+     * @return A unique pointer to the created IR-Sensor interface instance.
+     */
+    std::unique_ptr<ir_sensor::Interface> ir_sensor(driver::adc::Interface& adc) noexcept override;
+
+    /**
      * @brief Create a real ESP32-S3 GPIO input hardware instance.
      * * @param[in] pin The hardware pin number to configure as input.
      * @return A unique pointer to the created GPIO interface instance.

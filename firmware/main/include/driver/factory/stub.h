@@ -11,6 +11,7 @@
 
 #include "driver/adc/stub.h"
 #include "driver/gpio/stub.h"
+#include "driver/ir_sensor/stub.h"
 #include "driver/serial/stub.h"
 #include "driver/timer/stub.h"
 #include "driver/wifi/stub.h"
@@ -65,6 +66,17 @@ public:
     std::unique_ptr<adc::Interface> adc(std::uint8_t pin) noexcept override {
         (void)pin;
 	return std::make_unique<driver::adc::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated IR-Sensor stub instance.
+     * 
+     * @param[in] adc Reference to the initialized ADC driver instance to use for reading.
+     * @return A unique pointer ti the vreated simulated IR-Senor interface instance.
+     */
+    std::unique_ptr<ir_sensor::Interface> ir_sensor(adc::Interface&) noexcept override
+    {
+        return std::make_unique<driver::ir_sensor::Stub>();
     }
 
     /**
