@@ -1,5 +1,10 @@
+#include <cstdio>
+
 #include "system/logic/logic.h"
 
+
+#include "driver/adc/interface.h"
+#include "driver/ir_sensor/interface.h"
 #include "driver/gpio/interface.h"
 #include "driver/serial/interface.h"
 #include "driver/timer/interface.h"
@@ -11,11 +16,14 @@
 
 namespace
 {
-constexpr std::uint8_t LedPin{6U};
-constexpr std::uint32_t DefaultPeriodMs{500U};
-constexpr std::uint32_t SerialBaudRate{115200U};
-constexpr const char* WifiSsid{CONFIG_CNB_WIFI_SSID};
-constexpr const char* WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
+    constexpr std::uint8_t AdcPin{1U};
+    constexpr std::uint8_t LedPin{6U};
+    constexpr std::uint32_t DefaultPeriodMs{500U};
+    constexpr std::uint32_t SerialBaudRate{115200U};
+    constexpr const char *WifiSsid{CONFIG_CNB_WIFI_SSID};
+    constexpr const char *WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
+
+    constexpr std::uint8_t bufLen{64U};
 } // namespace
 
 namespace app::logic
@@ -27,9 +35,21 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     , myLed{factory.gpioOutput(LedPin)}
     , myTimer{factory.timer(DefaultPeriodMs)}
     , myWifi{factory.wifi(WifiSsid, WifiPassword)}
+    , myAdc{factory.adc(AdcPin)}
+    , myIr{factory.ir_sensor(*myAdc)}
 {
     setStartState();
-    initializeDrivers();
+    if (!initializeDrivers())
+    {
+        // Skriv ut eller indikera via en LED att initieringen misslyckades.
+        if (mySerial)
+        {
+            mySerial->write("Initialization failed!\n");
+        }
+
+        // Detta är en loop som bara får systemet att fastna. Blinka gärna en diod i denna loop.
+        while (1) {}
+    }
 }
 
 void Logic::setStartState() noexcept
@@ -46,12 +66,21 @@ void Logic::setStartState() noexcept
     }
 }
 
-void Logic::initializeDrivers() noexcept
+bool Logic::initializeDrivers() noexcept
 {
-    if (mySerial && !mySerial->isInitialized())
+    if (mySerial)
     {
         mySerial->connect();
         mySerial->write("CnB serial ready\n");
+    }
+    else
+    {
+        return false;
+    }
+
+    if (myAdc && !myAdc->isInitialized())
+    {
+        myAdc->init();
     }
 
 #if CONFIG_CNB_ENABLE_WIFI
@@ -60,6 +89,8 @@ void Logic::initializeDrivers() noexcept
         myWifi->connect();
     }
 #endif
+    // Om vi kommer hit har all hårdvara initierates korrekt => returnera true.
+    return true;
 }
 
 void Logic::processWifi() noexcept
@@ -80,6 +111,15 @@ void Logic::processTimer() noexcept
     }
 }
 
+void Logic::processDistance() noexcept
+{
+    const auto distance = myIr->readDistance();
+    // Testa att skriva ut distansen, kolla att den ser rimlit ut (sanity check).
+    char buf[bufLen]{'\0'};
+    std::snprintf(buf, sizeof(buf), "Distance: %.2f\n", static_cast<double>(distance));
+    mySerial->write(buf);
+}
+
 void Logic::run(const std::atomic<bool>& stop) noexcept
 {
     while (!stop.load())
@@ -87,6 +127,7 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         processWifi();
         processTimer();
         vTaskDelay(pdMS_TO_TICKS(10U));
+        processDistance();
     }
 }
 

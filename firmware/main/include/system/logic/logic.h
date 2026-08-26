@@ -33,14 +33,17 @@ public:
 
 private:
     void setStartState() noexcept;
-    void initializeDrivers() noexcept;
+    bool initializeDrivers() noexcept;
     void processWifi() noexcept;
     void processTimer() noexcept;
+    void processDistance() noexcept;
 
     std::unique_ptr<driver::serial::Interface> mySerial;
     std::unique_ptr<driver::gpio::Interface> myLed;
     std::unique_ptr<driver::timer::Interface> myTimer;
     std::unique_ptr<driver::wifi::Interface> myWifi;
+    std::unique_ptr<driver::adc::Interface> myAdc;
+    std::unique_ptr<driver::ir_sensor::Interface> myIr;
 
     bool myBlinkEnabled{false};
     std::uint32_t myPeriodMs{500U};
