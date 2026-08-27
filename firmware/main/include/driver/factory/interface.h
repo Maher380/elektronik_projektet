@@ -79,14 +79,12 @@ public:
     /**
      * @brief Create a motor driver instance.
      *
-     * @param[in] enablePwm PWM driver used for the motor enable pin.
-     * @param[in] input1 GPIO output driver used for the first motor input pin.
-     * @param[in] input2 GPIO output driver used for the second motor input pin.
+     * @param[in] MotorForwardsPwm PWM output driver used for IN1.
+     * @param[in] MotorBackwardsPwm PWM output driver used for IN2.
      * @return A unique pointer to the created motor interface instance.
      */
-    virtual std::unique_ptr<motor::Interface> motor(pwm::Interface& enablePwm,
-                                                    gpio::Interface& input1,
-                                                    gpio::Interface& input2) noexcept = 0;
+    virtual std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& MotorForwardsPwm,
+                                                    driver::pwm::Interface& MotorBackwardsPwm) noexcept = 0;
 
 
     /**

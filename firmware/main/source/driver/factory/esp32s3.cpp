@@ -4,6 +4,7 @@
 #include "driver/ir_sensor/esp32s3.h"
 #include "driver/gpio/esp32s3.h"
 #include "driver/motor/l298n.h"
+#include "driver/motor/mp6550.h"
 #include "driver/pwm/esp32s3.h"
 #include "driver/serial/esp32s3.h"
 #include "driver/timer/esp32s3.h"
@@ -43,11 +44,10 @@ std::unique_ptr<pwm::Interface> Esp32s3::pwm(const driver::pwm::Config& config) 
     return std::make_unique<driver::pwm::Esp32s3>(config);
 }
 
-std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& enablePwm,
-                                                 driver::gpio::Interface& input1,
-                                                 driver::gpio::Interface& input2) noexcept {
-    // Create a real L298N motor driver from existing PWM and GPIO outputs.
-    return std::make_unique<driver::motor::L298n>(enablePwm, input1, input2);
+std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& MotorForwardsPwm,
+                                                 driver::pwm::Interface& MotorBackwardsPwm) noexcept {
+    // Create a real MP6550 motor driver from existing PWM outputs.
+    return std::make_unique<driver::motor::MP6550>(MotorForwardsPwm, MotorBackwardsPwm);
 }
 
 std::unique_ptr<serial::Interface> Esp32s3::serial(std::uint32_t baud_bps) noexcept {

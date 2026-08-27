@@ -79,14 +79,12 @@ public:
     /**
      * @brief Create a real L298N motor driver instance.
      *
-     * @param[in] enablePwm PWM driver used for the L298N ENA or ENB pin.
-     * @param[in] input1 GPIO output driver used for IN1 or IN3.
-     * @param[in] input2 GPIO output driver used for IN2 or IN4.
+     * @param[in] MotorForwardsPwm PWM output driver used for IN1.
+     * @param[in] MotorBackwardsPwm PWM output driver used for IN2.
      * @return A unique pointer to the created motor interface instance.
      */
-    std::unique_ptr<motor::Interface> motor(pwm::Interface& enablePwm,
-                                            gpio::Interface& input1,
-                                            gpio::Interface& input2) noexcept override;
+    std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& MotorForwardsPwm,
+                                            driver::pwm::Interface& MotorBackwardsPwm) noexcept override;
 
     /**
      * @brief Create a real ESP32-S3 Serial hardware instance.

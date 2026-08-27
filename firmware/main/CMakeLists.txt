@@ -6,6 +6,7 @@ idf_component_register(
         "source/driver/gpio/esp32s3.cpp"
         "source/driver/ir_sensor/esp32s3.cpp"
         "source/driver/motor/l298n.cpp"
+        "source/driver/motor/mp6550.cpp"
         "source/driver/pwm/esp32s3.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"

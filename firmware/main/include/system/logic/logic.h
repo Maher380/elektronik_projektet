@@ -6,6 +6,10 @@
 #pragma once
 
 #include "driver/factory/interface.h"
+#include "driver/adc/interface.h"
+#include "driver/ir_sensor/interface.h"
+#include "driver/motor/interface.h"
+#include "driver/pwm/interface.h"
 
 #include <atomic>
 #include <cstdint>
@@ -21,6 +25,7 @@ namespace app::logic {
  */
 class Logic final {
 public:
+
     explicit Logic(driver::factory::Interface& factory) noexcept;
     ~Logic() noexcept;
 
@@ -38,12 +43,26 @@ private:
     void processTimer() noexcept;
     void processDistance() noexcept;
 
-    std::unique_ptr<driver::serial::Interface> mySerial;
-    std::unique_ptr<driver::gpio::Interface> myLed;
-    std::unique_ptr<driver::timer::Interface> myTimer;
-    std::unique_ptr<driver::wifi::Interface> myWifi;
-    std::unique_ptr<driver::adc::Interface> myAdc;
-    std::unique_ptr<driver::ir_sensor::Interface> myIr;
+    static constexpr std::uint8_t IrSensorAdcPin{1};       // A0
+
+
+    // l298 Motor
+    static constexpr std::uint8_t l298MotorPwm{2};      // 
+    static constexpr std::uint8_t l298MotorGpio1{3};    //
+    static constexpr std::uint8_t l298MotorGpio2{4};    // 
+
+    // M6550
+    static constexpr std::uint8_t mp6550MotorPwmForwardPin{5U};   // D2 / GPIO5
+    static constexpr std::uint8_t mp6550MotorPwmBackwardPin{6U};  // D3 / GPIO6
+    static constexpr std::uint8_t mp6550MotorSleepPin{7U};        // D4 / GPIO7
+
+
+    std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
+    std::unique_ptr<driver::pwm::Interface> myMotorBackwardsPwm;
+    std::unique_ptr<driver::adc::Interface> myIrSensorAdc;
+    std::unique_ptr<driver::motor::Interface> myMotor;
+    std::unique_ptr<driver::ir_sensor::Interface> myIrSensor;
+
 
     bool myBlinkEnabled{false};
     std::uint32_t myPeriodMs{500U};
