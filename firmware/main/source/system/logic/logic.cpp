@@ -120,14 +120,50 @@ void Logic::processDistance() noexcept
     // mySerial->write(buf);
 }
 
+
+void Logic::getEnvironmentPicture() noexcept
+{
+    myDistanceToObstacle = myIrSensor->readDistance();
+}
+
+void Logic::decideAction() noexcept
+{
+    if(myDistanceToObstacle < 30.0f) // Example threshold for obstacle detection
+    {
+        myPlannedSpeed = 0.0f; // Stop if too close to an obstacle
+    }
+    else
+    {
+        myPlannedSpeed = 1.0f; // Move forward at a speed of 1 m/s
+    }
+}
+
+void Logic::executeAction() noexcept
+{
+    //TODO: Implement motor control logic based on myPlannedSpeed and other factors
+    myMotor->setDirection(driver::motor::Direction::Forward);
+    myMotor->setSpeed(myPlannedSpeed,driver::motor::StopMode::Coast)   ;
+}
+
+void Logic::logState() noexcept
+{
+    ;
+}
+
+
 void Logic::run(const std::atomic<bool>& stop) noexcept
 {
     while (!stop.load())
     {
-        processWifi();
-        processTimer();
-        vTaskDelay(pdMS_TO_TICKS(10U));
-        processDistance();
+        getEnvironmentPicture();
+        decideAction();
+        executeAction();
+        logState();
+
+        // processWifi();
+        // processTimer();
+        // vTaskDelay(pdMS_TO_TICKS(10U));
+        // processDistance();
     }
 }
 
