@@ -13,10 +13,12 @@
 namespace driver {
     namespace adc { class Interface; }
     namespace gpio { class Interface; }
+    namespace motor { class Interface; }
+    namespace pwm { struct Config; class Interface; }
     namespace serial { class Interface; }
     namespace timer { class Interface; }
     namespace wifi { class Interface; }
-} 
+}
 
 namespace driver::factory {
 
@@ -38,7 +40,7 @@ public:
 
     /**
      * @brief Create a real ESP32-S3 IR-Sensor hardware instance.
-     * 
+     *
      * @param[in] adc Reference to the initialized ADC driver instance to use for reading.
      * @return A unique pointer to the created IR-Sensor interface instance.
      */
@@ -57,6 +59,34 @@ public:
      * @return A unique pointer to the created GPIO interface instance.
      */
     std::unique_ptr<gpio::Interface> gpioOutput(std::uint8_t pin) noexcept override;
+
+    /**
+     * @brief Create a real ESP32-S3 PWM hardware instance with default PWM settings.
+     *
+     * @param[in] pin The hardware pin number to configure as PWM output.
+     * @return A unique pointer to the created PWM interface instance.
+     */
+    std::unique_ptr<pwm::Interface> pwm(std::uint8_t pin) noexcept override;
+
+    /**
+     * @brief Create a real ESP32-S3 PWM hardware instance with an explicit configuration.
+     *
+     * @param[in] config PWM output configuration.
+     * @return A unique pointer to the created PWM interface instance.
+     */
+    std::unique_ptr<pwm::Interface> pwm(const pwm::Config& config) noexcept override;
+
+    /**
+     * @brief Create a real L298N motor driver instance.
+     *
+     * @param[in] enablePwm PWM driver used for the L298N ENA or ENB pin.
+     * @param[in] input1 GPIO output driver used for IN1 or IN3.
+     * @param[in] input2 GPIO output driver used for IN2 or IN4.
+     * @return A unique pointer to the created motor interface instance.
+     */
+    std::unique_ptr<motor::Interface> motor(pwm::Interface& enablePwm,
+                                            gpio::Interface& input1,
+                                            gpio::Interface& input2) noexcept override;
 
     /**
      * @brief Create a real ESP32-S3 Serial hardware instance.

@@ -12,6 +12,8 @@
 #include "driver/adc/stub.h"
 #include "driver/gpio/stub.h"
 #include "driver/ir_sensor/stub.h"
+#include "driver/motor/stub.h"
+#include "driver/pwm/stub.h"
 #include "driver/serial/stub.h"
 #include "driver/timer/stub.h"
 #include "driver/wifi/stub.h"
@@ -43,7 +45,7 @@ public:
      */
     std::unique_ptr<gpio::Interface> gpioInput(std::uint8_t pin) noexcept override {
         (void)pin;
-        return std::make_unique<driver::gpio::Stub>(); 
+        return std::make_unique<driver::gpio::Stub>();
     }
 
     /**
@@ -54,7 +56,29 @@ public:
      */
     std::unique_ptr<gpio::Interface> gpioOutput(std::uint8_t pin) noexcept override {
         (void)pin;
-        return std::make_unique<driver::gpio::Stub>(); 
+        return std::make_unique<driver::gpio::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated PWM stub instance with default PWM settings.
+     *
+     * @param[in] pin The hardware pin number to simulate.
+     * @return A unique pointer to the created simulated PWM interface instance.
+     */
+    std::unique_ptr<pwm::Interface> pwm(std::uint8_t pin) noexcept override {
+        driver::pwm::Config config{};
+        config.pin = pin;
+        return std::make_unique<driver::pwm::Stub>(config);
+    }
+
+    /**
+     * @brief Create a simulated PWM stub instance with an explicit configuration.
+     *
+     * @param[in] config Simulated PWM configuration.
+     * @return A unique pointer to the created simulated PWM interface instance.
+     */
+    std::unique_ptr<pwm::Interface> pwm(const driver::pwm::Config& config) noexcept override {
+        return std::make_unique<driver::pwm::Stub>(config);
     }
 
     /**
@@ -70,13 +94,31 @@ public:
 
     /**
      * @brief Create a simulated IR-Sensor stub instance.
-     * 
+     *
      * @param[in] adc Reference to the initialized ADC driver instance to use for reading.
      * @return A unique pointer ti the vreated simulated IR-Senor interface instance.
      */
     std::unique_ptr<ir_sensor::Interface> ir_sensor(adc::Interface&) noexcept override
     {
         return std::make_unique<driver::ir_sensor::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated motor stub instance.
+     *
+     * @param[in] enablePwm PWM driver used for the motor enable pin.
+     * @param[in] input1 GPIO output driver used for the first motor input pin.
+     * @param[in] input2 GPIO output driver used for the second motor input pin.
+     * @return A unique pointer to the created simulated motor interface instance.
+     */
+    std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& enablePwm,
+                                            driver::gpio::Interface& input1,
+                                            driver::gpio::Interface& input2) noexcept override
+    {
+        (void)enablePwm;
+        (void)input1;
+        (void)input2;
+        return std::make_unique<driver::motor::Stub>();
     }
 
     /**
@@ -98,7 +140,7 @@ public:
      */
     std::unique_ptr<timer::Interface> timer(std::uint32_t timeout_ms) noexcept override {
         (void)timeout_ms;
-        return std::make_unique<driver::timer::Stub>(); 
+        return std::make_unique<driver::timer::Stub>();
     }
 
     /**

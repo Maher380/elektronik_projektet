@@ -5,13 +5,15 @@ idf_component_register(
         "source/driver/factory/esp32s3.cpp"
         "source/driver/gpio/esp32s3.cpp"
         "source/driver/ir_sensor/esp32s3.cpp"
+        "source/driver/motor/l298n.cpp"
+        "source/driver/pwm/esp32s3.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"
         "source/driver/timer/esp32s3.cpp"
         "source/system/pin_manager/esp32s3.cpp"
         "source/driver/wifi/esp32s3.cpp"
         "source/system/logic/logic.cpp"
-        
+
     INCLUDE_DIRS
         "include"
     REQUIRES
@@ -22,5 +24,6 @@ idf_component_register(
         esp_driver_gpio
         esp_driver_uart
         esp_driver_usb_serial_jtag
+        esp_driver_mcpwm
         esp_adc
         nvs_flash)

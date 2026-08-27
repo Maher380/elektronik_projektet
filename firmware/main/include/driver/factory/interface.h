@@ -11,6 +11,8 @@
 namespace driver::ir_sensor {class Interface;}
 namespace driver::adc { class Interface; }
 namespace driver::gpio { class Interface; }
+namespace driver::motor { class Interface; }
+namespace driver::pwm { struct Config; class Interface; }
 namespace driver::serial { class Interface; }
 namespace driver::timer { class Interface; }
 namespace driver::wifi { class Interface; }
@@ -51,12 +53,41 @@ public:
     virtual std::unique_ptr<gpio::Interface> gpioOutput(std::uint8_t pin) noexcept = 0;
 
     /**
+     * @brief Create a PWM driver instance with default PWM settings.
+     *
+     * @param[in] pin The hardware pin number to configure as PWM output.
+     * @return A unique pointer to the created PWM interface instance.
+     */
+    virtual std::unique_ptr<pwm::Interface> pwm(std::uint8_t pin) noexcept = 0;
+
+    /**
+     * @brief Create a PWM driver instance with an explicit configuration.
+     *
+     * @param[in] config PWM output configuration.
+     * @return A unique pointer to the created PWM interface instance.
+     */
+    virtual std::unique_ptr<pwm::Interface> pwm(const pwm::Config& config) noexcept = 0;
+
+    /**
      * @brief Create an Ir sensor driver instance.
-     * 
-     * @param[in] adc Reference to an initialized ADC driver instance used for reading. 
+     *
+     * @param[in] adc Reference to an initialized ADC driver instance used for reading.
      * @return A unique pointer to the created Ir-sensor interface instance.
      */
     virtual std::unique_ptr<ir_sensor::Interface> ir_sensor(adc::Interface&) noexcept = 0;
+
+    /**
+     * @brief Create a motor driver instance.
+     *
+     * @param[in] enablePwm PWM driver used for the motor enable pin.
+     * @param[in] input1 GPIO output driver used for the first motor input pin.
+     * @param[in] input2 GPIO output driver used for the second motor input pin.
+     * @return A unique pointer to the created motor interface instance.
+     */
+    virtual std::unique_ptr<motor::Interface> motor(pwm::Interface& enablePwm,
+                                                    gpio::Interface& input1,
+                                                    gpio::Interface& input2) noexcept = 0;
+
 
     /**
      * @brief Create a serial driver instance.
