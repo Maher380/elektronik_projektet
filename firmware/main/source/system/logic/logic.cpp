@@ -22,8 +22,17 @@ namespace
     constexpr std::uint32_t SerialBaudRate{115200U};
     constexpr const char *WifiSsid{CONFIG_CNB_WIFI_SSID};
     constexpr const char *WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
+    
 
     constexpr std::uint8_t bufLen{64U};
+    // @brief the sleep period between two ticks. 50 ms -> 20 Hz 
+    constexpr int tickPeriod_ms{50U};
+
+    // @brief how often the state should be logged to serial
+    constexpr int logInterval_ms{1000};
+    constexpr int logInterval_ticks{logInterval_ms/tickPeriod_ms};
+
+
 } // namespace
 
 namespace app::logic
@@ -35,6 +44,7 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
     , myMotorSleep{factory.gpioOutput(mp6550MotorSleepPin)}
     , myIrSensorAdc{factory.adc(IrSensorAdcPin)}
+    , mySerial({factory.serial(SerialBaudRate)})
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
     {
@@ -53,6 +63,12 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
         {
             vTaskDelay(pdMS_TO_TICKS(1000U));
         }
+        // Skriv ut eller indikera via en LED att initieringen misslyckades.
+        if (mySerial)
+        {
+            mySerial->write("Initialization failed!\n");
+        }
+
     }
 }
 
@@ -72,6 +88,23 @@ void Logic::setStartState() noexcept
 
 bool Logic::initializeDrivers() noexcept
 {
+    if (mySerial)
+    {
+        mySerial->connect();
+        mySerial->write("CnB serial ready\n");
+    }
+    else
+    {
+        return false;
+    }
+
+// #if CONFIG_CNB_ENABLE_WIFI
+//     if (myWifi && !myWifi->isConnected())
+//     {
+//         myWifi->connect();
+//     }
+// #endif
+    return true;
     if (!myMotorForwardsPwm || !myMotorBackwardsPwm || !myMotorSleep ||
         !myIrSensorAdc || !myIrSensor || !myMotor)
     {
@@ -116,15 +149,6 @@ void Logic::processTimer() noexcept
     // }
 }
 
-void Logic::processDistance() noexcept
-{
-    // const auto distance = myIr->readDistance();
-    // // Testa att skriva ut distansen, kolla att den ser rimlit ut (sanity check).
-    // char buf[bufLen]{'\0'};
-    // std::snprintf(buf, sizeof(buf), "Distance: %.2f\n", static_cast<double>(distance));
-    // mySerial->write(buf);
-}
-
 
 void Logic::getEnvironmentPicture() noexcept
 {
@@ -145,7 +169,7 @@ void Logic::decideAction() noexcept
     }
     else
     {
-        myPlannedSpeed = 1.0f; // Move forward at a speed of 1 m/s
+        myPlannedSpeed = 0.5f; // Move forward at a speed of 1 m/s
     }
 }
 
@@ -162,7 +186,17 @@ void Logic::executeAction() noexcept
 
 void Logic::logState() noexcept
 {
-    ;
+    static int i = 0;
+    static double accumulatedDistance=0;
+
+    accumulatedDistance += myDistanceToObstacle;
+    if(0 == i++%logInterval_ticks)
+    {
+        char buf[bufLen]{'\0'};
+        std::snprintf(buf, sizeof(buf), "latest Distance: %.2f, period average distance: %.2f.\n", static_cast<double>(myDistanceToObstacle), accumulatedDistance/logInterval_ticks);
+        mySerial->write(buf);
+        accumulatedDistance = 0.0f;
+    }
 }
 
 
@@ -175,13 +209,13 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         executeAction();
         logState();
 
-        vTaskDelay(pdMS_TO_TICKS(50U));
+        vTaskDelay(pdMS_TO_TICKS(tickPeriod_ms));
     }
 
-    if (myMotor)
-    {
-        myMotor->stop(driver::motor::StopMode::Coast);
-    }
+    // if (myMotor)
+    // {
+    //     myMotor->stop(driver::motor::StopMode::Coast);
+    // }
 }
 
 } // namespace app::logic

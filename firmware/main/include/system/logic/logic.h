@@ -42,7 +42,6 @@ private:
     bool initializeDrivers() noexcept;
     void processWifi() noexcept;
     void processTimer() noexcept;
-    void processDistance() noexcept;
 
     /**
      * @brief Get a picture of the environment.
@@ -94,7 +93,7 @@ private:
     std::unique_ptr<driver::adc::Interface> myIrSensorAdc;
     std::unique_ptr<driver::motor::Interface> myMotor;
     std::unique_ptr<driver::ir_sensor::Interface> myIrSensor;
-
+    std::unique_ptr<driver::serial::Interface> mySerial;
 
     bool myBlinkEnabled{false};
     std::uint32_t myPeriodMs{500U};
