@@ -186,6 +186,12 @@ void Logic::executeAction() noexcept
 
 void Logic::logState() noexcept
 {
+    /**
+     * in order to avoid to frequent logging and to reduce the noice in the distance
+     * sum up all measurements done during a period ( maybe 1 s) and devide that value
+     * by the number of measurements made. Print both average value and latest value.
+     * note when shifting to next generation of logging (MQTT?), maybe something similar could be done
+     */
     static int i = 0;
     static double accumulatedDistance=0;
 
