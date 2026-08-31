@@ -13,10 +13,12 @@
 namespace driver {
     namespace adc { class Interface; }
     namespace gpio { class Interface; }
+    namespace motor { class Interface; }
+    namespace pwm { struct Config; class Interface; }
     namespace serial { class Interface; }
     namespace timer { class Interface; }
     namespace wifi { class Interface; }
-} 
+}
 
 namespace driver::factory {
 
@@ -37,6 +39,14 @@ public:
     std::unique_ptr<adc::Interface> adc(std::uint8_t pin) noexcept override;
 
     /**
+     * @brief Create a real ESP32-S3 IR-Sensor hardware instance.
+     *
+     * @param[in] adc Reference to the initialized ADC driver instance to use for reading.
+     * @return A unique pointer to the created IR-Sensor interface instance.
+     */
+    std::unique_ptr<ir_sensor::Interface> ir_sensor(driver::adc::Interface& adc) noexcept override;
+
+    /**
      * @brief Create a real ESP32-S3 GPIO input hardware instance.
      * * @param[in] pin The hardware pin number to configure as input.
      * @return A unique pointer to the created GPIO interface instance.
@@ -49,6 +59,32 @@ public:
      * @return A unique pointer to the created GPIO interface instance.
      */
     std::unique_ptr<gpio::Interface> gpioOutput(std::uint8_t pin) noexcept override;
+
+    /**
+     * @brief Create a real ESP32-S3 PWM hardware instance with default PWM settings.
+     *
+     * @param[in] pin The hardware pin number to configure as PWM output.
+     * @return A unique pointer to the created PWM interface instance.
+     */
+    std::unique_ptr<pwm::Interface> pwm(std::uint8_t pin) noexcept override;
+
+    /**
+     * @brief Create a real ESP32-S3 PWM hardware instance with an explicit configuration.
+     *
+     * @param[in] config PWM output configuration.
+     * @return A unique pointer to the created PWM interface instance.
+     */
+    std::unique_ptr<pwm::Interface> pwm(const pwm::Config& config) noexcept override;
+
+    /**
+     * @brief Create a real L298N motor driver instance.
+     *
+     * @param[in] MotorForwardsPwm PWM output driver used for IN1.
+     * @param[in] MotorBackwardsPwm PWM output driver used for IN2.
+     * @return A unique pointer to the created motor interface instance.
+     */
+    std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& MotorForwardsPwm,
+                                            driver::pwm::Interface& MotorBackwardsPwm) noexcept override;
 
     /**
      * @brief Create a real ESP32-S3 Serial hardware instance.

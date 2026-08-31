@@ -30,6 +30,7 @@ firmware/.cache/
 *.swo
 *.user
 
+
 # --- Unit Test & Simulations ---
 bin/
 gen/
