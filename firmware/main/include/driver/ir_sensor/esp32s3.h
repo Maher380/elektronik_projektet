@@ -41,6 +41,12 @@ public:
      */
     bool isInitialized() const noexcept override;
 
-    private : driver::adc::Interface &myAdc;
+    private: 
+    
+    /** 
+     * @brief the adc used by the IR sensor 
+     * 
+     */
+    driver::adc::Interface &myAdc;
 };
 } // namespace driver::ir_sensor
