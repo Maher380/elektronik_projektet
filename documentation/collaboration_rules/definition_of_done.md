@@ -27,7 +27,7 @@ Gäller kodtasks, till exempel features, buggar och refaktoreringar.
 - [ ] Designen är dokumenterad i Git-repot.
 - [x] Dokumentationen följer gruppens dokumentationsstruktur.
 - [ ] Ändringen är pushad via en pull request med ett begripligt commit-meddelande.
-- [ ] Designen är granskad av minst en annan gruppmedlem.
+- [ ] Designen är granskad och förstådd av minst en annan gruppmedlem.
 - [ ] Pull requesten är godkänd och mergad till `main` av ticketansvarig.
 - [ ] Tasken är markerad som klar på boarden.
 
