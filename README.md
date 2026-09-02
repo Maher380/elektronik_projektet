@@ -13,6 +13,24 @@ The project starts from an ESP32-S3 driver library and includes:
 - factory-based driver creation
 - ESP-IDF CMake project structure
 
+## v1.0 Demo
+
+The `v1.0-demo` release preserves the first working CnB vehicle demo
+shown to the teacher.
+
+The demonstrated configuration used:
+
+- Arduino Nano ESP32 (ESP32-S3)
+- MP6550 motor controller
+- Sharp GP2Y0A21YK IR distance sensor
+- 7.2 V battery supply
+- L7805CV regulator in the IR sensor power supply
+- forward motor duty set to 0.4
+
+The KiCad project and wiring documentation for this release must represent
+the physical demo configuration, including the L7805CV. The release tag is
+created only after the corresponding hardware files have been reviewed.
+
 ## Project Layout
 
 ```text

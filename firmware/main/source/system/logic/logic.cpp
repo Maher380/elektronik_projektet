@@ -145,7 +145,8 @@ void Logic::decideAction() noexcept
     }
     else
     {
-        myPlannedSpeed = 1.0f; // Move forward at a speed of 1 m/s
+        /** 0.4 minimum */
+        myPlannedSpeed = 0.4f; // Move forward at a speed of 1 m/s
     }
 }
 
@@ -177,7 +178,6 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 
         vTaskDelay(pdMS_TO_TICKS(50U));
     }
-
     if (myMotor)
     {
         myMotor->stop(driver::motor::StopMode::Coast);
