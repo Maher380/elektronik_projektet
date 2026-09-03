@@ -14,6 +14,7 @@
 #include "driver/ir_sensor/stub.h"
 #include "driver/motor/stub.h"
 #include "driver/pwm/stub.h"
+#include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
 #include "driver/timer/stub.h"
 #include "driver/wifi/stub.h"
@@ -79,6 +80,17 @@ public:
      */
     std::unique_ptr<pwm::Interface> pwm(const driver::pwm::Config& config) noexcept override {
         return std::make_unique<driver::pwm::Stub>(config);
+    }
+
+    /**
+     * @brief Create a simulated servo driver instance.
+     *
+     * @param[in] pwm PWM output driver used by the simulated servo (unused).
+     * @return A unique pointer to the created simulated servo interface instance.
+     */
+    std::unique_ptr<servo::Interface> servo(pwm::Interface& pwm) noexcept override {
+        (void)pwm;
+        return std::make_unique<driver::servo::Stub>();
     }
 
     /**
