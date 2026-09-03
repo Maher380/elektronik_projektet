@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <cstdio>
+#include <limits>
 #include "driver/adc/interface.h"
 
 namespace driver::adc
@@ -81,7 +82,12 @@ public:
      * @return Simulated input voltage in Volts.
      */
     float readVoltage() const noexcept override 
-    { 
+    {
+        if (!myIsInitialized)
+        {
+            return std::numeric_limits<float>::quiet_NaN();
+        }
+
         return (static_cast<float>(myRawInput) / 4095.0f) * 3.3f; 
     }
 
