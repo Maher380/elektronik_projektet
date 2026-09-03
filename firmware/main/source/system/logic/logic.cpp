@@ -1,5 +1,7 @@
 #include <cstdio>
 
+#include <algorithm>
+
 #include "system/logic/logic.h"
 
 #include "driver/adc/interface.h"
@@ -43,7 +45,9 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     : myMotorForwardsPwm{factory.pwm(mp6550MotorPwmForwardPin)}
     , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
     , myMotorSleep{factory.gpioOutput(mp6550MotorSleepPin)}
-    , myIrSensorAdc{factory.adc(IrSensorAdcPin)}
+    , myIrSensorForwardAdc{factory.adc(IrSensorForwrdAdcPin)}
+    , myIrSensorLeftAdc{factory.adc(IrSensorLeftAdcPin)}
+    , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
     , mySerial({factory.serial(SerialBaudRate)})
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
@@ -51,9 +55,17 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
         myMotor = factory.motor(*myMotorForwardsPwm, *myMotorBackwardsPwm);
     }
 
-    if (myIrSensorAdc)
+    if (myIrSensorForwardAdc)
     {
-        myIrSensor = factory.ir_sensor(*myIrSensorAdc);
+        myIrSensorForward = factory.ir_sensor(*myIrSensorForwardAdc);
+    }
+    if (myIrSensorLeftAdc)
+    {
+        myIrSensorLeft = factory.ir_sensor(*myIrSensorLeftAdc);
+    }
+    if (myIrSensorRightAdc)
+    {
+        myIrSensorRight = factory.ir_sensor(*myIrSensorRightAdc);
     }
 
     setStartState();
@@ -88,9 +100,8 @@ void Logic::setStartState() noexcept
 
 bool Logic::initializeDrivers() noexcept
 {
-    if (mySerial)
+    if (mySerial &&mySerial->connect())
     {
-        mySerial->connect();
         mySerial->write("CnB serial ready\n");
     }
     else
@@ -98,37 +109,63 @@ bool Logic::initializeDrivers() noexcept
         return false;
     }
 
+
 // #if CONFIG_CNB_ENABLE_WIFI
 //     if (myWifi && !myWifi->isConnected())
 //     {
 //         myWifi->connect();
 //     }
 // #endif
-    return true;
-    if (!myMotorForwardsPwm || !myMotorBackwardsPwm || !myMotorSleep ||
-        !myIrSensorAdc || !myIrSensor || !myMotor)
+    // Verify that all required driver objects were created.
+    if (!myMotorForwardsPwm || 
+        !myMotorBackwardsPwm || 
+        !myMotorSleep ||
+        !myIrSensorForwardAdc || 
+        !myIrSensorLeftAdc || 
+        !myIrSensorRightAdc || 
+        !myMotor || 
+        !myIrSensorForward ||
+        !myIrSensorLeft || 
+        !myIrSensorRight ||
+        !mySerial )
     {
         return false;
     }
 
-    if (!myIrSensorAdc->isInitialized() && !myIrSensorAdc->init())
-    {
-        return false;
-    }
+    // Initialize drivers that expose an explicit init operation.
+    // The GPIO output is initialized by its constructor.
+    // IR sensors become ready when their ADC dependencies are initialized.
+    // Serial is prepared through connect() above.
+    myMotorForwardsPwm->init();
+    myMotorBackwardsPwm->init();
+    // no init function for myMotorSleep
+    myIrSensorForwardAdc->init();
+    myIrSensorLeftAdc->init();
+    myIrSensorRightAdc->init();
+    myMotor->init();
+    // no init function for myIrSensorLeft
+    // no init function for myIrSensorRight
+    // no init function for mySerial
 
-    if (!myMotorSleep->isInitialized())
+    // Verify that all required drivers are initialized and ready.
+    if (!myMotorForwardsPwm->isInitialized() ||
+        !myMotorBackwardsPwm->isInitialized() ||
+        !myMotorSleep->isInitialized() ||
+        !myIrSensorForwardAdc->isInitialized() ||
+        !myIrSensorLeftAdc->isInitialized() ||
+        !myIrSensorRightAdc->isInitialized() ||
+        !myMotor->isInitialized() ||
+        !myIrSensorForward->isInitialized() ||
+        !myIrSensorLeft->isInitialized() ||
+        !myIrSensorRight->isInitialized() ||
+        !mySerial->isInitialized())
     {
         return false;
     }
 
     myMotorSleep->write(true); // nSLEEP_HB HIGH keeps MP6550 awake.
 
-    if (!myMotor->isInitialized() && !myMotor->init())
-    {
-        return false;
-    }
-
-    return myIrSensor->isInitialized();
+    return true;
 }
 
 void Logic::processWifi() noexcept
@@ -152,18 +189,43 @@ void Logic::processTimer() noexcept
 
 void Logic::getEnvironmentPicture() noexcept
 {
-    if (myIrSensor && myIrSensor->isInitialized())
+    //Check if all sensors are functional
+    if (myIrSensorForward && myIrSensorForward->isInitialized() &&
+        myIrSensorLeft    && myIrSensorLeft->isInitialized()    &&
+        myIrSensorRight   && myIrSensorRight->isInitialized()   )
     {
-        myDistanceToObstacle = myIrSensor->readDistance();
+        myDistanceToObstacleForward = myIrSensorForward->readDistance();
+        myDistanceToObstacleLeft    = myIrSensorLeft->readDistance();
+        myDistanceToObstacleRight   = myIrSensorRight->readDistance();
         return;
     }
 
-    myDistanceToObstacle = 0.0F;
+    myDistanceToObstacleForward = 0.0F;
+    myDistanceToObstacleLeft = 0.0F;
+    myDistanceToObstacleRight = 0.0F;
 }
 
 void Logic::decideAction() noexcept
 {
-    if(myDistanceToObstacle < 30.0f) // Example threshold for obstacle detection
+    float distanceToClosestObject;
+    // set direction based on where closest obstacle is
+    if(myDistanceToObstacleForward > std::min(myDistanceToObstacleLeft, myDistanceToObstacleRight))
+    {
+        myPlannedHeading = 0.0f;
+        distanceToClosestObject = myDistanceToObstacleForward;
+    }
+    else if (myDistanceToObstacleLeft > myDistanceToObstacleRight)
+    {
+        myPlannedHeading = -5.0f;
+        distanceToClosestObject = myDistanceToObstacleLeft;
+    }
+    else 
+    {
+        myPlannedHeading = 5.0f;
+        distanceToClosestObject = myDistanceToObstacleRight;
+    }
+
+    if(distanceToClosestObject < 30.0f) // Example threshold for obstacle detection
     {
         myPlannedSpeed = 0.0f; // Stop if too close to an obstacle
     }
@@ -180,8 +242,13 @@ void Logic::executeAction() noexcept
         return;
     }
 
-    myMotor->setDirection(driver::motor::Direction::Forward);
-    myMotor->setSpeed(myPlannedSpeed, driver::motor::StopMode::Coast);
+    if (myPlannedSpeed>0.0f)
+    {
+        myMotor->setDirection(driver::motor::Direction::Forward);
+        myMotor->setSpeed(myPlannedSpeed, driver::motor::StopMode::Coast);
+    }
+    else
+        myMotor->stop();
 }
 
 void Logic::logState() noexcept
@@ -193,15 +260,25 @@ void Logic::logState() noexcept
      * note when shifting to next generation of logging (MQTT?), maybe something similar could be done
      */
     static int i = 0;
-    static double accumulatedDistance=0;
+    static double accumulatedDistanceForward{0.0f};
+    static double accumulatedDistanceLeft{0.0f};
+    static double accumulatedDistanceRight{0.0f};
 
-    accumulatedDistance += myDistanceToObstacle;
+    accumulatedDistanceForward += myDistanceToObstacleForward;
+    accumulatedDistanceLeft += myDistanceToObstacleLeft;
+    accumulatedDistanceRight += myDistanceToObstacleRight;
     if(0 == i++%logInterval_ticks)
     {
         char buf[bufLen]{'\0'};
-        std::snprintf(buf, sizeof(buf), "latest Distance: %.2f, period average distance: %.2f.\n", static_cast<double>(myDistanceToObstacle), accumulatedDistance/logInterval_ticks);
+        std::snprintf(buf, sizeof(buf), "latest Forward Distance: %.2f, period average distance: %.2f.\n", static_cast<double>(myDistanceToObstacleForward), accumulatedDistanceForward/logInterval_ticks);
         mySerial->write(buf);
-        accumulatedDistance = 0.0f;
+        std::snprintf(buf, sizeof(buf), "latest Left Distance: %.2f, period average distance: %.2f.\n", static_cast<double>(myDistanceToObstacleLeft), accumulatedDistanceLeft/logInterval_ticks);
+        mySerial->write(buf);
+        std::snprintf(buf, sizeof(buf), "latest Right Distance: %.2f, period average distance: %.2f.\n", static_cast<double>(myDistanceToObstacleRight), accumulatedDistanceRight/logInterval_ticks);
+        mySerial->write(buf);
+        accumulatedDistanceForward = 0.0f;
+        accumulatedDistanceLeft = 0.0f;
+        accumulatedDistanceRight = 0.0f;
     }
 }
 
