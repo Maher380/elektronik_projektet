@@ -44,3 +44,7 @@ desktop.ini
 __pycache__/
 *.py[cod]
 *$py.class
+
+# KiCad local files
+~*.lck
+*.kicad_prl
