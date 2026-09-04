@@ -41,6 +41,11 @@ namespace app::logic
 {
 Logic::~Logic() noexcept = default;
 
+void Logic::setDriverStyle(const DriverStyle style) noexcept
+{
+    myDriverStyle = style;
+}
+
 Logic::Logic(driver::factory::Interface& factory) noexcept
     : myMotorForwardsPwm{factory.pwm(mp6550MotorPwmForwardPin)}
     , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
@@ -49,6 +54,7 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     , myIrSensorLeftAdc{factory.adc(IrSensorLeftAdcPin)}
     , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
     , mySerial({factory.serial(SerialBaudRate)})
+    , mySteeringServoPwm{factory.pwm(steeringServoPwmPin)}
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
     {
@@ -66,6 +72,10 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     if (myIrSensorRightAdc)
     {
         myIrSensorRight = factory.ir_sensor(*myIrSensorRightAdc);
+    }
+    if (mySteeringServoPwm)
+    {
+        mySteeringServo = factory.servo(*mySteeringServoPwm);
     }
 
     setStartState();
@@ -127,6 +137,8 @@ bool Logic::initializeDrivers() noexcept
         !myIrSensorForward ||
         !myIrSensorLeft || 
         !myIrSensorRight ||
+        !mySteeringServoPwm ||
+        !mySteeringServo ||
         !mySerial )
     {
         return false;
@@ -143,6 +155,8 @@ bool Logic::initializeDrivers() noexcept
     myIrSensorLeftAdc->init();
     myIrSensorRightAdc->init();
     myMotor->init();
+    mySteeringServoPwm->init();
+    mySteeringServo->init();
     // no init function for myIrSensorLeft
     // no init function for myIrSensorRight
     // no init function for mySerial
@@ -158,6 +172,8 @@ bool Logic::initializeDrivers() noexcept
         !myIrSensorForward->isInitialized() ||
         !myIrSensorLeft->isInitialized() ||
         !myIrSensorRight->isInitialized() ||
+        !mySteeringServoPwm->isInitialized() ||
+        !mySteeringServo->isInitialized() ||
         !mySerial->isInitialized())
     {
         return false;
@@ -207,31 +223,78 @@ void Logic::getEnvironmentPicture() noexcept
 
 void Logic::decideAction() noexcept
 {
-    float distanceToClosestObject;
-    // set direction based on where closest obstacle is
-    if(myDistanceToObstacleForward > std::min(myDistanceToObstacleLeft, myDistanceToObstacleRight))
+    switch (myDriverStyle)
     {
-        myPlannedHeading = 0.0f;
+    case DriverStyle::DecideAction:
+        decideNormalAction();
+        break;
+    case DriverStyle::SlowLeft:
+        decideSlowLeftAction();
+        break;
+    case DriverStyle::SlowRight:
+        decideSlowRightAction();
+        break;
+    }
+}
+
+void Logic::decideNormalAction() noexcept
+{
+    float distanceToClosestObject;
+    if (myDistanceToObstacleForward > std::min(myDistanceToObstacleLeft, myDistanceToObstacleRight))
+    {
+        myPlannedAction.steeringDegrees = 0.0F;
         distanceToClosestObject = myDistanceToObstacleForward;
     }
     else if (myDistanceToObstacleLeft > myDistanceToObstacleRight)
     {
-        myPlannedHeading = -5.0f;
+        myPlannedAction.steeringDegrees = -5.0F;
         distanceToClosestObject = myDistanceToObstacleLeft;
-    }
-    else 
-    {
-        myPlannedHeading = 5.0f;
-        distanceToClosestObject = myDistanceToObstacleRight;
-    }
-
-    if(distanceToClosestObject < 30.0f) // Example threshold for obstacle detection
-    {
-        myPlannedSpeed = 0.0f; // Stop if too close to an obstacle
     }
     else
     {
-        myPlannedSpeed = 0.5f; // Move forward at a speed of 1 m/s
+        myPlannedAction.steeringDegrees = 5.0F;
+        distanceToClosestObject = myDistanceToObstacleRight;
+    }
+
+    if (distanceToClosestObject < 30.0F)
+    {
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+    }
+    else
+    {
+        myPlannedAction.speed = 0.5F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+    }
+}
+
+void Logic::decideSlowLeftAction() noexcept
+{
+    myPlannedAction.steeringDegrees = -90.0F;
+    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+    {
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+    }
+    else
+    {
+        myPlannedAction.speed = 0.2F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+    }
+}
+
+void Logic::decideSlowRightAction() noexcept
+{
+    myPlannedAction.steeringDegrees = 90.0F;
+    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+    {
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+    }
+    else
+    {
+        myPlannedAction.speed = 0.2F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
     }
 }
 
@@ -242,13 +305,20 @@ void Logic::executeAction() noexcept
         return;
     }
 
-    if (myPlannedSpeed>0.0f)
+    if (mySteeringServo && mySteeringServo->isInitialized())
+    {
+        mySteeringServo->setDirection(myPlannedAction.steeringDegrees);
+    }
+
+    if (myPlannedAction.speed > 0.0F)
     {
         myMotor->setDirection(driver::motor::Direction::Forward);
-        myMotor->setSpeed(myPlannedSpeed, driver::motor::StopMode::Coast);
+        myMotor->setSpeed(myPlannedAction.speed, myPlannedAction.stopMode);
     }
     else
-        myMotor->stop();
+    {
+        myMotor->stop(myPlannedAction.stopMode);
+    }
 }
 
 void Logic::logState() noexcept
@@ -290,15 +360,10 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         getEnvironmentPicture();
         decideAction();
         executeAction();
-        logState();
 
         vTaskDelay(pdMS_TO_TICKS(tickPeriod_ms));
     }
-
-    // if (myMotor)
-    // {
-    //     myMotor->stop(driver::motor::StopMode::Coast);
-    // }
+    myMotor->stop(myPlannedAction.stopMode);
 }
 
 } // namespace app::logic

@@ -11,12 +11,27 @@
 #include "driver/ir_sensor/interface.h"
 #include "driver/motor/interface.h"
 #include "driver/pwm/interface.h"
+#include "driver/servo/interface.h"
 
 #include <atomic>
 #include <cstdint>
 #include <memory>
 
 namespace app::logic {
+
+enum class DriverStyle : std::uint8_t
+{
+    DecideAction,
+    SlowLeft,
+    SlowRight,
+};
+
+struct PlannedAction
+{
+    float speed{0.0F};
+    float steeringDegrees{0.0F};
+    driver::motor::StopMode stopMode{driver::motor::StopMode::Coast};
+};
 
 /**
  * @brief Main system logic for the autonomous car starter application.
@@ -31,6 +46,7 @@ public:
     ~Logic() noexcept;
 
     void run(const std::atomic<bool>& stop) noexcept;
+    void setDriverStyle(DriverStyle style) noexcept;
 
     Logic(const Logic&) = delete;
     Logic& operator=(const Logic&) = delete;
@@ -54,6 +70,9 @@ private:
      * Analyzes the data from getEnvironmentPicture() and determines the appropriate action to take.
      */
     void decideAction() noexcept;
+    void decideNormalAction() noexcept;
+    void decideSlowLeftAction() noexcept;
+    void decideSlowRightAction() noexcept;
 
     /**
      * @brief Execute the decided action.
@@ -87,6 +106,7 @@ private:
     static constexpr std::uint8_t mp6550MotorPwmForwardPin{5U};   // D2 / GPIO5
     static constexpr std::uint8_t mp6550MotorPwmBackwardPin{6U};  // D3 / GPIO6
     static constexpr std::uint8_t mp6550MotorSleepPin{7U};        // D4 / GPIO7
+    static constexpr std::uint8_t steeringServoPwmPin{10U};
 
 
     std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
@@ -100,6 +120,8 @@ private:
     std::unique_ptr<driver::ir_sensor::Interface> myIrSensorLeft;
     std::unique_ptr<driver::ir_sensor::Interface> myIrSensorRight;
     std::unique_ptr<driver::serial::Interface> mySerial;
+    std::unique_ptr<driver::pwm::Interface> mySteeringServoPwm;
+    std::unique_ptr<driver::servo::Interface> mySteeringServo;
 
     bool myBlinkEnabled{false};
     std::uint32_t myPeriodMs{500U};
@@ -111,8 +133,8 @@ private:
 
     // planned action data members can be added here for storing the decided action, etc.
     // For example, you might have an enum or struct to represent the action to be taken
-    float myPlannedSpeed{0.0f}; // Example member variable to store planned speed
-    float myPlannedHeading{0.0f};
+    DriverStyle myDriverStyle{DriverStyle::DecideAction};
+    PlannedAction myPlannedAction{};
 };
 
 } // namespace app::logic
