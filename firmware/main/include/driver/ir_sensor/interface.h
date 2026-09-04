@@ -21,7 +21,7 @@ public:
     /**
      * @brief Read the current distance from the sensor.
      * 
-     * @return Distance in cm
+     * @return Distance in cm, or NaN if no valid reading is available.
      */
     virtual float readDistance() noexcept = 0;
 

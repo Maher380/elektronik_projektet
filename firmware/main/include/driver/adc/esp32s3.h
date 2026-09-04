@@ -6,6 +6,7 @@
 
 #include "driver/adc/interface.h"
 
+#include "esp_adc/adc_cali.h"
 #include "esp_adc/adc_oneshot.h"
 
 namespace driver::adc 
@@ -26,7 +27,7 @@ public:
     /**
      * @brief Destructor.
      */
-    ~Esp32s3() noexcept override = default;
+    ~Esp32s3() noexcept override;
      
     /**
      * @brief Check if the ADC is initialized.
@@ -79,6 +80,8 @@ private:
     adc_channel_t myChannel;
     /** ESP-IDF ADC unit handle. */
     adc_oneshot_unit_handle_t myHandle;
+    /** ESP-IDF calibration handle for this ADC channel. */
+    adc_cali_handle_t myCalibrationHandle;
 };
 
 } // namespace driver::adc 
