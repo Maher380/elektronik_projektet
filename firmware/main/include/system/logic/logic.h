@@ -13,7 +13,9 @@
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
 
+#include <array>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 
@@ -24,6 +26,7 @@ enum class DriverStyle : std::uint8_t
     DecideAction,
     SlowLeft,
     SlowRight,
+    GradualSweep,
 };
 
 struct PlannedAction
@@ -56,6 +59,7 @@ public:
 private:
     void setStartState() noexcept;
     bool initializeDrivers() noexcept;
+    void deinitializeDrivers() noexcept;
     void processWifi() noexcept;
     void processTimer() noexcept;
 
@@ -64,6 +68,7 @@ private:
      * makes use of relevant sensors and stores the data in member variables for further processing.
      */
     void getEnvironmentPicture() noexcept;
+    bool hasValidEnvironmentPicture() const noexcept;
 
     /**
      * @brief Decide on the next action based on the environment picture.
@@ -71,6 +76,7 @@ private:
      */
     void decideAction() noexcept;
     void decideNormalAction() noexcept;
+    void decideGradualSweepAction() noexcept;
     void decideSlowLeftAction() noexcept;
     void decideSlowRightAction() noexcept;
 
@@ -92,9 +98,9 @@ private:
     void logState() noexcept;
 
 
-    static constexpr std::uint8_t IrSensorForwrdAdcPin{1};       // ??
-    static constexpr std::uint8_t IrSensorLeftAdcPin{8};       // ??
-    static constexpr std::uint8_t IrSensorRightAdcPin{9};       // ??
+    static constexpr std::uint8_t IrSensorForwardAdcPin{2U};    // A1
+    static constexpr std::uint8_t IrSensorLeftAdcPin{1U};       // A0
+    static constexpr std::uint8_t IrSensorRightAdcPin{4U};      // A3
 
 
     // l298 Motor
@@ -106,7 +112,7 @@ private:
     static constexpr std::uint8_t mp6550MotorPwmForwardPin{5U};   // D2 / GPIO5
     static constexpr std::uint8_t mp6550MotorPwmBackwardPin{6U};  // D3 / GPIO6
     static constexpr std::uint8_t mp6550MotorSleepPin{7U};        // D4 / GPIO7
-    static constexpr std::uint8_t steeringServoPwmPin{10U};
+    static constexpr std::uint8_t steeringServoPwmPin{9U};        // D6 /
 
 
     std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
@@ -126,14 +132,15 @@ private:
     bool myBlinkEnabled{false};
     std::uint32_t myPeriodMs{500U};
 
-    // Environment picture data members can be added here for storing sensor readings, etc.
-    float myDistanceToObstacleForward{0.0f}; // Example member variable to store distance to closest obstacle forward
-    float myDistanceToObstacleLeft{0.0f}; // Example member variable to store distance to closest obstacle on the left
-    float myDistanceToObstacleRight{0.0f}; // Example member variable to store distance to closest obstacle on the right
+    float myDistanceToObstacleForward{0.0F};
+    float myDistanceToObstacleLeft{0.0F};
+    float myDistanceToObstacleRight{0.0F};
 
     // planned action data members can be added here for storing the decided action, etc.
     // For example, you might have an enum or struct to represent the action to be taken
     DriverStyle myDriverStyle{DriverStyle::DecideAction};
+    float mySweepSteeringDegrees{-90.0F};
+    float mySweepDirection{1.0F};
     PlannedAction myPlannedAction{};
 };
 
