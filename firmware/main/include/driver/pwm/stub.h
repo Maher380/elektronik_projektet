@@ -113,6 +113,17 @@ public:
         return myConfig.frequencyHz;
     }
 
+    bool setFrequencyHz(const std::uint32_t frequencyHz) noexcept override
+    {
+        if (frequencyHz == 0U || frequencyHz > myConfig.resolutionHz)
+        {
+            return false;
+        }
+
+        myConfig.frequencyHz = frequencyHz;
+        return true;
+    }
+
     Stub(const Stub&)            = delete;
     Stub& operator=(const Stub&) = delete;
     Stub(Stub&&)                 = delete;

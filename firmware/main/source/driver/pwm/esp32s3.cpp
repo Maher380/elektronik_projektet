@@ -230,6 +230,34 @@ std::uint32_t Esp32s3::frequencyHz() const noexcept
     return myConfig.frequencyHz;
 }
 
+bool Esp32s3::setFrequencyHz(const std::uint32_t frequencyHz) noexcept
+{
+    if (frequencyHz == 0U || frequencyHz > myConfig.resolutionHz)
+    {
+        return false;
+    }
+
+    const auto newPeriodTicks = myConfig.resolutionHz / frequencyHz;
+    if (newPeriodTicks == 0U)
+    {
+        return false;
+    }
+
+    if (myIsInitialized && mcpwm_timer_set_period(myTimer, newPeriodTicks) != ESP_OK)
+    {
+        return false;
+    }
+
+    myConfig.frequencyHz = frequencyHz;
+    myPeriodTicks = newPeriodTicks;
+    if (myIsInitialized)
+    {
+        return applyDuty(myDuty);
+    }
+
+    return true;
+}
+
 bool Esp32s3::applyDuty(const float duty) noexcept
 {
     if (!isDutyValid(duty) || (myGenerator == nullptr) || (myComparator == nullptr))
