@@ -6,7 +6,7 @@ namespace sys::pin_manager
 {
 namespace
 {
-constexpr std::uint8_t PinMax{47U};
+constexpr std::uint8_t PinMax{48U};
 
 } // namespace
 
@@ -26,7 +26,7 @@ bool Esp32s3::isPinValid(const std::uint8_t pin) const noexcept
     if (PinMax < pin) { return false; }
 
     // Pins to avoid (boot strapping pins).
-    constexpr std::uint8_t invalidPins[]{0U, 2U, 12U, 15U};
+    constexpr std::uint8_t invalidPins[]{0U, 3U, 45U, 46U};
 
     // Check through invalid pins list, return false on match.
     for (const auto invalidPin : invalidPins)

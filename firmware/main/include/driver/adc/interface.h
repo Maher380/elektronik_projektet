@@ -47,8 +47,8 @@ public:
 
     /**
      * @brief Read the input voltage in Volts.
-     * Converts the conversion from raw value to voltage.
-     * * @return Input voltage in Volts.
+     *
+     * @return Calibrated input voltage in Volts, or NaN if the read fails.
      */
     virtual float readVoltage() const noexcept = 0;
 };
