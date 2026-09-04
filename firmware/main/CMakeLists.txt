@@ -8,7 +8,7 @@ idf_component_register(
         "source/driver/motor/l298n.cpp"
         "source/driver/motor/mp6550.cpp"
         "source/driver/pwm/esp32s3.cpp"
-        "source/driver/servo/esp32s3.cpp"
+        "source/driver/servo/vagrant.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"
         "source/driver/timer/esp32s3.cpp"
