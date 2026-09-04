@@ -87,6 +87,9 @@ public:
      */
     std::uint32_t frequencyHz() const noexcept override;
 
+    /** @brief Set the PWM frequency while preserving the current duty cycle. */
+    bool setFrequencyHz(std::uint32_t frequencyHz) noexcept override;
+
     /** @brief Copy construction is disabled because the driver owns hardware handles. */
     Esp32s3(const Esp32s3&)            = delete;
 

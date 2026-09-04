@@ -23,6 +23,7 @@ These are the calls and physical pins used by the current three-sensor code on
 | `factory.pwm(5)` | `~D2` | 〰️ PWM output | MP6550 IN1, forward | 🔵 Used |
 | `factory.pwm(6)` | `~D3` | 〰️ PWM output | MP6550 IN2, reverse | 🔵 Used |
 | `factory.gpioOutput(7)` | `~D4` | 🔌 Digital output | MP6550 nSLEEP | 🔵 Used |
+| `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo | 🔵 Used |
 
 Power connections do not use driver factory calls:
 

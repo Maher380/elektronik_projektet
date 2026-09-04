@@ -14,6 +14,7 @@
 #include "driver/ir_sensor/stub.h"
 #include "driver/motor/stub.h"
 #include "driver/pwm/stub.h"
+#include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
 #include "driver/timer/stub.h"
 #include "driver/wifi/stub.h"
@@ -82,6 +83,17 @@ public:
     }
 
     /**
+     * @brief Create a simulated servo driver instance.
+     *
+     * @param[in] pwm PWM output driver used by the simulated servo (unused).
+     * @return A unique pointer to the created simulated servo interface instance.
+     */
+    std::unique_ptr<servo::Interface> servo(pwm::Interface& pwm) noexcept override {
+        (void)pwm;
+        return std::make_unique<driver::servo::Stub>();
+    }
+
+    /**
      * @brief Create a simulated ADC stub instance.
      *
      * @param[in] pin The hardware pin number to simulate (unused).
@@ -106,18 +118,15 @@ public:
     /**
      * @brief Create a simulated motor stub instance.
      *
-     * @param[in] enablePwm PWM driver used for the motor enable pin.
-     * @param[in] input1 GPIO output driver used for the first motor input pin.
-     * @param[in] input2 GPIO output driver used for the second motor input pin.
+     * @param[in] motorForwardsPwm PWM driver used for the forward input.
+     * @param[in] motorBackwardsPwm PWM driver used for the backward input.
      * @return A unique pointer to the created simulated motor interface instance.
      */
-    std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& enablePwm,
-                                            driver::gpio::Interface& input1,
-                                            driver::gpio::Interface& input2) noexcept override
+    std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& motorForwardsPwm,
+                                            driver::pwm::Interface& motorBackwardsPwm) noexcept override
     {
-        (void)enablePwm;
-        (void)input1;
-        (void)input2;
+        (void)motorForwardsPwm;
+        (void)motorBackwardsPwm;
         return std::make_unique<driver::motor::Stub>();
     }
 

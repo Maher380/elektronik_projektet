@@ -23,14 +23,18 @@ namespace test
 bool runPinManagerTest(sys::pin_manager::Interface& manager) noexcept
 {
     constexpr std::uint8_t validPin{1U};
+    constexpr std::uint8_t validAdcPin{2U};
     constexpr std::uint8_t invalidBootPin{0U};
-    constexpr std::uint8_t invalidOutOfRangePin{48U};
+    constexpr std::uint8_t invalidStrappingPin{3U};
+    constexpr std::uint8_t invalidOutOfRangePin{49U};
 
     manager.releasePin(validPin);
 
     if (!expect(manager.isPinValid(validPin), "pin 1 should be valid")) { return false; }
+    if (!expect(manager.isPinValid(validAdcPin), "ADC pin 2 should be valid")) { return false; }
     if (!expect(!manager.isPinValid(invalidBootPin), "pin 0 should be invalid")) { return false; }
-    if (!expect(!manager.isPinValid(invalidOutOfRangePin), "pin 48 should be invalid")) { return false; }
+    if (!expect(!manager.isPinValid(invalidStrappingPin), "strapping pin 3 should be invalid")) { return false; }
+    if (!expect(!manager.isPinValid(invalidOutOfRangePin), "pin 49 should be invalid")) { return false; }
 
     if (!expect(!manager.isPinBusy(validPin), "valid pin should not be busy before reservation")) { return false; }
     if (!expect(manager.reservePin(validPin), "valid pin reservation should succeed")) { return false; }
