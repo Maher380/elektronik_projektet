@@ -26,6 +26,11 @@ bool Vagrant::init() noexcept
         return false;
     }
 
+    if (!myPwm.setDuty(0.5F))
+    {
+        return false;
+    }
+
     myIsInitialized = true;
     return center();
 }
@@ -53,14 +58,18 @@ bool Vagrant::setDirection(const float angleDegrees) noexcept
         return false;
     }
 
-    const std::uint32_t frequency = angleDegrees <= 0.0F
-        ? MinFrequencyHz + static_cast<std::uint32_t>((angleDegrees - MinAngleDegrees) *
+    // The physical servo is mounted with the steering direction reversed.
+    // Invert the requested angle before converting it to PWM frequency so the
+    // logical left/right commands match the actual steering direction.
+    const float mirroredAngleDegrees = -angleDegrees;
+    const std::uint32_t frequency = mirroredAngleDegrees <= 0.0F
+        ? MinFrequencyHz + static_cast<std::uint32_t>((mirroredAngleDegrees - MinAngleDegrees) *
                                                        (CenterFrequencyHz - MinFrequencyHz) /
                                                        (0.0F - MinAngleDegrees))
-        : CenterFrequencyHz + static_cast<std::uint32_t>(angleDegrees *
+        : CenterFrequencyHz + static_cast<std::uint32_t>(mirroredAngleDegrees *
                                                           (MaxFrequencyHz - CenterFrequencyHz) /
                                                           MaxAngleDegrees);
-    if (!myPwm.setFrequencyHz(frequency))
+    if (myPwm.frequencyHz() != frequency && !myPwm.setFrequencyHz(frequency))
     {
         return false;
     }

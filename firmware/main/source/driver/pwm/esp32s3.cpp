@@ -8,6 +8,7 @@
 #include "system/pin_manager/esp32s3.h"
 
 #include "esp_err.h"
+#include "esp_log.h"
 
 namespace driver::pwm
 {
@@ -15,6 +16,7 @@ namespace
 {
 /** Shared pin manager used to reserve the PWM output GPIO. */
 auto& myPinManager = sys::pin_manager::Esp32s3::instance();
+constexpr auto* LogTag = "pwm";
 
 /**
  * @brief Check if a duty cycle is inside the supported PWM range.
@@ -243,18 +245,28 @@ bool Esp32s3::setFrequencyHz(const std::uint32_t frequencyHz) noexcept
         return false;
     }
 
+    const auto oldPeriodTicks = myPeriodTicks;
     if (myIsInitialized && mcpwm_timer_set_period(myTimer, newPeriodTicks) != ESP_OK)
     {
         return false;
     }
 
-    myConfig.frequencyHz = frequencyHz;
     myPeriodTicks = newPeriodTicks;
     if (myIsInitialized)
     {
-        return applyDuty(myDuty);
+        if (!applyDuty(myDuty))
+        {
+            myPeriodTicks = oldPeriodTicks;
+            if (mcpwm_timer_set_period(myTimer, oldPeriodTicks) != ESP_OK)
+            {
+                ESP_LOGE(LogTag, "Failed to restore PWM period after frequency update failure");
+            }
+            return false;
+        }
     }
 
+    myConfig.frequencyHz = frequencyHz;
+    ESP_LOGI(LogTag, "PWM frequency set to %u Hz, period %u ticks", frequencyHz, myPeriodTicks);
     return true;
 }
 
