@@ -6,6 +6,7 @@
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"
 #include "driver/pwm/esp32s3.h"
+#include "driver/servo/vagrant.h"
 #include "driver/serial/esp32s3.h"
 #include "driver/timer/esp32s3.h"
 #include "driver/wifi/esp32s3.h"
@@ -42,6 +43,10 @@ std::unique_ptr<pwm::Interface> Esp32s3::pwm(std::uint8_t pin) noexcept {
 std::unique_ptr<pwm::Interface> Esp32s3::pwm(const driver::pwm::Config& config) noexcept {
     // Create a real PWM output using an explicit PWM configuration.
     return std::make_unique<driver::pwm::Esp32s3>(config);
+}
+
+std::unique_ptr<servo::Interface> Esp32s3::servo(driver::pwm::Interface& pwm) noexcept {
+    return std::make_unique<driver::servo::Vagrant>(pwm);
 }
 
 std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& MotorForwardsPwm,

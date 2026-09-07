@@ -1,7 +1,8 @@
-#include <algorithm>
-#include <array>
-#include <cmath>
 #include <cstdio>
+
+#include <algorithm>
+#include <cmath>
+#include <cstddef>
 #include <limits>
 
 #include "system/logic/logic.h"
@@ -20,14 +21,19 @@
 
 namespace
 {
+    constexpr std::uint8_t AdcPin{1U};
     constexpr std::uint8_t LedPin{6U};
     constexpr std::uint32_t DefaultPeriodMs{500U};
     constexpr std::uint32_t SerialBaudRate{115200U};
+    constexpr driver::pwm::Config SteeringPwmConfig{
+        .pin = 9U,
+        .frequencyHz = 300U,
+    };
     constexpr const char *WifiSsid{CONFIG_CNB_WIFI_SSID};
     constexpr const char *WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
     
 
-    constexpr std::size_t bufLen{192U};
+    constexpr std::uint8_t bufLen{192U};
     // @brief the sleep period between two ticks. 50 ms -> 20 Hz 
     constexpr int tickPeriod_ms{50U};
 
@@ -42,36 +48,57 @@ namespace app::logic
 {
 Logic::~Logic() noexcept = default;
 
+void Logic::setDriverStyle(const DriverStyle style) noexcept
+{
+    myDriverStyle = style;
+    if (style == DriverStyle::GradualSweep)
+    {
+        mySweepSteeringDegrees = -90.0F;
+        mySweepDirection = 1.0F;
+    }
+}
+
 Logic::Logic(driver::factory::Interface& factory) noexcept
     : myMotorForwardsPwm{factory.pwm(mp6550MotorPwmForwardPin)}
     , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
     , myMotorSleep{factory.gpioOutput(mp6550MotorSleepPin)}
+    , myIrSensorForwardAdc{factory.adc(IrSensorForwardAdcPin)}
+    , myIrSensorLeftAdc{factory.adc(IrSensorLeftAdcPin)}
+    , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
     , mySerial({factory.serial(SerialBaudRate)})
+    , mySteeringServoPwm{factory.pwm(SteeringPwmConfig)}
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
     {
         myMotor = factory.motor(*myMotorForwardsPwm, *myMotorBackwardsPwm);
     }
 
-    for (std::size_t index{0U}; index < IrSensorCount; ++index)
+    if (myIrSensorForwardAdc)
     {
-        // Create ADC, then create IR sensor with it if allocated.
-        myIrSensorAdcs[index] = factory.adc(IrSensorAdcPins[index]);
-
-        if (nullptr != myIrSensorAdcs[index])
-        {
-            myIrSensors[index] = factory.ir_sensor(*myIrSensorAdcs[index]);
-        }
-        else { break; }
+        myIrSensorForward = factory.ir_sensor(*myIrSensorForwardAdc);
+    }
+    if (myIrSensorLeftAdc)
+    {
+        myIrSensorLeft = factory.ir_sensor(*myIrSensorLeftAdc);
+    }
+    if (myIrSensorRightAdc)
+    {
+        myIrSensorRight = factory.ir_sensor(*myIrSensorRightAdc);
+    }
+    if (mySteeringServoPwm)
+    {
+        mySteeringServo = factory.servo(*mySteeringServoPwm);
     }
 
     setStartState();
     if (!initializeDrivers())
     {
-        if (mySerial && mySerial->isInitialized())
+        if (mySerial)
         {
             mySerial->write("Initialization failed!\n");
         }
+
+        deinitializeDrivers();
 
         while (true)
         {
@@ -84,8 +111,8 @@ void Logic::setStartState() noexcept
 {
     myBlinkEnabled = false;
     myPeriodMs = DefaultPeriodMs;
-    myDistancesToObstacles.fill(std::numeric_limits<float>::quiet_NaN());
-    myPlannedSpeed = 0.0F;
+    mySweepSteeringDegrees = -90.0F;
+    mySweepDirection = 1.0F;
 
     // if (myLed) { myLed->write(false); }
 
@@ -98,16 +125,15 @@ void Logic::setStartState() noexcept
 
 bool Logic::initializeDrivers() noexcept
 {
-    if (!mySerial)
+    if (mySerial &&mySerial->connect())
+    {
+        mySerial->write("CnB serial ready\n");
+    }
+    else
     {
         return false;
     }
 
-    if (!mySerial->isInitialized() && !mySerial->connect())
-    {
-        return false;
-    }
-    mySerial->write("CnB serial ready\n");
 
 // #if CONFIG_CNB_ENABLE_WIFI
 //     if (myWifi && !myWifi->isConnected())
@@ -115,42 +141,102 @@ bool Logic::initializeDrivers() noexcept
 //         myWifi->connect();
 //     }
 // #endif
-    if (!myMotorForwardsPwm || !myMotorBackwardsPwm || !myMotorSleep || !myMotor)
+    // Verify that all required driver objects were created.
+    if (!myMotorForwardsPwm || 
+        !myMotorBackwardsPwm || 
+        !myMotorSleep ||
+        !myIrSensorForwardAdc || 
+        !myIrSensorLeftAdc || 
+        !myIrSensorRightAdc || 
+        !myMotor || 
+        !myIrSensorForward ||
+        !myIrSensorLeft || 
+        !myIrSensorRight ||
+        !mySteeringServoPwm ||
+        !mySteeringServo ||
+        !mySerial )
     {
         return false;
     }
 
-    for (std::size_t index{0U}; index < IrSensorCount; ++index)
-    {
-        if (!myIrSensorAdcs[index] || !myIrSensors[index])
-        {
-            return false;
-        }
+    // Initialize drivers that expose an explicit init operation.
+    // The GPIO output is initialized by its constructor.
+    // IR sensors become ready when their ADC dependencies are initialized.
+    // Serial is prepared through connect() above.
+    myMotorForwardsPwm->init();
+    myMotorBackwardsPwm->init();
+    // no init function for myMotorSleep
+    myIrSensorForwardAdc->init();
+    myIrSensorLeftAdc->init();
+    myIrSensorRightAdc->init();
+    myMotor->init();
+    mySteeringServoPwm->init();
+    mySteeringServo->init();
+    // no init function for myIrSensorLeft
+    // no init function for myIrSensorRight
+    // no init function for mySerial
 
-        if (!myIrSensorAdcs[index]->isInitialized() && !myIrSensorAdcs[index]->init())
-        {
-            return false;
-        }
-
-        if (!myIrSensors[index]->isInitialized())
-        {
-            return false;
-        }
-    }
-
-    if (!myMotorSleep->isInitialized())
+    // Verify that all required drivers are initialized and ready.
+    if (!myMotorForwardsPwm->isInitialized() ||
+        !myMotorBackwardsPwm->isInitialized() ||
+        !myMotorSleep->isInitialized() ||
+        !myIrSensorForwardAdc->isInitialized() ||
+        !myIrSensorLeftAdc->isInitialized() ||
+        !myIrSensorRightAdc->isInitialized() ||
+        !myMotor->isInitialized() ||
+        !myIrSensorForward->isInitialized() ||
+        !myIrSensorLeft->isInitialized() ||
+        !myIrSensorRight->isInitialized() ||
+        !mySteeringServoPwm->isInitialized() ||
+        !mySteeringServo->isInitialized() ||
+        !mySerial->isInitialized())
     {
         return false;
     }
 
     myMotorSleep->write(true); // nSLEEP_HB HIGH keeps MP6550 awake.
 
-    if (!myMotor->isInitialized() && !myMotor->init())
-    {
-        return false;
-    }
-
     return true;
+}
+
+void Logic::deinitializeDrivers() noexcept
+{
+    if (mySteeringServo && mySteeringServo->isInitialized())
+    {
+        mySteeringServo->deinit();
+    }
+    if (myMotor && myMotor->isInitialized())
+    {
+        myMotor->deinit();
+    }
+    if (myIrSensorForwardAdc && myIrSensorForwardAdc->isInitialized())
+    {
+        myIrSensorForwardAdc->deinit();
+    }
+    if (myIrSensorLeftAdc && myIrSensorLeftAdc->isInitialized())
+    {
+        myIrSensorLeftAdc->deinit();
+    }
+    if (myIrSensorRightAdc && myIrSensorRightAdc->isInitialized())
+    {
+        myIrSensorRightAdc->deinit();
+    }
+    if (myMotorForwardsPwm && myMotorForwardsPwm->isInitialized())
+    {
+        myMotorForwardsPwm->deinit();
+    }
+    if (myMotorBackwardsPwm && myMotorBackwardsPwm->isInitialized())
+    {
+        myMotorBackwardsPwm->deinit();
+    }
+    if (mySteeringServoPwm && mySteeringServoPwm->isInitialized())
+    {
+        mySteeringServoPwm->deinit();
+    }
+    if (mySerial && mySerial->isInitialized())
+    {
+        mySerial->disconnect();
+    }
 }
 
 void Logic::processWifi() noexcept
@@ -174,35 +260,167 @@ void Logic::processTimer() noexcept
 
 void Logic::getEnvironmentPicture() noexcept
 {
-    for (std::size_t index{0U}; index < IrSensorCount; ++index)
+    //Check if all sensors are functional
+    if (myIrSensorForward && myIrSensorForward->isInitialized() &&
+        myIrSensorLeft    && myIrSensorLeft->isInitialized()    &&
+        myIrSensorRight   && myIrSensorRight->isInitialized()   )
     {
-        if (myIrSensors[index] && myIrSensors[index]->isInitialized())
-        {
-            myDistancesToObstacles[index] = myIrSensors[index]->readDistance();
-        }
-        else
-        {
-            myDistancesToObstacles[index] = std::numeric_limits<float>::quiet_NaN();
-        }
+        myDistanceToObstacleForward = myIrSensorForward->readDistance();
+        myDistanceToObstacleLeft    = myIrSensorLeft->readDistance();
+        myDistanceToObstacleRight   = myIrSensorRight->readDistance();
+        return;
     }
+
+    const auto invalidDistance = std::numeric_limits<float>::quiet_NaN();
+    myDistanceToObstacleForward = invalidDistance;
+    myDistanceToObstacleLeft = invalidDistance;
+    myDistanceToObstacleRight = invalidDistance;
+}
+
+bool Logic::hasValidEnvironmentPicture() const noexcept
+{
+    return std::isfinite(myDistanceToObstacleForward) &&
+           std::isfinite(myDistanceToObstacleLeft) &&
+           std::isfinite(myDistanceToObstacleRight);
 }
 
 void Logic::decideAction() noexcept
 {
-    const bool allDistancesValid = std::all_of(
-        myDistancesToObstacles.begin(),
-        myDistancesToObstacles.end(),
-        [](const float distance) { return std::isfinite(distance) && (distance > 0.0F); });
-
-    if (!allDistancesValid)
+    switch (myDriverStyle)
     {
-        myPlannedSpeed = 0.0F;
+    case DriverStyle::DecideAction:
+        decideNormalAction();
+        break;
+    case DriverStyle::GradualSweep:
+        decideGradualSweepAction();
+        break;
+    case DriverStyle::SlowLeft:
+        decideSlowLeftAction();
+        break;
+    case DriverStyle::SlowRight:
+        decideSlowRightAction();
+        break;
+    }
+}
+
+void Logic::decideNormalAction() noexcept
+{
+    if (!hasValidEnvironmentPicture())
+    {
+        myPlannedAction.steeringDegrees = 0.0F;
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
         return;
     }
 
-    const auto closestObstacle = std::min_element(
-        myDistancesToObstacles.begin(), myDistancesToObstacles.end());
-    myPlannedSpeed = (*closestObstacle < 30.0F) ? 0.0F : 0.5F;
+    float distanceToClosestObject;
+    if (myDistanceToObstacleForward > std::max(myDistanceToObstacleLeft, myDistanceToObstacleRight))
+    {
+        myPlannedAction.steeringDegrees = 0.0F;
+        distanceToClosestObject = myDistanceToObstacleForward;
+    }
+    else if (myDistanceToObstacleLeft > myDistanceToObstacleRight)
+    {
+        myPlannedAction.steeringDegrees = -90.0F;
+        distanceToClosestObject = myDistanceToObstacleLeft;
+    }
+    else
+    {
+        myPlannedAction.steeringDegrees = 90.0F;
+        distanceToClosestObject = myDistanceToObstacleRight;
+    }
+
+    if (distanceToClosestObject < 30.0F)
+    {
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+    }
+    else
+    {
+        myPlannedAction.speed = 0.5F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+    }
+}
+
+void Logic::decideGradualSweepAction() noexcept
+{
+    constexpr float SweepStepDegrees{5.0F};
+
+    if (!hasValidEnvironmentPicture())
+    {
+        myPlannedAction.steeringDegrees = 0.0F;
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+        return;
+    }
+
+    myPlannedAction.steeringDegrees = mySweepSteeringDegrees;
+    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+    {
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+    }
+    else
+    {
+        myPlannedAction.speed = 0.2F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+    }
+
+    if (mySweepSteeringDegrees >= 90.0F)
+    {
+        mySweepDirection = -1.0F;
+    }
+    else if (mySweepSteeringDegrees <= -90.0F)
+    {
+        mySweepDirection = 1.0F;
+    }
+    mySweepSteeringDegrees += mySweepDirection * SweepStepDegrees;
+}
+
+void Logic::decideSlowLeftAction() noexcept
+{
+    if (!hasValidEnvironmentPicture())
+    {
+        myPlannedAction.steeringDegrees = 0.0F;
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+        return;
+    }
+
+    myPlannedAction.steeringDegrees = -90.0F;
+    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+    {
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+    }
+    else
+    {
+        myPlannedAction.speed = 0.2F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+    }
+}
+
+void Logic::decideSlowRightAction() noexcept
+{
+    if (!hasValidEnvironmentPicture())
+    {
+        myPlannedAction.steeringDegrees = 0.0F;
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+        return;
+    }
+
+    myPlannedAction.steeringDegrees = 90.0F;
+    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+    {
+        myPlannedAction.speed = 0.0F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+    }
+    else
+    {
+        myPlannedAction.speed = 0.2F;
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+    }
 }
 
 void Logic::executeAction() noexcept
@@ -212,8 +430,20 @@ void Logic::executeAction() noexcept
         return;
     }
 
-    myMotor->setDirection(driver::motor::Direction::Forward);
-    myMotor->setSpeed(myPlannedSpeed, driver::motor::StopMode::Coast);
+    if (mySteeringServo && mySteeringServo->isInitialized())
+    {
+        mySteeringServo->setDirection(myPlannedAction.steeringDegrees);
+    }
+
+    if (myPlannedAction.speed > 0.0F)
+    {
+        myMotor->setDirection(driver::motor::Direction::Forward);
+        myMotor->setSpeed(myPlannedAction.speed, myPlannedAction.stopMode);
+    }
+    else
+    {
+        myMotor->stop(myPlannedAction.stopMode);
+    }
 }
 
 void Logic::logState() noexcept
@@ -224,47 +454,67 @@ void Logic::logState() noexcept
      * by the number of measurements made. Print both average value and latest value.
      * note when shifting to next generation of logging (MQTT?), maybe something similar could be done
      */
-    static std::array<double, IrSensorCount> accumulatedDistances{};
-    static std::array<std::size_t, IrSensorCount> validSamples{};
+    static double accumulatedDistanceForward{0.0};
+    static double accumulatedDistanceLeft{0.0};
+    static double accumulatedDistanceRight{0.0};
+    static std::size_t validSamplesForward{0U};
+    static std::size_t validSamplesLeft{0U};
+    static std::size_t validSamplesRight{0U};
     static std::size_t sampleCount{0U};
 
-    for (std::size_t index{0U}; index < IrSensorCount; ++index)
+    if (std::isfinite(myDistanceToObstacleForward))
     {
-        if (std::isfinite(myDistancesToObstacles[index]))
-        {
-            accumulatedDistances[index] += myDistancesToObstacles[index];
-            ++validSamples[index];
-        }
+        accumulatedDistanceForward += myDistanceToObstacleForward;
+        ++validSamplesForward;
+    }
+    if (std::isfinite(myDistanceToObstacleLeft))
+    {
+        accumulatedDistanceLeft += myDistanceToObstacleLeft;
+        ++validSamplesLeft;
+    }
+    if (std::isfinite(myDistanceToObstacleRight))
+    {
+        accumulatedDistanceRight += myDistanceToObstacleRight;
+        ++validSamplesRight;
     }
 
     ++sampleCount;
     if (sampleCount >= static_cast<std::size_t>(logInterval_ticks))
     {
         char buf[bufLen]{'\0'};
-        std::array<double, IrSensorCount> averages{};
-
-        for (std::size_t index{0U}; index < IrSensorCount; ++index)
-        {
-            averages[index] = validSamples[index] > 0U
-                ? accumulatedDistances[index] / static_cast<double>(validSamples[index])
-                : std::numeric_limits<double>::quiet_NaN();
-        }
+        const double averageLeft = validSamplesLeft > 0U
+            ? accumulatedDistanceLeft / static_cast<double>(validSamplesLeft)
+            : std::numeric_limits<double>::quiet_NaN();
+        const double averageForward = validSamplesForward > 0U
+            ? accumulatedDistanceForward / static_cast<double>(validSamplesForward)
+            : std::numeric_limits<double>::quiet_NaN();
+        const double averageRight = validSamplesRight > 0U
+            ? accumulatedDistanceRight / static_cast<double>(validSamplesRight)
+            : std::numeric_limits<double>::quiet_NaN();
 
         std::snprintf(
             buf,
             sizeof(buf),
-            "IR cm L: %.2f (avg %.2f), C: %.2f (avg %.2f), R: %.2f (avg %.2f)\n",
-            static_cast<double>(myDistancesToObstacles[0]), averages[0],
-            static_cast<double>(myDistancesToObstacles[1]), averages[1],
-            static_cast<double>(myDistancesToObstacles[2]), averages[2]);
+            "IR cm L: %.2f (avg %.2f), C: %.2f (avg %.2f), R: %.2f (avg %.2f), "
+            "Direction: %.1f deg, Speed: %.2f, Brake mode: %s\n",
+            static_cast<double>(myDistanceToObstacleLeft), averageLeft,
+            static_cast<double>(myDistanceToObstacleForward), averageForward,
+            static_cast<double>(myDistanceToObstacleRight), averageRight,
+            static_cast<double>(myPlannedAction.steeringDegrees),
+            static_cast<double>(myPlannedAction.speed),
+            myPlannedAction.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast");
 
         if (mySerial && mySerial->isInitialized())
         {
             mySerial->write(buf);
         }
 
-        accumulatedDistances.fill(0.0);
-        validSamples.fill(0U);
+        accumulatedDistanceForward = 0.0;
+        accumulatedDistanceLeft = 0.0;
+        accumulatedDistanceRight = 0.0;
+        validSamplesForward = 0U;
+        validSamplesLeft = 0U;
+        validSamplesRight = 0U;
         sampleCount = 0U;
     }
 }
@@ -281,11 +531,7 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 
         vTaskDelay(pdMS_TO_TICKS(tickPeriod_ms));
     }
-
-    // if (myMotor)
-    // {
-    //     myMotor->stop(driver::motor::StopMode::Coast);
-    // }
+    myMotor->stop(myPlannedAction.stopMode);
 }
 
 } // namespace app::logic

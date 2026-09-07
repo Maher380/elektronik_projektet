@@ -97,5 +97,13 @@ public:
      */
     virtual std::uint32_t frequencyHz() const noexcept = 0;
 
+    /**
+     * @brief Set the PWM frequency.
+     *
+     * @param[in] frequencyHz Frequency in Hz.
+     * @return True if the frequency was accepted.
+     */
+    virtual bool setFrequencyHz(std::uint32_t frequencyHz) noexcept = 0;
+
 };
 } // namespace driver::pwm

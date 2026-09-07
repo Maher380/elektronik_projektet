@@ -13,6 +13,7 @@ namespace driver::adc { class Interface; }
 namespace driver::gpio { class Interface; }
 namespace driver::motor { class Interface; }
 namespace driver::pwm { struct Config; class Interface; }
+namespace driver::servo { class Interface; }
 namespace driver::serial { class Interface; }
 namespace driver::timer { class Interface; }
 namespace driver::wifi { class Interface; }
@@ -67,6 +68,14 @@ public:
      * @return A unique pointer to the created PWM interface instance.
      */
     virtual std::unique_ptr<pwm::Interface> pwm(const pwm::Config& config) noexcept = 0;
+
+    /**
+     * @brief Create a servo driver instance backed by a PWM output.
+     *
+     * @param[in] pwm PWM output driver used to control the servo signal.
+     * @return A unique pointer to the created servo interface instance.
+     */
+    virtual std::unique_ptr<servo::Interface> servo(pwm::Interface& pwm) noexcept = 0;
 
     /**
      * @brief Create an Ir sensor driver instance.
