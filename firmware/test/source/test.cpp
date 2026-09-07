@@ -1,5 +1,8 @@
+#include <array>
+#include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <memory>
 
 #include "system/pin_manager/esp32s3.h"
 #include "test/pin_manager.h"
@@ -19,6 +22,12 @@ int main()
 
     driver::adc::Stub testAdc;
     driver::ir_sensor::Esp32s3 testSensor{testAdc};
+
+    if (!std::isnan(testSensor.readDistance()))
+    {
+        std::printf("Uninitialized IR sensor should report an invalid reading\n");
+        return -1;
+    }
 
     if (!testAdc.init())
     {
@@ -109,15 +118,35 @@ int main()
     }
 
     driver::factory::Stub testFactory;
-    auto factoryPwm = testFactory.pwm(3U);
-    auto factoryInput1 = testFactory.gpioOutput(4U);
-    auto factoryInput2 = testFactory.gpioOutput(5U);
-    auto factoryMotor = testFactory.motor(*factoryPwm, *factoryInput1, *factoryInput2);
+    auto factoryPwmForward = testFactory.pwm(5U);
+    auto factoryPwmBackward = testFactory.pwm(6U);
 
-    if (!factoryPwm || !factoryInput1 || !factoryInput2 || !factoryMotor || !factoryMotor->init())
+    if (!factoryPwmForward || !factoryPwmBackward)
+    {
+        std::printf("Factory PWM test failed\n");
+        return -1;
+    }
+
+    auto factoryMotor = testFactory.motor(*factoryPwmForward, *factoryPwmBackward);
+    if (!factoryMotor || !factoryMotor->init())
     {
         std::printf("Factory motor test failed\n");
         return -1;
+    }
+
+    std::array<std::unique_ptr<driver::adc::Interface>, 3U> factoryAdcs{
+        testFactory.adc(1U),
+        testFactory.adc(2U),
+        testFactory.adc(4U),
+    };
+
+    for (auto& adc : factoryAdcs)
+    {
+        if (!adc || !adc->init() || !std::isfinite(adc->readVoltage()))
+        {
+            std::printf("Factory multi-channel ADC test failed\n");
+            return -1;
+        }
     }
 
     std::printf("All tests succeeded!\n");

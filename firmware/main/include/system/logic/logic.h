@@ -12,7 +12,9 @@
 #include "driver/motor/interface.h"
 #include "driver/pwm/interface.h"
 
+#include <array>
 #include <atomic>
+#include <cstddef>
 #include <cstdint>
 #include <memory>
 
@@ -73,7 +75,12 @@ private:
     void logState() noexcept;
 
 
-    static constexpr std::uint8_t IrSensorAdcPin{1};       // A0
+    static constexpr std::size_t IrSensorCount{3U};
+    static constexpr std::array<std::uint8_t, IrSensorCount> IrSensorAdcPins{
+        1U, // A0 / GPIO1 / ADC1_CH0
+        2U, // A1 / GPIO2 / ADC1_CH1
+        4U, // A3 / GPIO4 / ADC1_CH3; A2/GPIO3 is a strapping pin.
+    };
 
 
     // l298 Motor
@@ -90,16 +97,16 @@ private:
     std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
     std::unique_ptr<driver::pwm::Interface> myMotorBackwardsPwm;
     std::unique_ptr<driver::gpio::Interface> myMotorSleep;
-    std::unique_ptr<driver::adc::Interface> myIrSensorAdc;
+    std::array<std::unique_ptr<driver::adc::Interface>, IrSensorCount> myIrSensorAdcs;
     std::unique_ptr<driver::motor::Interface> myMotor;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensor;
+    std::array<std::unique_ptr<driver::ir_sensor::Interface>, IrSensorCount> myIrSensors;
     std::unique_ptr<driver::serial::Interface> mySerial;
 
     bool myBlinkEnabled{false};
     std::uint32_t myPeriodMs{500U};
 
-    // Environment picture data members can be added here for storing sensor readings, etc.
-    float myDistanceToObstacle{0.0f}; // Example member variable to store distance to an obstacle
+    // Distances are ordered left, center, right.
+    std::array<float, IrSensorCount> myDistancesToObstacles{};
 
 
     // planned action data members can be added here for storing the decided action, etc.

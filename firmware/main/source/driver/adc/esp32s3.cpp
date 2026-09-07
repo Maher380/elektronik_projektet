@@ -1,24 +1,78 @@
-#include <cstdio>
+#include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <mutex>
 
 #include "driver/adc/esp32s3.h"
 #include "system/pin_manager/esp32s3.h"
-#include "esp_log.h"
+#include "esp_adc/adc_cali_scheme.h"
 
 namespace driver::adc 
 {
 namespace
 {
+constexpr adc_atten_t AdcAttenuation{ADC_ATTEN_DB_12};
+constexpr adc_bitwidth_t AdcBitWidth{ADC_BITWIDTH_DEFAULT};
 
-bool isAdcPin(const std::uint8_t pin) noexcept 
+class SharedAdcUnit final
 {
-    return (pin >= 1U) && (pin <= 10U);
-}
+public:
+    bool acquire(adc_oneshot_unit_handle_t& handle) noexcept
+    {
+        std::lock_guard<std::mutex> lock{myMutex};
 
+        if (!myHandle)
+        {
+            adc_oneshot_unit_init_cfg_t unitConfig{};
+            unitConfig.unit_id = ADC_UNIT_1;
+            unitConfig.ulp_mode = ADC_ULP_MODE_DISABLE;
 
-adc_channel_t pinToAdc1Channel(const std::uint8_t pin) noexcept
+            if (adc_oneshot_new_unit(&unitConfig, &myHandle) != ESP_OK)
+            {
+                return false;
+            }
+        }
+
+        ++myUsers;
+        handle = myHandle;
+        return true;
+    }
+
+    bool release(adc_oneshot_unit_handle_t handle) noexcept
+    {
+        std::lock_guard<std::mutex> lock{myMutex};
+
+        if (!myHandle || (handle != myHandle) || (myUsers == 0U))
+        {
+            return false;
+        }
+
+        --myUsers;
+        if (myUsers != 0U)
+        {
+            return true;
+        }
+
+        if (adc_oneshot_del_unit(myHandle) != ESP_OK)
+        {
+            ++myUsers;
+            return false;
+        }
+
+        myHandle = nullptr;
+        return true;
+    }
+
+private:
+    std::mutex myMutex;
+    adc_oneshot_unit_handle_t myHandle{nullptr};
+    std::size_t myUsers{0U};
+};
+
+SharedAdcUnit& sharedAdcUnit() noexcept
 {
-    return static_cast<adc_channel_t>(pin - 1U);
+    static SharedAdcUnit unit{};
+    return unit;
 }
 
 // Singleton pin manager instance.
@@ -31,8 +85,16 @@ Esp32s3::Esp32s3(std::uint8_t pin) noexcept
     , myPin{pin}
     , myChannel{ADC_CHANNEL_0}
     , myHandle{nullptr}
+    , myCalibrationHandle{nullptr}
 {}
 
+Esp32s3::~Esp32s3() noexcept
+{
+    if (myState)
+    {
+        deinit();
+    }
+}
 
 bool Esp32s3::isInitialized() const noexcept 
 {
@@ -46,8 +108,9 @@ bool Esp32s3::init() noexcept
         return false;
     }
 
-    // Return false on invalid ADC pin.
-    if (!isAdcPin(myPin))
+    adc_unit_t unit{ADC_UNIT_1};
+    if ((adc_oneshot_io_to_channel(myPin, &unit, &myChannel) != ESP_OK) ||
+        (unit != ADC_UNIT_1))
     {
         return false;
     }
@@ -58,29 +121,33 @@ bool Esp32s3::init() noexcept
         return false;
     }
 
-    // ADC1 only: GPIO1 maps to ADC_CHANNEL_0.
-    myChannel = pinToAdc1Channel(myPin);
-
-    // Configure default mode.
-    adc_oneshot_unit_init_cfg_t unitConfig{};
-    unitConfig.unit_id = ADC_UNIT_1;
-    unitConfig.ulp_mode = ADC_ULP_MODE_DISABLE;
-
-    // Create the ESP-IDF ADC unit before configuring the channel.
-    // ESP-IDF returns ESP_OK on success.
-    if (adc_oneshot_new_unit(&unitConfig, &myHandle) != ESP_OK)
+    if (!sharedAdcUnit().acquire(myHandle))
     {
         myPinManager.releasePin(myPin);
         return false;
     }
     adc_oneshot_chan_cfg_t channelConfig = {};
-    channelConfig.bitwidth = ADC_BITWIDTH_DEFAULT;
-    channelConfig.atten = ADC_ATTEN_DB_12;
+    channelConfig.bitwidth = AdcBitWidth;
+    channelConfig.atten = AdcAttenuation;
 
     // Release resources on configuration failure.
     if (adc_oneshot_config_channel(myHandle, myChannel, &channelConfig) != ESP_OK)
     {
-        adc_oneshot_del_unit(myHandle);
+        sharedAdcUnit().release(myHandle);
+        myHandle = nullptr;
+        myPinManager.releasePin(myPin);
+        return false;
+    }
+
+    adc_cali_curve_fitting_config_t calibrationConfig{};
+    calibrationConfig.unit_id = ADC_UNIT_1;
+    calibrationConfig.chan = myChannel;
+    calibrationConfig.atten = AdcAttenuation;
+    calibrationConfig.bitwidth = AdcBitWidth;
+
+    if (adc_cali_create_scheme_curve_fitting(&calibrationConfig, &myCalibrationHandle) != ESP_OK)
+    {
+        sharedAdcUnit().release(myHandle);
         myHandle = nullptr;
         myPinManager.releasePin(myPin);
         return false;
@@ -96,8 +163,17 @@ bool Esp32s3::deinit() noexcept
     // Return false if init() never succeeded.
     if ( !myState ) { return false; }
     
-    // Release ESP-IDF ADC unit resources.
-    if(adc_oneshot_del_unit(myHandle) != ESP_OK) { return false; }
+    if (myCalibrationHandle &&
+        (adc_cali_delete_scheme_curve_fitting(myCalibrationHandle) != ESP_OK))
+    {
+        return false;
+    }
+    myCalibrationHandle = nullptr;
+
+    if (!sharedAdcUnit().release(myHandle))
+    {
+        return false;
+    }
 
     myHandle = nullptr;
     myPinManager.releasePin(myPin);
@@ -124,16 +200,24 @@ std::uint16_t Esp32s3::readRaw() const noexcept
 
 float Esp32s3::readVoltage() const noexcept
 {
-    constexpr float maxRawValue{4095.0F};
-    constexpr float supplyVoltage{3.3F};
+    if (!myState || !myCalibrationHandle)
+    {
+        return std::numeric_limits<float>::quiet_NaN();
+    }
 
-    // Get raw ADC value (0-4095).
-    const auto rawValue = readRaw();
+    int rawValue{0};
+    if (adc_oneshot_read(myHandle, myChannel, &rawValue) != ESP_OK)
+    {
+        return std::numeric_limits<float>::quiet_NaN();
+    }
 
-    // Convert raw ADC value to volts.
-    const auto voltage = (rawValue / maxRawValue) * supplyVoltage;
+    int voltageMillivolts{0};
+    if (adc_cali_raw_to_voltage(myCalibrationHandle, rawValue, &voltageMillivolts) != ESP_OK)
+    {
+        return std::numeric_limits<float>::quiet_NaN();
+    }
 
-    return voltage;
+    return static_cast<float>(voltageMillivolts) / 1000.0F;
 }
 
 } // namespace driver::adc 

@@ -1,4 +1,8 @@
+#include <algorithm>
+#include <array>
+#include <cmath>
 #include <cstdio>
+#include <limits>
 
 #include "system/logic/logic.h"
 
@@ -16,7 +20,6 @@
 
 namespace
 {
-    constexpr std::uint8_t AdcPin{1U};
     constexpr std::uint8_t LedPin{6U};
     constexpr std::uint32_t DefaultPeriodMs{500U};
     constexpr std::uint32_t SerialBaudRate{115200U};
@@ -24,7 +27,7 @@ namespace
     constexpr const char *WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
     
 
-    constexpr std::uint8_t bufLen{64U};
+    constexpr std::size_t bufLen{192U};
     // @brief the sleep period between two ticks. 50 ms -> 20 Hz 
     constexpr int tickPeriod_ms{50U};
 
@@ -43,7 +46,6 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     : myMotorForwardsPwm{factory.pwm(mp6550MotorPwmForwardPin)}
     , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
     , myMotorSleep{factory.gpioOutput(mp6550MotorSleepPin)}
-    , myIrSensorAdc{factory.adc(IrSensorAdcPin)}
     , mySerial({factory.serial(SerialBaudRate)})
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
@@ -51,24 +53,30 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
         myMotor = factory.motor(*myMotorForwardsPwm, *myMotorBackwardsPwm);
     }
 
-    if (myIrSensorAdc)
+    for (std::size_t index{0U}; index < IrSensorCount; ++index)
     {
-        myIrSensor = factory.ir_sensor(*myIrSensorAdc);
+        // Create ADC, then create IR sensor with it if allocated.
+        myIrSensorAdcs[index] = factory.adc(IrSensorAdcPins[index]);
+
+        if (nullptr != myIrSensorAdcs[index])
+        {
+            myIrSensors[index] = factory.ir_sensor(*myIrSensorAdcs[index]);
+        }
+        else { break; }
     }
 
     setStartState();
     if (!initializeDrivers())
     {
-        while (true)
-        {
-            vTaskDelay(pdMS_TO_TICKS(1000U));
-        }
-        // Skriv ut eller indikera via en LED att initieringen misslyckades.
-        if (mySerial)
+        if (mySerial && mySerial->isInitialized())
         {
             mySerial->write("Initialization failed!\n");
         }
 
+        while (true)
+        {
+            vTaskDelay(pdMS_TO_TICKS(1000U));
+        }
     }
 }
 
@@ -76,6 +84,8 @@ void Logic::setStartState() noexcept
 {
     myBlinkEnabled = false;
     myPeriodMs = DefaultPeriodMs;
+    myDistancesToObstacles.fill(std::numeric_limits<float>::quiet_NaN());
+    myPlannedSpeed = 0.0F;
 
     // if (myLed) { myLed->write(false); }
 
@@ -88,15 +98,16 @@ void Logic::setStartState() noexcept
 
 bool Logic::initializeDrivers() noexcept
 {
-    if (mySerial)
-    {
-        mySerial->connect();
-        mySerial->write("CnB serial ready\n");
-    }
-    else
+    if (!mySerial)
     {
         return false;
     }
+
+    if (!mySerial->isInitialized() && !mySerial->connect())
+    {
+        return false;
+    }
+    mySerial->write("CnB serial ready\n");
 
 // #if CONFIG_CNB_ENABLE_WIFI
 //     if (myWifi && !myWifi->isConnected())
@@ -104,16 +115,27 @@ bool Logic::initializeDrivers() noexcept
 //         myWifi->connect();
 //     }
 // #endif
-    return true;
-    if (!myMotorForwardsPwm || !myMotorBackwardsPwm || !myMotorSleep ||
-        !myIrSensorAdc || !myIrSensor || !myMotor)
+    if (!myMotorForwardsPwm || !myMotorBackwardsPwm || !myMotorSleep || !myMotor)
     {
         return false;
     }
 
-    if (!myIrSensorAdc->isInitialized() && !myIrSensorAdc->init())
+    for (std::size_t index{0U}; index < IrSensorCount; ++index)
     {
-        return false;
+        if (!myIrSensorAdcs[index] || !myIrSensors[index])
+        {
+            return false;
+        }
+
+        if (!myIrSensorAdcs[index]->isInitialized() && !myIrSensorAdcs[index]->init())
+        {
+            return false;
+        }
+
+        if (!myIrSensors[index]->isInitialized())
+        {
+            return false;
+        }
     }
 
     if (!myMotorSleep->isInitialized())
@@ -128,7 +150,7 @@ bool Logic::initializeDrivers() noexcept
         return false;
     }
 
-    return myIrSensor->isInitialized();
+    return true;
 }
 
 void Logic::processWifi() noexcept
@@ -152,25 +174,35 @@ void Logic::processTimer() noexcept
 
 void Logic::getEnvironmentPicture() noexcept
 {
-    if (myIrSensor && myIrSensor->isInitialized())
+    for (std::size_t index{0U}; index < IrSensorCount; ++index)
     {
-        myDistanceToObstacle = myIrSensor->readDistance();
-        return;
+        if (myIrSensors[index] && myIrSensors[index]->isInitialized())
+        {
+            myDistancesToObstacles[index] = myIrSensors[index]->readDistance();
+        }
+        else
+        {
+            myDistancesToObstacles[index] = std::numeric_limits<float>::quiet_NaN();
+        }
     }
-
-    myDistanceToObstacle = 0.0F;
 }
 
 void Logic::decideAction() noexcept
 {
-    if(myDistanceToObstacle < 30.0f) // Example threshold for obstacle detection
+    const bool allDistancesValid = std::all_of(
+        myDistancesToObstacles.begin(),
+        myDistancesToObstacles.end(),
+        [](const float distance) { return std::isfinite(distance) && (distance > 0.0F); });
+
+    if (!allDistancesValid)
     {
-        myPlannedSpeed = 0.0f; // Stop if too close to an obstacle
+        myPlannedSpeed = 0.0F;
+        return;
     }
-    else
-    {
-        myPlannedSpeed = 0.5f; // Move forward at a speed of 1 m/s
-    }
+
+    const auto closestObstacle = std::min_element(
+        myDistancesToObstacles.begin(), myDistancesToObstacles.end());
+    myPlannedSpeed = (*closestObstacle < 30.0F) ? 0.0F : 0.5F;
 }
 
 void Logic::executeAction() noexcept
@@ -192,16 +224,48 @@ void Logic::logState() noexcept
      * by the number of measurements made. Print both average value and latest value.
      * note when shifting to next generation of logging (MQTT?), maybe something similar could be done
      */
-    static int i = 0;
-    static double accumulatedDistance=0;
+    static std::array<double, IrSensorCount> accumulatedDistances{};
+    static std::array<std::size_t, IrSensorCount> validSamples{};
+    static std::size_t sampleCount{0U};
 
-    accumulatedDistance += myDistanceToObstacle;
-    if(0 == i++%logInterval_ticks)
+    for (std::size_t index{0U}; index < IrSensorCount; ++index)
+    {
+        if (std::isfinite(myDistancesToObstacles[index]))
+        {
+            accumulatedDistances[index] += myDistancesToObstacles[index];
+            ++validSamples[index];
+        }
+    }
+
+    ++sampleCount;
+    if (sampleCount >= static_cast<std::size_t>(logInterval_ticks))
     {
         char buf[bufLen]{'\0'};
-        std::snprintf(buf, sizeof(buf), "latest Distance: %.2f, period average distance: %.2f.\n", static_cast<double>(myDistanceToObstacle), accumulatedDistance/logInterval_ticks);
-        mySerial->write(buf);
-        accumulatedDistance = 0.0f;
+        std::array<double, IrSensorCount> averages{};
+
+        for (std::size_t index{0U}; index < IrSensorCount; ++index)
+        {
+            averages[index] = validSamples[index] > 0U
+                ? accumulatedDistances[index] / static_cast<double>(validSamples[index])
+                : std::numeric_limits<double>::quiet_NaN();
+        }
+
+        std::snprintf(
+            buf,
+            sizeof(buf),
+            "IR cm L: %.2f (avg %.2f), C: %.2f (avg %.2f), R: %.2f (avg %.2f)\n",
+            static_cast<double>(myDistancesToObstacles[0]), averages[0],
+            static_cast<double>(myDistancesToObstacles[1]), averages[1],
+            static_cast<double>(myDistancesToObstacles[2]), averages[2]);
+
+        if (mySerial && mySerial->isInitialized())
+        {
+            mySerial->write(buf);
+        }
+
+        accumulatedDistances.fill(0.0);
+        validSamples.fill(0U);
+        sampleCount = 0U;
     }
 }
 

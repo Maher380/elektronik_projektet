@@ -2,6 +2,7 @@
 
 #include "driver/ir_sensor/esp32s3.h"
 #include <cmath>
+#include <limits>
 
 
 namespace
@@ -23,15 +24,23 @@ namespace driver::ir_sensor
    
     float Esp32s3::readDistance() noexcept 
     {
-        if ( !myAdc.isInitialized()) { return 0.0f; }
+        if (!myAdc.isInitialized())
+        {
+            return std::numeric_limits<float>::quiet_NaN();
+        }
         
         const float voltage = myAdc.readVoltage();
 
-        if ( voltage <= 0.0f ) { return 0.0f; }
+        if (!std::isfinite(voltage) || (voltage <= 0.0F))
+        {
+            return std::numeric_limits<float>::quiet_NaN();
+        }
 
         const float distance = (scalingConstant * std::pow(voltage, exponent));
 
-        return distance;
+        return std::isfinite(distance)
+            ? distance
+            : std::numeric_limits<float>::quiet_NaN();
     }
 
         bool Esp32s3::isInitialized() const noexcept 
