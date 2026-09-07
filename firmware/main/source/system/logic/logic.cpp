@@ -314,14 +314,14 @@ void Logic::decideNormalAction() noexcept
     }
 
     float distanceToClosestObject;
-    if (myDistanceToObstacleForward > std::min(myDistanceToObstacleLeft, myDistanceToObstacleRight))
+    if (myDistanceToObstacleForward > std::max(myDistanceToObstacleLeft, myDistanceToObstacleRight))
     {
         myPlannedAction.steeringDegrees = 0.0F;
         distanceToClosestObject = myDistanceToObstacleForward;
     }
     else if (myDistanceToObstacleLeft > myDistanceToObstacleRight)
     {
-        myPlannedAction.steeringDegrees = 90.0F;
+        myPlannedAction.steeringDegrees = -90.0F;
         distanceToClosestObject = myDistanceToObstacleLeft;
     }
     else
