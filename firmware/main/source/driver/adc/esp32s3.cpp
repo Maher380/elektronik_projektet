@@ -154,6 +154,7 @@ bool Esp32s3::init() noexcept
     }
 
     myState = true;
+    myLastRaw = -1;
     return true;
 }
 
@@ -184,6 +185,7 @@ bool Esp32s3::deinit() noexcept
 
 std::uint16_t Esp32s3::readRaw() const noexcept
 {
+    myLastRaw = -1;
     // Check if ADC is initiated, return 0 on failure.
     if (!myState) { return 0U; }
 
@@ -195,11 +197,13 @@ std::uint16_t Esp32s3::readRaw() const noexcept
     {
         return 0U;
     }
+    myLastRaw = rawValue;
     return static_cast<std::uint16_t>(rawValue);
 }
 
 float Esp32s3::readVoltage() const noexcept
 {
+    myLastRaw = -1;
     if (!myState || !myCalibrationHandle)
     {
         return std::numeric_limits<float>::quiet_NaN();
@@ -211,6 +215,7 @@ float Esp32s3::readVoltage() const noexcept
         return std::numeric_limits<float>::quiet_NaN();
     }
 
+    myLastRaw = rawValue;
     int voltageMillivolts{0};
     if (adc_cali_raw_to_voltage(myCalibrationHandle, rawValue, &voltageMillivolts) != ESP_OK)
     {

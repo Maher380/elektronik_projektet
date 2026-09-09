@@ -1,0 +1,13 @@
+# Replace REPLACE_ME and copy this file outside the repository before use.
+listener 1883
+allow_anonymous false
+
+password_file C:/Users/REPLACE_ME/cnb-mqtt/passwords
+acl_file C:/Users/REPLACE_ME/cnb-mqtt/acl
+
+persistence true
+persistence_location C:/Users/REPLACE_ME/cnb-mqtt/data/
+
+log_type error
+log_type warning
+log_type notice

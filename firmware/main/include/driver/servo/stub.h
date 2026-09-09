@@ -6,6 +6,7 @@
 #pragma once
 
 #include "driver/servo/interface.h"
+#include <cmath>
 
 namespace driver::servo
 {
@@ -49,7 +50,7 @@ public:
 
     bool setDirection(float angleDegrees) noexcept override
     {
-        if (!myIsInitialized || angleDegrees < MinAngleDegrees || angleDegrees > MaxAngleDegrees)
+        if (!myIsInitialized || !std::isfinite(angleDegrees) || angleDegrees < MinAngleDegrees || angleDegrees > MaxAngleDegrees)
         {
             return false;
         }
