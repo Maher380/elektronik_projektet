@@ -1,0 +1,3 @@
+# app_main runs vehicle control and bounded MQTT JSON/queue handling.
+# Validate remaining stack on hardware under reconnect and command traffic.
+CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192

@@ -16,6 +16,15 @@
 #include "driver/factory/esp32s3.h"
 #include "system/logic/logic.h"
 #include <atomic>
+#include "sdkconfig.h"
+
+#if CONFIG_CNB_ENABLE_MQTT
+// Existing sdkconfig files override sdkconfig.defaults. Fail compilation rather
+// than booting the known undersized stack; menuconfig remains usable to fix it.
+static_assert(CONFIG_ESP_MAIN_TASK_STACK_SIZE >= 8192,
+              "CnB MQTT requires main task stack >= 8192 bytes. Set Component config > "
+              "ESP System Settings > Main task stack size in idf.py menuconfig.");
+#endif
 
 #endif
 

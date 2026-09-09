@@ -6,6 +6,7 @@
 #include "driver/servo/vagrant.h"
 
 #include "driver/pwm/interface.h"
+#include <cmath>
 
 namespace driver::servo
 {
@@ -32,7 +33,10 @@ bool Vagrant::init() noexcept
     }
 
     myIsInitialized = true;
-    return center();
+    if (center()) { return true; }
+    myIsInitialized = false;
+    myPwm.setDuty(0.0F);
+    return false;
 }
 
 bool Vagrant::deinit() noexcept
@@ -53,7 +57,7 @@ bool Vagrant::isInitialized() const noexcept
 
 bool Vagrant::setDirection(const float angleDegrees) noexcept
 {
-    if (!myIsInitialized || angleDegrees < MinAngleDegrees || angleDegrees > MaxAngleDegrees)
+    if (!myIsInitialized || !std::isfinite(angleDegrees) || angleDegrees < MinAngleDegrees || angleDegrees > MaxAngleDegrees)
     {
         return false;
     }

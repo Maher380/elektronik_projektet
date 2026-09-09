@@ -51,6 +51,12 @@ public:
      * @return Calibrated input voltage in Volts, or NaN if the read fails.
      */
     virtual float readVoltage() const noexcept = 0;
+
+    /** Raw count from the latest readRaw/readVoltage attempt, or -1 on read
+     * failure/before a sample. Does not acquire a new sample. A calibration
+     * failure may leave a valid raw count while readVoltage returns NaN.
+     * Read and inspect this cache from the same task. */
+    virtual std::int32_t lastRaw() const noexcept = 0;
 };
 
 } // namespace driver::adc

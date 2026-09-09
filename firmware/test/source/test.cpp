@@ -2,16 +2,20 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdio>
+#include <cstring>
 #include <memory>
 
 #include "system/pin_manager/esp32s3.h"
 #include "test/pin_manager.h"
+#include "test/runtime_control.h"
+#include "test/mqtt_integration.h"
 
 #include "driver/adc/stub.h"
 #include "driver/factory/stub.h"
 #include "driver/gpio/stub.h"
 #include "driver/ir_sensor/esp32s3.h"
 #include "driver/motor/l298n.h"
+#include "driver/mqtt/stub.h"
 #include "driver/pwm/stub.h"
 
 int main()
@@ -19,6 +23,8 @@ int main()
     auto& pinManager = sys::pin_manager::Esp32s3::instance();
 
     if (!test::runPinManagerTest(pinManager)) { return -1; }
+    if (!test::runRuntimeControlTests()) { return -1; }
+    if (!test::runMqttIntegrationTests()) { return -1; }
 
     driver::adc::Stub testAdc;
     driver::ir_sensor::Esp32s3 testSensor{testAdc};
@@ -147,6 +153,37 @@ int main()
             std::printf("Factory multi-channel ADC test failed\n");
             return -1;
         }
+    }
+
+    driver::mqtt::Stub mqtt;
+    if (!mqtt.subscribe("cnb/vagrant/command", driver::mqtt::Qos::AtLeastOnce)
+        || !mqtt.connect())
+    {
+        std::printf("MQTT stub setup failed\n");
+        return -1;
+    }
+    if (!mqtt.simulateIncoming("cnb/vagrant/command", "{\"command\":\"stop\"}"))
+    {
+        std::printf("MQTT stub receive setup failed\n");
+        return -1;
+    }
+
+    driver::mqtt::Message mqttMessage{};
+    if (!mqtt.readMessage(mqttMessage)
+        || (std::strcmp(mqttMessage.topic.data(), "cnb/vagrant/command") != 0))
+    {
+        std::printf("MQTT stub receive failed\n");
+        return -1;
+    }
+    if (!mqtt.publish("cnb/vagrant/status",
+                      "{\"online\":true}",
+                      driver::mqtt::Qos::AtLeastOnce,
+                      true)
+        || !mqtt.hasPublishedMessage()
+        || !mqtt.lastPublishedMessage().retained)
+    {
+        std::printf("MQTT stub publish failed\n");
+        return -1;
     }
 
     std::printf("All tests succeeded!\n");

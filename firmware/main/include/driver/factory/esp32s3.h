@@ -14,6 +14,7 @@ namespace driver {
     namespace adc { class Interface; }
     namespace gpio { class Interface; }
     namespace motor { class Interface; }
+    namespace mqtt { struct Config; class Interface; }
     namespace pwm { struct Config; class Interface; }
     namespace servo { class Interface; }
     namespace serial { class Interface; }
@@ -86,7 +87,7 @@ public:
     std::unique_ptr<servo::Interface> servo(pwm::Interface& pwm) noexcept override;
 
     /**
-     * @brief Create a real L298N motor driver instance.
+     * @brief Create a real MP6550 motor driver instance.
      *
      * @param[in] MotorForwardsPwm PWM output driver used for IN1.
      * @param[in] MotorBackwardsPwm PWM output driver used for IN2.
@@ -94,6 +95,9 @@ public:
      */
     std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& MotorForwardsPwm,
                                             driver::pwm::Interface& MotorBackwardsPwm) noexcept override;
+
+    /** Create a real ESP-MQTT client. */
+    std::unique_ptr<mqtt::Interface> mqtt(const mqtt::Config& config) noexcept override;
 
     /**
      * @brief Create a real ESP32-S3 Serial hardware instance.

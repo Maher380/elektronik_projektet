@@ -18,4 +18,48 @@ menu "Autonomous car network configuration"
         help
             WiFi network password used by the ESP32-S3 client.
 
+    config CNB_ENABLE_MQTT
+        bool "Enable MQTT telemetry and runtime control"
+        default y
+        depends on CNB_ENABLE_WIFI
+        help
+            Enable Mosquitto communication for telemetry, configuration,
+            and start/stop control.
+
+    if CNB_ENABLE_MQTT
+
+        config CNB_MQTT_BROKER_URI
+            string "MQTT broker URI"
+            default "mqtt://CHANGE_ME_BROKER_HOST:1883"
+            help
+                LAN URI of the Mosquitto broker. Do not use localhost.
+
+        config CNB_MQTT_CLIENT_ID
+            string "MQTT client ID"
+            default "cnb-vagrant"
+            help
+                Unique MQTT client identity for this car.
+
+        config CNB_MQTT_USERNAME
+            string "MQTT username"
+            default "cnb-vagrant"
+            help
+                Mosquitto username allowed by the car ACL.
+
+        config CNB_MQTT_PASSWORD
+            string "MQTT password"
+            default "CHANGE_ME_MQTT_PASSWORD"
+            help
+                Mosquitto password. The generated sdkconfig is Git-ignored.
+
+        config CNB_MQTT_KEEPALIVE_SEC
+            int "MQTT keepalive in seconds"
+            range 10 120
+            default 30
+            help
+                Broker keepalive interval. Runtime motion uses a separate
+                three-second operator heartbeat timeout.
+
+    endif
+
 endmenu
