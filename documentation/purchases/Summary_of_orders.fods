@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 
 <office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:ooo="http://openoffice.org/2004/office" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:rpt="http://openoffice.org/2005/report" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:dr3d="urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:chart="urn:oasis:names:tc:opendocument:xmlns:chart:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0" xmlns:ooow="http://openoffice.org/2004/writer" xmlns:oooc="http://openoffice.org/2004/calc" xmlns:field="urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0" xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" xmlns:xforms="http://www.w3.org/2002/xforms" xmlns:tableooo="http://openoffice.org/2009/table" xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" xmlns:drawooo="http://openoffice.org/2010/draw" xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0" xmlns:math="http://www.w3.org/1998/Math/MathML" xmlns:form="urn:oasis:names:tc:opendocument:xmlns:form:1.0" xmlns:script="urn:oasis:names:tc:opendocument:xmlns:script:1.0" xmlns:dom="http://www.w3.org/2001/xml-events" xmlns:formx="urn:openoffice:names:experimental:ooxml-odf-interop:xmlns:form:1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:grddl="http://www.w3.org/2003/g/data-view#" xmlns:css3t="http://www.w3.org/TR/css3-text/" xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0" office:version="1.4" office:mimetype="application/vnd.oasis.opendocument.spreadsheet">
- <office:meta><meta:generator>LibreOffice/26.8.0.3$Windows_X86_64 LibreOffice_project/bce0998afefdbc355585ca324285661a2170ba77</meta:generator><meta:document-statistic meta:table-count="3" meta:cell-count="116" meta:object-count="0"/></office:meta>
+ <office:meta><meta:generator>LibreOffice/26.8.0.3$Windows_X86_64 LibreOffice_project/bce0998afefdbc355585ca324285661a2170ba77</meta:generator><dc:date>2026-09-11T16:07:57.863194800</dc:date><meta:editing-duration>PT10M47S</meta:editing-duration><meta:editing-cycles>1</meta:editing-cycles><meta:document-statistic meta:table-count="3" meta:cell-count="14" meta:object-count="0"/></office:meta>
  <office:settings>
   <config:config-item-set config:name="ooo:view-settings">
-   <config:config-item config:name="VisibleAreaTop" config:type="int">0</config:config-item>
+   <config:config-item config:name="VisibleAreaTop" config:type="int">1115</config:config-item>
    <config:config-item config:name="VisibleAreaLeft" config:type="int">0</config:config-item>
-   <config:config-item config:name="VisibleAreaWidth" config:type="int">38112</config:config-item>
-   <config:config-item config:name="VisibleAreaHeight" config:type="int">15191</config:config-item>
+   <config:config-item config:name="VisibleAreaWidth" config:type="int">17824</config:config-item>
+   <config:config-item config:name="VisibleAreaHeight" config:type="int">5027</config:config-item>
    <config:config-item-map-indexed config:name="Views">
     <config:config-item-map-entry>
      <config:config-item config:name="ViewId" config:type="string">view1</config:config-item>
      <config:config-item-map-named config:name="Tables">
       <config:config-item-map-entry config:name="Blad1">
-       <config:config-item config:name="CursorPositionX" config:type="int">0</config:config-item>
-       <config:config-item config:name="CursorPositionY" config:type="int">0</config:config-item>
+       <config:config-item config:name="CursorPositionX" config:type="int">1</config:config-item>
+       <config:config-item config:name="CursorPositionY" config:type="int">2</config:config-item>
        <config:config-item config:name="ActiveSplitRange" config:type="short">2</config:config-item>
        <config:config-item config:name="PositionLeft" config:type="int">0</config:config-item>
        <config:config-item config:name="PositionRight" config:type="int">0</config:config-item>
@@ -123,9 +123,9 @@
    <config:config-item config:name="LinkUpdateMode" config:type="short">3</config:config-item>
    <config:config-item config:name="LoadReadonly" config:type="boolean">false</config:config-item>
    <config:config-item config:name="ModifyPasswordHash" config:type="int">0</config:config-item>
-   <config:config-item config:name="PrinterName" config:type="string"/>
+   <config:config-item config:name="PrinterName" config:type="string">HPF80DACE7E11B(HP Color Laser 150) (redirected 1)</config:config-item>
    <config:config-item config:name="PrinterPaperFromSetup" config:type="boolean">false</config:config-item>
-   <config:config-item config:name="PrinterSetup" config:type="base64Binary"/>
+   <config:config-item config:name="PrinterSetup" config:type="base64Binary">Uin+/0hQRjgwREFDRTdFMTFCKEhQIENvbG9yIExhc2VyIDE1MCkgKHJlZGlyZWN0ZWQgMSkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAUmVtb3RlIERlc2t0b3AgRWFzeSBQcmludAAAAAAAAAAWAAEACigAAAAAAAAEAAhSAAAEdAAAM1ROVwAAAAAKAEgAUABGADgAMABEAEEAQwBFADcARQAxADEAQgAoAEgAUAAgAEMAbwBsAG8AcgAgAEwAYQBzAGUAcgAgADEAAAABBAAE3AAkJw/fgQMBAAkAmgs0CGQAAQAHAFgCAgABAAAAAwABAEEANAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABTRUNEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAABAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAB4AC0AAABBAHIAaQBhAGwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAAACAgIAAAACQAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAVQBuAHQAaQB0AGwAZQBkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAMAA6ADAAOgAwADoAMAA6ADAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAZAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAADIAMgAyADIAMgAyADIAMgAyAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQQA0AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAACAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAADwAAAAAAAAAAAWQAZAABAGQAAGQAAGQAAGQAAAAAAgAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAQEAAQAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEBAQEBAAAAAAACAQEBAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAcAAAAJAAAHAAAACQAABwAAAAkAAAAABwA0CJoLNAiaCwAAAAAAAAAAAAAABQYEADQImgsBAAAAAAA0CJoLki0r+AABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABkAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABAAAAgICAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAEEAcgBpAGEAbAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEIAIyMjAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAApQLgFaUC4BWlAuAVpQLgFQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAABKAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAASAENPTVBBVF9EVVBMRVhfTU9ERQ8ARHVwbGV4TW9kZTo6T2ZmDABQUklOVEVSX05BTUUxAEhQRjgwREFDRTdFMTFCKEhQIENvbG9yIExhc2VyIDE1MCkgKHJlZGlyZWN0ZWQgMSkLAERSSVZFUl9OQU1FGQBSZW1vdGUgRGVza3RvcCBFYXN5IFByaW50</config:config-item>
    <config:config-item config:name="RasterIsVisible" config:type="boolean">false</config:config-item>
    <config:config-item config:name="RasterResolutionX" config:type="int">1270</config:config-item>
    <config:config-item config:name="RasterResolutionY" config:type="int">1270</config:config-item>
@@ -141,11 +141,24 @@
    <config:config-item config:name="ShowZeroValues" config:type="boolean">true</config:config-item>
    <config:config-item config:name="SyntaxStringRef" config:type="short">7</config:config-item>
    <config:config-item config:name="UpdateFromTemplate" config:type="boolean">true</config:config-item>
+   <config:config-item-map-named config:name="ScriptConfiguration">
+    <config:config-item-map-entry config:name="Blad1">
+     <config:config-item config:name="CodeName" config:type="string">Sheet1</config:config-item>
+    </config:config-item-map-entry>
+    <config:config-item-map-entry config:name="Blad2">
+     <config:config-item config:name="CodeName" config:type="string">Blad2</config:config-item>
+    </config:config-item-map-entry>
+    <config:config-item-map-entry config:name="Blad3">
+     <config:config-item config:name="CodeName" config:type="string">Blad3</config:config-item>
+    </config:config-item-map-entry>
+   </config:config-item-map-named>
   </config:config-item-set>
  </office:settings>
  <office:scripts>
   <office:script script:language="ooo:Basic">
-   <ooo:libraries xmlns:ooo="http://openoffice.org/2004/office" xmlns:xlink="http://www.w3.org/1999/xlink"/>
+   <ooo:libraries xmlns:ooo="http://openoffice.org/2004/office" xmlns:xlink="http://www.w3.org/1999/xlink">
+    <ooo:library-embedded ooo:name="Standard"/>
+   </ooo:libraries>
   </office:script>
  </office:scripts>
  <office:font-face-decls>
@@ -155,6 +168,8 @@
   <style:font-face style:name="Liberation Sans" svg:font-family="&apos;Liberation Sans&apos;" style:font-family-generic="swiss" style:font-pitch="variable"/>
   <style:font-face style:name="Lucida Sans" svg:font-family="&apos;Lucida Sans&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
   <style:font-face style:name="Microsoft YaHei" svg:font-family="&apos;Microsoft YaHei&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
+  <style:font-face style:name="Segoe UI" svg:font-family="&apos;Segoe UI&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
+  <style:font-face style:name="Segoe UI1" svg:font-family="&apos;Segoe UI&apos;" style:font-pitch="variable"/>
  </office:font-face-decls>
  <office:styles>
   <style:default-style style:family="table-cell">
@@ -164,10 +179,10 @@
   </style:default-style>
   <style:default-style style:family="graphic">
    <style:graphic-properties svg:stroke-color="#3465a4" draw:fill-color="#729fcf" fo:wrap-option="no-wrap" draw:shadow-offset-x="0.1181in" draw:shadow-offset-y="0.1181in" style:writing-mode="page"/>
-   <style:paragraph-properties style:text-autospace="ideograph-alpha" style:punctuation-wrap="simple" style:line-break="strict" style:font-independent-line-spacing="false">
+   <style:paragraph-properties style:text-autospace="ideograph-alpha" style:punctuation-wrap="simple" style:line-break="strict" loext:tab-stop-distance="0in" style:font-independent-line-spacing="false">
     <style:tab-stops/>
    </style:paragraph-properties>
-   <style:text-properties style:use-window-font-color="true" loext:opacity="0%" fo:font-family="&apos;Liberation Serif&apos;" style:font-family-generic="roman" style:font-pitch="variable" fo:font-size="12pt" fo:language="en" fo:country="US" style:letter-kerning="true" style:font-family-asian="&apos;Segoe UI&apos;" style:font-family-generic-asian="system" style:font-pitch-asian="variable" style:font-size-asian="12pt" style:language-asian="zh" style:country-asian="CN" style:font-family-complex="Tahoma" style:font-family-generic-complex="system" style:font-pitch-complex="variable" style:font-size-complex="12pt" style:language-complex="hi" style:country-complex="IN"/>
+   <style:text-properties style:use-window-font-color="true" loext:opacity="0%" fo:font-family="&apos;Liberation Serif&apos;" style:font-family-generic="roman" style:font-pitch="variable" fo:font-size="12pt" fo:language="en" fo:country="US" style:letter-kerning="true" style:font-name-asian="Segoe UI" style:font-size-asian="12pt" style:language-asian="zh" style:country-asian="CN" style:font-family-complex="Tahoma" style:font-family-generic-complex="system" style:font-pitch-complex="variable" style:font-size-complex="12pt" style:language-complex="hi" style:country-complex="IN"/>
   </style:default-style>
   <style:style style:name="Default" style:family="graphic"/>
   <style:style style:name="Note" style:family="graphic" style:parent-style-name="Default">
@@ -188,113 +203,113 @@
    <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
    <style:map style:condition="value()&gt;=0" style:apply-style-name="N129P0"/>
   </number:currency-style>
-  <number:number-style style:name="N130P0" style:volatile="true">
-   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
-  </number:number-style>
-  <number:number-style style:name="N130">
-   <number:text>-</number:text>
-   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
-   <style:map style:condition="value()&gt;=0" style:apply-style-name="N130P0"/>
-  </number:number-style>
   <number:number-style style:name="N131P0" style:volatile="true">
    <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
   </number:number-style>
   <number:number-style style:name="N131">
-   <style:text-properties fo:color="#ff0000"/>
    <number:text>-</number:text>
    <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
    <style:map style:condition="value()&gt;=0" style:apply-style-name="N131P0"/>
   </number:number-style>
   <number:number-style style:name="N132P0" style:volatile="true">
-   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
   </number:number-style>
   <number:number-style style:name="N132">
+   <style:text-properties fo:color="#ff0000"/>
    <number:text>-</number:text>
-   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
    <style:map style:condition="value()&gt;=0" style:apply-style-name="N132P0"/>
   </number:number-style>
   <number:number-style style:name="N133P0" style:volatile="true">
    <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
   </number:number-style>
   <number:number-style style:name="N133">
-   <style:text-properties fo:color="#ff0000"/>
    <number:text>-</number:text>
    <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
    <style:map style:condition="value()&gt;=0" style:apply-style-name="N133P0"/>
   </number:number-style>
   <number:number-style style:name="N134P0" style:volatile="true">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:number-style style:name="N134">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>-</number:text>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N134P0"/>
+  </number:number-style>
+  <number:number-style style:name="N138P0" style:volatile="true">
    <number:text loext:blank-width-char="-"> </number:text>
    <number:fill-character> </number:fill-character>
    <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
    <number:text loext:blank-width-char="-"> </number:text>
   </number:number-style>
-  <number:number-style style:name="N134P1" style:volatile="true">
+  <number:number-style style:name="N138P1" style:volatile="true">
    <number:text>-</number:text>
    <number:fill-character> </number:fill-character>
    <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
    <number:text loext:blank-width-char="-"> </number:text>
   </number:number-style>
-  <number:number-style style:name="N134P2" style:volatile="true">
+  <number:number-style style:name="N138P2" style:volatile="true">
    <number:text loext:blank-width-char="-"> </number:text>
    <number:fill-character> </number:fill-character>
    <number:text loext:blank-width-char="-1">- </number:text>
   </number:number-style>
-  <number:text-style style:name="N134">
+  <number:text-style style:name="N138">
    <number:text loext:blank-width-char="-"> </number:text>
    <number:text-content/>
    <number:text loext:blank-width-char="-"> </number:text>
-   <style:map style:condition="value()&gt;0" style:apply-style-name="N134P0"/>
-   <style:map style:condition="value()&lt;0" style:apply-style-name="N134P1"/>
-   <style:map style:condition="value()=0" style:apply-style-name="N134P2"/>
+   <style:map style:condition="value()&gt;0" style:apply-style-name="N138P0"/>
+   <style:map style:condition="value()&lt;0" style:apply-style-name="N138P1"/>
+   <style:map style:condition="value()=0" style:apply-style-name="N138P2"/>
   </number:text-style>
-  <number:number-style style:name="N135P0" style:volatile="true">
+  <number:number-style style:name="N142P0" style:volatile="true">
    <number:text loext:blank-width-char="-"> </number:text>
    <number:fill-character> </number:fill-character>
    <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
    <number:text loext:blank-width-char="-"> </number:text>
   </number:number-style>
-  <number:number-style style:name="N135P1" style:volatile="true">
+  <number:number-style style:name="N142P1" style:volatile="true">
    <number:text>-</number:text>
    <number:fill-character> </number:fill-character>
    <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
    <number:text loext:blank-width-char="-"> </number:text>
   </number:number-style>
-  <number:number-style style:name="N135P2" style:volatile="true">
+  <number:number-style style:name="N142P2" style:volatile="true">
    <number:text loext:blank-width-char="-"> </number:text>
    <number:fill-character> </number:fill-character>
    <number:text>-</number:text>
    <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="2" loext:max-blank-integer-digits="2"/>
    <number:text loext:blank-width-char="-"> </number:text>
   </number:number-style>
-  <number:text-style style:name="N135">
+  <number:text-style style:name="N142">
    <number:text loext:blank-width-char="-"> </number:text>
    <number:text-content/>
    <number:text loext:blank-width-char="-"> </number:text>
-   <style:map style:condition="value()&gt;0" style:apply-style-name="N135P0"/>
-   <style:map style:condition="value()&lt;0" style:apply-style-name="N135P1"/>
-   <style:map style:condition="value()=0" style:apply-style-name="N135P2"/>
+   <style:map style:condition="value()&gt;0" style:apply-style-name="N142P0"/>
+   <style:map style:condition="value()&lt;0" style:apply-style-name="N142P1"/>
+   <style:map style:condition="value()=0" style:apply-style-name="N142P2"/>
   </number:text-style>
-  <number:time-style style:name="N136">
+  <number:time-style style:name="N143">
    <number:minutes number:style="long"/>
    <number:text>:</number:text>
    <number:seconds number:style="long"/>
   </number:time-style>
-  <number:time-style style:name="N137" number:truncate-on-overflow="false">
+  <number:time-style style:name="N144" number:truncate-on-overflow="false">
    <number:hours/>
    <number:text>:</number:text>
    <number:minutes number:style="long"/>
    <number:text>:</number:text>
    <number:seconds number:style="long"/>
   </number:time-style>
-  <number:time-style style:name="N138">
+  <number:time-style style:name="N145">
    <number:minutes number:style="long"/>
    <number:text>:</number:text>
    <number:seconds number:style="long" number:decimal-places="1"/>
   </number:time-style>
-  <number:number-style style:name="N139">
+  <number:number-style style:name="N146">
    <number:scientific-number number:decimal-places="1" number:min-decimal-places="1" number:min-integer-digits="1" number:min-exponent-digits="1" number:exponent-interval="3" number:forced-exponent-sign="true"/>
   </number:number-style>
-  <number:number-style style:name="N140">
+  <number:number-style style:name="N147">
    <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
    <number:text loext:blank-width-char="k1_r3">    </number:text>
   </number:number-style>
@@ -391,24 +406,27 @@
  </office:styles>
  <office:automatic-styles>
   <style:style style:name="co1" style:family="table-column">
-   <style:table-column-properties fo:break-before="auto" style:column-width="1.6098in"/>
+   <style:table-column-properties fo:break-before="auto" style:column-width="3.0272in"/>
   </style:style>
   <style:style style:name="co2" style:family="table-column">
    <style:table-column-properties fo:break-before="auto" style:column-width="2.3807in"/>
   </style:style>
   <style:style style:name="co3" style:family="table-column">
-   <style:table-column-properties fo:break-before="auto" style:column-width="0.7516in"/>
+   <style:table-column-properties fo:break-before="auto" style:column-width="1.6098in"/>
   </style:style>
   <style:style style:name="co4" style:family="table-column">
-   <style:table-column-properties fo:break-before="auto" style:column-width="3.9311in"/>
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.7516in"/>
   </style:style>
   <style:style style:name="co5" style:family="table-column">
-   <style:table-column-properties fo:break-before="auto" style:column-width="0.6165in"/>
+   <style:table-column-properties fo:break-before="auto" style:column-width="3.9311in"/>
   </style:style>
   <style:style style:name="co6" style:family="table-column">
-   <style:table-column-properties fo:break-before="auto" style:column-width="0.9736in"/>
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.6165in"/>
   </style:style>
   <style:style style:name="co7" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.9736in"/>
+  </style:style>
+  <style:style style:name="co8" style:family="table-column">
    <style:table-column-properties fo:break-before="auto" style:column-width="0.6555in"/>
   </style:style>
   <style:style style:name="ro1" style:family="table-row">
@@ -437,8 +455,16 @@
    <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
    <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="14pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="14pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="14pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
   </style:style>
-  <style:style style:name="ce2" style:family="table-cell" style:parent-style-name="Default">
-   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.06pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+  <style:style style:name="ce17" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border="0.74pt solid #000000"/>
+  </style:style>
+  <style:style style:name="ce18" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.74pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce19" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="none" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
    <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
    <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
   </style:style>
@@ -451,20 +477,9 @@
    <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
    <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
   </style:style>
-  <style:style style:name="ce5" style:family="table-cell" style:parent-style-name="Default">
-   <style:table-cell-properties fo:border-bottom="0.74pt solid #44b3e1" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border-left="none" style:direction="ltr" fo:border-right="none" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" fo:border-top="0.74pt solid #44b3e1" style:vertical-align="bottom" loext:vertical-justify="auto"/>
-   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
-   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
-  </style:style>
-  <style:style style:name="ce6" style:family="table-cell" style:parent-style-name="Default">
-   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
-   <style:paragraph-properties fo:text-align="start" css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
-   <style:text-properties fo:color="#272627" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="7pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="7pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="7pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
-  </style:style>
-  <style:style style:name="ce7" style:family="table-cell" style:parent-style-name="Default">
-   <style:table-cell-properties fo:background-color="#ffffff" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
-   <style:paragraph-properties fo:text-align="start" css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
-   <style:text-properties fo:color="#171717" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="&quot;Inter Tight&quot;" fo:font-size="8pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="8pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="&quot;Inter Tight&quot;" style:font-size-complex="8pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  <style:style style:name="ce22" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:wrap-option="wrap" fo:border="0.74pt solid #000000"/>
+   <style:text-properties style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" fo:font-size="10pt" fo:language="en" fo:country="US" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:text-underline-mode="continuous" style:text-overline-mode="continuous" style:text-line-through-mode="continuous" style:font-name-asian="Segoe UI" style:font-size-asian="10pt" style:language-asian="zh" style:country-asian="CN" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-size-complex="10pt" style:language-complex="hi" style:country-complex="IN" style:font-style-complex="normal" style:font-weight-complex="normal" style:text-emphasize="none" style:font-relief="none" style:text-overline-style="none" style:text-overline-color="font-color"/>
   </style:style>
   <style:style style:name="ce8" style:family="table-cell" style:parent-style-name="Default">
    <style:table-cell-properties style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
@@ -481,35 +496,25 @@
    <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
    <style:text-properties fo:color="#171717" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
   </style:style>
-  <style:style style:name="ce11" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N140">
-   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.06pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+  <style:style style:name="ce26" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N147">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="none" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
    <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
    <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
   </style:style>
-  <style:style style:name="ce12" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N140">
-   <style:table-cell-properties fo:border-bottom="0.74pt solid #44b3e1" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border-left="none" style:direction="ltr" fo:border-right="none" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" fo:border-top="0.74pt solid #44b3e1" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+  <style:style style:name="ce27" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N147">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="none" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
    <style:paragraph-properties fo:text-align="end" css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
    <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
   </style:style>
-  <style:style style:name="ce13" style:family="table-cell" style:parent-style-name="Default">
-   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.06pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+  <style:style style:name="ce28" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="none" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
    <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
    <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal">
     <loext:char-complex-color loext:theme-type="dark1" loext:color-type="theme"/>
    </style:text-properties>
   </style:style>
-  <style:style style:name="ce14" style:family="table-cell" style:parent-style-name="Default">
-   <style:table-cell-properties fo:border-bottom="0.74pt solid #44b3e1" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border-left="none" style:direction="ltr" fo:border-right="0.74pt solid #44b3e1" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" fo:border-top="0.74pt solid #44b3e1" style:vertical-align="bottom" loext:vertical-justify="auto"/>
-   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
-   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
-  </style:style>
-  <style:style style:name="ce15" style:family="table-cell" style:parent-style-name="Default">
-   <style:table-cell-properties fo:border-bottom="0.74pt solid #44b3e1" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border-left="none" style:direction="ltr" fo:border-right="0.74pt solid #44b3e1" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" fo:border-top="0.74pt solid #44b3e1" style:vertical-align="bottom" loext:vertical-justify="auto"/>
-   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
-   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
-  </style:style>
-  <style:style style:name="ce16" style:family="table-cell" style:parent-style-name="Default">
-   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.06pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+  <style:style style:name="ce29" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="none" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
    <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
    <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
   </style:style>
@@ -544,12 +549,6 @@
     <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-top="0.0984in"/>
    </style:footer-style>
   </style:page-layout>
-  <style:style style:name="T1" style:family="text">
-   <style:text-properties fo:color="#000000" style:font-name="Calibri" fo:font-size="11pt" fo:font-weight="normal" style:text-underline-style="none" style:text-underline-color="font-color" style:text-line-through-type="none" fo:font-style="normal" style:text-outline="false" fo:text-shadow="none" style:text-position="0% 100%" style:font-name-complex="Calibri" style:font-size-asian="11pt" style:font-size-complex="11pt" style:font-weight-asian="normal" style:font-weight-complex="normal" style:font-style-asian="normal" style:font-style-complex="normal"/>
-  </style:style>
-  <style:style style:name="T2" style:family="text">
-   <style:text-properties fo:color="#000000" style:font-name="Calibri" fo:font-size="11pt" fo:font-weight="normal" style:text-line-through-type="none" fo:font-style="normal" style:text-outline="false" fo:text-shadow="none" style:text-position="0% 100%" style:font-name-complex="Calibri" style:font-size-asian="11pt" style:font-size-complex="11pt" style:font-weight-asian="normal" style:font-weight-complex="normal" style:font-style-asian="normal" style:font-style-complex="normal" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/>
-  </style:style>
  </office:automatic-styles>
  <office:master-styles>
   <style:master-page style:name="Default" style:page-layout-name="pm1">
@@ -570,7 +569,7 @@
      <text:p><text:sheet-name>???</text:sheet-name><text:s/>(<text:title>???</text:title>)</text:p>
     </style:region-left>
     <style:region-right>
-     <text:p><text:date style:data-style-name="N2" text:date-value="2026-09-11">00/00/0000</text:date>, <text:time>00:00:00</text:time></text:p>
+     <text:p><text:date style:data-style-name="N2" text:date-value="2026-09-11">00/00/0000</text:date>, <text:time style:data-style-name="N2" text:time-value="15:46:55.283855800">00:00:00</text:time></text:p>
     </style:region-right>
    </style:header>
    <style:header-left style:display="false"/>
@@ -615,479 +614,185 @@
     <office:forms form:automatic-focus="false" form:apply-design-mode="false"/>
     <table:table-column table:style-name="co1" table:default-cell-style-name="Default"/>
     <table:table-column table:style-name="co2" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co1" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co3" table:number-columns-repeated="3" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co1" table:number-columns-repeated="2" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co4" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co5" table:number-columns-repeated="17" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co6" table:number-columns-repeated="16358"/>
+    <table:table-column table:style-name="co3" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co4" table:number-columns-repeated="3" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co3" table:number-columns-repeated="2" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co5" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co6" table:number-columns-repeated="17" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co7" table:number-columns-repeated="16358"/>
     <table:table-row table:style-name="ro1">
-     <table:table-cell table:style-name="ce1" office:value-type="string" calcext:value-type="string">
-      <text:p>Beställningslista</text:p>
-     </table:table-cell>
+     <table:table-cell table:style-name="ce1"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Företag</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Beskrivning</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Artikelnummer</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Antal</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Pris/st</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Pris, tot</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Beställare</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Ansvarig</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce13" office:value-type="string" calcext:value-type="string">
-      <text:p>Kommentarer (länkar mm)</text:p>
-     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="6"/>
+     <table:table-cell table:style-name="ce28"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Elektrokit</text:p>
+     <table:table-cell table:style-name="ce17" office:value-type="string" calcext:value-type="string">
+      <text:p>Remaining Funds</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Raspberry pi 5 2 GB</text:p>
+     <table:table-cell table:style-name="ce18" table:formula="of:=[.B5]-SUM([.B6:.B14])" office:value-type="float" office:value="2189.2" calcext:value-type="float">
+      <text:p>2189.2</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="41022613" calcext:value-type="float">
-      <text:p>41022613</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
-      <text:p>1</text:p>
-     </table:table-cell>
-     <table:table-cell table:number-columns-repeated="2" table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>655.20 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Maher/Martin</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/raspberry-pi-5-2gb" xlink:type="simple">https://www.electrokit.com/raspberry-pi-5-2gb</text:a></text:p>
-     </table:table-cell>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Elektrokit</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Raspberry pi 6mm vidvinkelobjektiv</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="41017554" calcext:value-type="float">
-      <text:p>41017554</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
-      <text:p>1</text:p>
-     </table:table-cell>
-     <table:table-cell table:number-columns-repeated="2" table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>295.20 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Maher/Martin</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/en/raspberry-pi-lins-for-hq-kamera-6mm" xlink:type="simple">https://www.electrokit.com/en/raspberry-pi-lins-for-hq-kamera-6mm</text:a></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Elektrokit</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
-      <text:p>Raspberry Pi CSI-kamerakabel, 200 mm</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce5" office:value-type="float" office:value="41020808" calcext:value-type="float">
-      <text:p>41020808</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
-      <text:p>1</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>23.20 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>23.20 KR</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Maher/Martin</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/en/raspberry-pi-kamerakabel-fpc-0.5mm-200mm" xlink:type="simple">https://www.electrokit.com/en/raspberry-pi-kamerakabel-fpc-0.5mm-200mm</text:a></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Elektrokit</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Digital hallsensor A3144</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="41015730" calcext:value-type="float">
-      <text:p>41015730</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="4" calcext:value-type="float">
-      <text:p>4</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>14.40 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>57.60 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Martin</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/en/halleffektsensor-digital" xlink:type="simple">https://www.electrokit.com/en/halleffektsensor-digital</text:a></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Elektrokit</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
-      <text:p>Neodymmagnet 4 x 3 mm, 320 mT</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="41035780" calcext:value-type="float">
-      <text:p>41035780</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="4" calcext:value-type="float">
-      <text:p>4</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>11.20 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>44.80 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Martin</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/magnet-neodym-4x3mm-320mt" xlink:type="simple">https://www.electrokit.com/magnet-neodym-4x3mm-320mt</text:a></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Elektrokit</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
-      <text:p>Neodymmagnet 5 x 3 mm, 5 N</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce5" office:value-type="float" office:value="41035779" calcext:value-type="float">
-      <text:p>41035779</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="2" calcext:value-type="float">
-      <text:p>2</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce12" office:value-type="string" calcext:value-type="string">
-      <text:p>19,20 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>38.40 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Martin</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/magnet-neodym-5x3mm-5n" xlink:type="simple">https://www.electrokit.com/magnet-neodym-5x3mm-5n</text:a></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Elektrokit</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
-      <text:p>Kopplingsdäck, 170 anslutningar</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="10160170" calcext:value-type="float">
-      <text:p>10160170</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="8" calcext:value-type="float">
-      <text:p>8</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce12" office:value-type="string" calcext:value-type="string">
-      <text:p>28,00 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string"><text:p>224,00 kr
-</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Martin</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce15" office:value-type="string" calcext:value-type="string">
-      <text:p>https://www.electrokit.com/kopplingsdack-170-anslutningar - presentationen anger även 10 st för 252,00 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Elektrokit</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Motordrivare för borstlösa motorer 50V 11A - A89301</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce8" office:value-type="float" office:value="41015730" calcext:value-type="float">
-      <text:p>41015730</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
-      <text:p>1</text:p>
-     </table:table-cell>
-     <table:table-cell table:number-columns-repeated="2" table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>223.20 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:number-columns-repeated="2" table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/motordrivare-for-bldc-50v-11a-a89301" xlink:type="simple">https://www.electrokit.com/motordrivare-for-bldc-50v-11a-a89301</text:a></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Batteriexperten</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce6" office:value-type="string" calcext:value-type="string">
-      <text:p>Vapex Li-Po Batteri 2S 7,4 V 25C 1.000 mAh JST-RCY (BEC)-kontakt</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce9" office:value-type="string" calcext:value-type="string">
-      <text:p>VPLP009F</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
-      <text:p>1</text:p>
-     </table:table-cell>
-     <table:table-cell table:number-columns-repeated="2" table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>159.20 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:number-columns-repeated="2" table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.batteriexperten.com/sv/artiklar/vapex-li-po-batteri-2s-74-v-25c-1000mah-jst-rcy-bec-kontakt.html?utm_source=google&amp;utm_medium=cpc&amp;utm_campaign=AR%20-%20SE%3A%20Standard%20Shopping%20-%20Mid%20-%20Batterier&amp;utm_id=23913167680&amp;gad_source=1&amp;gad_campaignid=23913167680&amp;gbraid=0AAAAAD9zpgy0BaYeaU_KkA9tZp9DIBDL_&amp;gclid=EAIaIQobChMI5PqercDNlgMVHVGRBR2CvCy4EAQYCiABEgJxI_D_BwE" xlink:type="simple">https://www.batteriexperten.com/sv/artiklar/vapex-li-po-batteri-2s-74-v-25c-1000mah-jst-rcy-bec-kontakt.html?utm_source=google&amp;utm_medium=cpc&amp;utm_campaign=AR%20-%20SE%3A%20Standard%20Shopping%20-%20Mid%20-%20Batterier&amp;utm_id=23913167680&amp;gad_source=1&amp;gad_campaignid=23913167680&amp;gbraid=0AAAAAD9zpgy0BaYeaU_KkA9tZp9DIBDL_&amp;gclid=EAIaIQobChMI5PqercDNlgMVHVGRBR2CvCy4EAQYCiABEgJxI_D_BwE</text:a></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2"/>
-     <table:table-cell table:style-name="ce7" office:value-type="string" calcext:value-type="string">
-      <text:p>Experimentkort - breadboard 270 hål formfaktor</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce10" office:value-type="float" office:value="41003657" calcext:value-type="float">
-      <text:p>41003657</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="3" calcext:value-type="float">
-      <text:p>3</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>22.40 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
-      <text:p>67.2 kr</text:p>
-     </table:table-cell>
-     <table:table-cell table:number-columns-repeated="2" table:style-name="ce2" office:value-type="string" calcext:value-type="string">
-      <text:p>Daniel</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/experimentkort-breadboard-pcb-270-hal" xlink:type="simple">https://www.electrokit.com/experimentkort-breadboard-pcb-270-hal</text:a></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2"/>
      <table:table-cell/>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="2"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D13]*[.E13]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D14]*[.E14]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
+     <table:table-cell table:style-name="ce17" office:value-type="string" calcext:value-type="string">
+      <text:p>initial budget</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce18" office:value-type="float" office:value="7000" calcext:value-type="float">
+      <text:p>7000</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D15]*[.E15]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D16]*[.E16]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
+     <table:table-cell table:style-name="ce18" office:value-type="string" calcext:value-type="string">
+      <text:p>Auction</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce22" office:value-type="float" office:value="2282" calcext:value-type="float">
+      <text:p>2282</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D17]*[.E17]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
+     <table:table-cell table:style-name="ce18" office:value-type="string" calcext:value-type="string">
+      <text:p>Sprint 1</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce18" office:value-type="float" office:value="540.8" calcext:value-type="float">
+      <text:p>540.8</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce27"/>
+     <table:table-cell table:style-name="ce26"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D18]*[.E18]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
+     <table:table-cell table:style-name="ce18" office:value-type="string" calcext:value-type="string">
+      <text:p>Sprint 2</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce18" office:value-type="float" office:value="1788" calcext:value-type="float">
+      <text:p>1788</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce27"/>
+     <table:table-cell table:style-name="ce26"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="3"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D19]*[.E19]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
+     <table:table-cell table:style-name="ce18" office:value-type="string" calcext:value-type="string">
+      <text:p>Extra purchase: cam price unknown, estimated</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce18" office:value-type="float" office:value="200" calcext:value-type="float">
+      <text:p>200</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce8"/>
+     <table:table-cell table:style-name="ce19"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D20]*[.E20]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
+     <table:table-cell table:style-name="ce18" office:value-type="string" calcext:value-type="string">
+      <text:p>Sprint 3</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce18"/>
+     <table:table-cell table:style-name="ce9"/>
+     <table:table-cell table:style-name="ce19"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D21]*[.E21]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
+     <table:table-cell table:style-name="ce18" office:value-type="string" calcext:value-type="string">
+      <text:p>Sprint 4</text:p>
      </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce18"/>
+     <table:table-cell table:style-name="ce10"/>
+     <table:table-cell table:style-name="ce19"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce29"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
-     <table:table-cell table:style-name="ce11"/>
-     <table:table-cell table:style-name="ce11" table:formula="of:=[.D22]*[.E22]" office:value-type="float" office:value="0" calcext:value-type="float">
-      <text:p>0.00 <text:s text:c="3"/></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce19"/>
+     <table:table-cell/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="3"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="9">
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce26" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce19" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="2">
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="2">
+     <table:table-cell table:style-name="ce4"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
     <table:table-row table:style-name="ro2">
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="26"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce3" office:value-type="string" calcext:value-type="string">
-      <text:p>Företag är tex ELFA, Farnell, Electrokit, Mouser, …</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
-      <text:p>Beskrivning är artikelns namn/beskrivning</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
-      <text:p>Beställningsnummer är företagets artikelnummer på delen</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce3" office:value-type="string" calcext:value-type="string"><text:p><text:span text:style-name="T1">Pris ska vara </text:span><text:span text:style-name="T2">exkl. moms</text:span></text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
-      <text:p>Beställare är gruppens inköpsansvarig (eller annan utsedd)</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
-      <text:p>Ansvarig är din lärare, tex Erik eller Henrik.</text:p>
-     </table:table-cell>
-     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
-     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
-    </table:table-row>
-    <table:table-row table:style-name="ro2">
-     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
-      <text:p>Kom ihåg att länka till artikeln! Det underlättar för den som lägger beställningen.</text:p>
-     </table:table-cell>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="3">
+     <table:table-cell table:style-name="ce4"/>
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
     </table:table-row>
@@ -1105,9 +810,9 @@
     </table:table-row>
    </table:table>
    <table:table table:name="Blad2" table:style-name="ta2">
-    <table:table-column table:style-name="co7" table:number-columns-repeated="6" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co5" table:number-columns-repeated="20" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co6" table:number-columns-repeated="16358"/>
+    <table:table-column table:style-name="co8" table:number-columns-repeated="6" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co6" table:number-columns-repeated="20" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co7" table:number-columns-repeated="16358"/>
     <table:table-row table:style-name="ro2" table:number-rows-repeated="1000">
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="26"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
@@ -1122,9 +827,9 @@
     </table:table-row>
    </table:table>
    <table:table table:name="Blad3" table:style-name="ta3">
-    <table:table-column table:style-name="co7" table:number-columns-repeated="6" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co5" table:number-columns-repeated="20" table:default-cell-style-name="Default"/>
-    <table:table-column table:style-name="co6" table:number-columns-repeated="16358"/>
+    <table:table-column table:style-name="co8" table:number-columns-repeated="6" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co6" table:number-columns-repeated="20" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co7" table:number-columns-repeated="16358"/>
     <table:table-row table:style-name="ro2" table:number-rows-repeated="1000">
      <table:table-cell table:style-name="ce3" table:number-columns-repeated="26"/>
      <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
