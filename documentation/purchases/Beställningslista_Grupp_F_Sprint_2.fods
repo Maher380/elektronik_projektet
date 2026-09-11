@@ -1,0 +1,1144 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<office:document xmlns:office="urn:oasis:names:tc:opendocument:xmlns:office:1.0" xmlns:ooo="http://openoffice.org/2004/office" xmlns:fo="urn:oasis:names:tc:opendocument:xmlns:xsl-fo-compatible:1.0" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:config="urn:oasis:names:tc:opendocument:xmlns:config:1.0" xmlns:dc="http://purl.org/dc/elements/1.1/" xmlns:meta="urn:oasis:names:tc:opendocument:xmlns:meta:1.0" xmlns:style="urn:oasis:names:tc:opendocument:xmlns:style:1.0" xmlns:text="urn:oasis:names:tc:opendocument:xmlns:text:1.0" xmlns:rpt="http://openoffice.org/2005/report" xmlns:draw="urn:oasis:names:tc:opendocument:xmlns:drawing:1.0" xmlns:dr3d="urn:oasis:names:tc:opendocument:xmlns:dr3d:1.0" xmlns:svg="urn:oasis:names:tc:opendocument:xmlns:svg-compatible:1.0" xmlns:chart="urn:oasis:names:tc:opendocument:xmlns:chart:1.0" xmlns:table="urn:oasis:names:tc:opendocument:xmlns:table:1.0" xmlns:number="urn:oasis:names:tc:opendocument:xmlns:datastyle:1.0" xmlns:ooow="http://openoffice.org/2004/writer" xmlns:oooc="http://openoffice.org/2004/calc" xmlns:field="urn:openoffice:names:experimental:ooo-ms-interop:xmlns:field:1.0" xmlns:of="urn:oasis:names:tc:opendocument:xmlns:of:1.2" xmlns:xforms="http://www.w3.org/2002/xforms" xmlns:tableooo="http://openoffice.org/2009/table" xmlns:calcext="urn:org:documentfoundation:names:experimental:calc:xmlns:calcext:1.0" xmlns:drawooo="http://openoffice.org/2010/draw" xmlns:loext="urn:org:documentfoundation:names:experimental:office:xmlns:loext:1.0" xmlns:math="http://www.w3.org/1998/Math/MathML" xmlns:form="urn:oasis:names:tc:opendocument:xmlns:form:1.0" xmlns:script="urn:oasis:names:tc:opendocument:xmlns:script:1.0" xmlns:dom="http://www.w3.org/2001/xml-events" xmlns:formx="urn:openoffice:names:experimental:ooxml-odf-interop:xmlns:form:1.0" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xhtml="http://www.w3.org/1999/xhtml" xmlns:grddl="http://www.w3.org/2003/g/data-view#" xmlns:css3t="http://www.w3.org/TR/css3-text/" xmlns:presentation="urn:oasis:names:tc:opendocument:xmlns:presentation:1.0" office:version="1.4" office:mimetype="application/vnd.oasis.opendocument.spreadsheet">
+ <office:meta><meta:document-statistic meta:table-count="3" meta:cell-count="116" meta:object-count="0"/><meta:generator>LibreOffice/26.8.0.3$Windows_X86_64 LibreOffice_project/bce0998afefdbc355585ca324285661a2170ba77</meta:generator></office:meta>
+ <office:settings>
+  <config:config-item-set config:name="ooo:view-settings">
+   <config:config-item config:name="VisibleAreaTop" config:type="int">0</config:config-item>
+   <config:config-item config:name="VisibleAreaLeft" config:type="int">0</config:config-item>
+   <config:config-item config:name="VisibleAreaWidth" config:type="int">38112</config:config-item>
+   <config:config-item config:name="VisibleAreaHeight" config:type="int">15191</config:config-item>
+   <config:config-item-map-indexed config:name="Views">
+    <config:config-item-map-entry>
+     <config:config-item config:name="ViewId" config:type="string">view1</config:config-item>
+     <config:config-item-map-named config:name="Tables">
+      <config:config-item-map-entry config:name="Blad1">
+       <config:config-item config:name="CursorPositionX" config:type="int">0</config:config-item>
+       <config:config-item config:name="CursorPositionY" config:type="int">0</config:config-item>
+       <config:config-item config:name="ActiveSplitRange" config:type="short">2</config:config-item>
+       <config:config-item config:name="PositionLeft" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionRight" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionTop" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionBottom" config:type="int">0</config:config-item>
+       <config:config-item config:name="ZoomType" config:type="short">0</config:config-item>
+       <config:config-item config:name="ZoomValue" config:type="int">100</config:config-item>
+       <config:config-item config:name="PageViewZoomValue" config:type="int">60</config:config-item>
+       <config:config-item config:name="ShowGrid" config:type="boolean">true</config:config-item>
+       <config:config-item config:name="AnchoredTextOverflowLegacy" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="LegacySingleLineFontwork" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="ConnectorUseSnapRect" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="IgnoreBreakAfterMultilineField" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="UseTrailingEmptyLinesInLayout" config:type="boolean">false</config:config-item>
+      </config:config-item-map-entry>
+      <config:config-item-map-entry config:name="Blad2">
+       <config:config-item config:name="CursorPositionX" config:type="int">0</config:config-item>
+       <config:config-item config:name="CursorPositionY" config:type="int">0</config:config-item>
+       <config:config-item config:name="ActiveSplitRange" config:type="short">2</config:config-item>
+       <config:config-item config:name="PositionLeft" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionRight" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionTop" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionBottom" config:type="int">0</config:config-item>
+       <config:config-item config:name="ZoomType" config:type="short">0</config:config-item>
+       <config:config-item config:name="ZoomValue" config:type="int">100</config:config-item>
+       <config:config-item config:name="PageViewZoomValue" config:type="int">60</config:config-item>
+       <config:config-item config:name="ShowGrid" config:type="boolean">true</config:config-item>
+       <config:config-item config:name="AnchoredTextOverflowLegacy" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="LegacySingleLineFontwork" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="ConnectorUseSnapRect" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="IgnoreBreakAfterMultilineField" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="UseTrailingEmptyLinesInLayout" config:type="boolean">false</config:config-item>
+      </config:config-item-map-entry>
+      <config:config-item-map-entry config:name="Blad3">
+       <config:config-item config:name="CursorPositionX" config:type="int">0</config:config-item>
+       <config:config-item config:name="CursorPositionY" config:type="int">0</config:config-item>
+       <config:config-item config:name="ActiveSplitRange" config:type="short">2</config:config-item>
+       <config:config-item config:name="PositionLeft" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionRight" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionTop" config:type="int">0</config:config-item>
+       <config:config-item config:name="PositionBottom" config:type="int">0</config:config-item>
+       <config:config-item config:name="ZoomType" config:type="short">0</config:config-item>
+       <config:config-item config:name="ZoomValue" config:type="int">100</config:config-item>
+       <config:config-item config:name="PageViewZoomValue" config:type="int">60</config:config-item>
+       <config:config-item config:name="ShowGrid" config:type="boolean">true</config:config-item>
+       <config:config-item config:name="AnchoredTextOverflowLegacy" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="LegacySingleLineFontwork" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="ConnectorUseSnapRect" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="IgnoreBreakAfterMultilineField" config:type="boolean">false</config:config-item>
+       <config:config-item config:name="UseTrailingEmptyLinesInLayout" config:type="boolean">false</config:config-item>
+      </config:config-item-map-entry>
+     </config:config-item-map-named>
+     <config:config-item config:name="ActiveTable" config:type="string">Blad1</config:config-item>
+     <config:config-item config:name="HorizontalScrollbarWidth" config:type="int">1855</config:config-item>
+     <config:config-item config:name="ZoomType" config:type="short">0</config:config-item>
+     <config:config-item config:name="ZoomValue" config:type="int">100</config:config-item>
+     <config:config-item config:name="PageViewZoomValue" config:type="int">60</config:config-item>
+     <config:config-item config:name="ShowPageBreakPreview" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="ShowZeroValues" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="ShowNotes" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="ShowNoteAuthor" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="ShowFormulasMarks" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="ShowGrid" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="GridColor" config:type="int">-1</config:config-item>
+     <config:config-item config:name="ShowPageBreaks" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="HasColumnRowHeaders" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="HasSheetTabs" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="IsOutlineSymbolsSet" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="IsValueHighlightingEnabled" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="IsSnapToRaster" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="RasterIsVisible" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="RasterResolutionX" config:type="int">1270</config:config-item>
+     <config:config-item config:name="RasterResolutionY" config:type="int">1270</config:config-item>
+     <config:config-item config:name="RasterSubdivisionX" config:type="int">1</config:config-item>
+     <config:config-item config:name="RasterSubdivisionY" config:type="int">1</config:config-item>
+     <config:config-item config:name="IsRasterAxisSynchronized" config:type="boolean">true</config:config-item>
+     <config:config-item config:name="FormulaBarHeight" config:type="short">1</config:config-item>
+     <config:config-item config:name="WindowState" config:type="string">2,25,1920,1009;1;,,,;</config:config-item>
+     <config:config-item config:name="AnchoredTextOverflowLegacy" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="LegacySingleLineFontwork" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="ConnectorUseSnapRect" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="IgnoreBreakAfterMultilineField" config:type="boolean">false</config:config-item>
+     <config:config-item config:name="UseTrailingEmptyLinesInLayout" config:type="boolean">false</config:config-item>
+    </config:config-item-map-entry>
+   </config:config-item-map-indexed>
+  </config:config-item-set>
+  <config:config-item-set config:name="ooo:configuration-settings">
+   <config:config-item config:name="AllowPrintJobCancel" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ApplyUserData" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="AutoCalculate" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="CharacterCompressionType" config:type="short">0</config:config-item>
+   <config:config-item config:name="EmbedAsianScriptFonts" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="EmbedComplexScriptFonts" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="EmbedFonts" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="EmbedLatinScriptFonts" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="EmbedOnlyUsedFonts" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="GridColor" config:type="int">-1</config:config-item>
+   <config:config-item config:name="HasColumnRowHeaders" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="HasSheetTabs" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ImagePreferredDPI" config:type="int">0</config:config-item>
+   <config:config-item config:name="IsDocumentShared" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="IsKernAsianPunctuation" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="IsOutlineSymbolsSet" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="IsRasterAxisSynchronized" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="IsSnapToRaster" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="LinkUpdateMode" config:type="short">3</config:config-item>
+   <config:config-item config:name="LoadReadonly" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="ModifyPasswordHash" config:type="int">0</config:config-item>
+   <config:config-item config:name="PrinterName" config:type="string"/>
+   <config:config-item config:name="PrinterPaperFromSetup" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="PrinterSetup" config:type="base64Binary"/>
+   <config:config-item config:name="RasterIsVisible" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="RasterResolutionX" config:type="int">1270</config:config-item>
+   <config:config-item config:name="RasterResolutionY" config:type="int">1270</config:config-item>
+   <config:config-item config:name="RasterSubdivisionX" config:type="int">1</config:config-item>
+   <config:config-item config:name="RasterSubdivisionY" config:type="int">1</config:config-item>
+   <config:config-item config:name="SaveThumbnail" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="SaveVersionOnClose" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="ShowFormulasMarks" config:type="boolean">false</config:config-item>
+   <config:config-item config:name="ShowGrid" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ShowNoteAuthor" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ShowNotes" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ShowPageBreaks" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="ShowZeroValues" config:type="boolean">true</config:config-item>
+   <config:config-item config:name="SyntaxStringRef" config:type="short">7</config:config-item>
+   <config:config-item config:name="UpdateFromTemplate" config:type="boolean">true</config:config-item>
+  </config:config-item-set>
+ </office:settings>
+ <office:scripts>
+  <office:script script:language="ooo:Basic">
+   <ooo:libraries xmlns:ooo="http://openoffice.org/2004/office" xmlns:xlink="http://www.w3.org/1999/xlink"/>
+  </office:script>
+ </office:scripts>
+ <office:font-face-decls>
+  <style:font-face style:name="&quot;Inter Tight&quot;" svg:font-family="&apos;&quot;Inter Tight&quot;&apos;"/>
+  <style:font-face style:name="Arial" svg:font-family="Arial"/>
+  <style:font-face style:name="Calibri" svg:font-family="Calibri"/>
+  <style:font-face style:name="Liberation Sans" svg:font-family="&apos;Liberation Sans&apos;" style:font-family-generic="swiss" style:font-pitch="variable"/>
+  <style:font-face style:name="Lucida Sans" svg:font-family="&apos;Lucida Sans&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
+  <style:font-face style:name="Microsoft YaHei" svg:font-family="&apos;Microsoft YaHei&apos;" style:font-family-generic="system" style:font-pitch="variable"/>
+ </office:font-face-decls>
+ <office:styles>
+  <style:default-style style:family="table-cell">
+   <style:table-cell-properties fo:wrap-option="wrap"/>
+   <style:paragraph-properties style:tab-stop-distance="0.5in"/>
+   <style:text-properties style:font-name="Liberation Sans" fo:font-size="10pt" fo:language="en" fo:country="US" style:font-name-asian="Microsoft YaHei" style:font-size-asian="10pt" style:language-asian="zh" style:country-asian="CN" style:font-name-complex="Lucida Sans" style:font-size-complex="10pt" style:language-complex="hi" style:country-complex="IN"/>
+  </style:default-style>
+  <style:default-style style:family="graphic">
+   <style:graphic-properties svg:stroke-color="#3465a4" draw:fill-color="#729fcf" fo:wrap-option="no-wrap" draw:shadow-offset-x="0.1181in" draw:shadow-offset-y="0.1181in" style:writing-mode="page"/>
+   <style:paragraph-properties style:text-autospace="ideograph-alpha" style:punctuation-wrap="simple" style:line-break="strict" style:font-independent-line-spacing="false">
+    <style:tab-stops/>
+   </style:paragraph-properties>
+   <style:text-properties style:use-window-font-color="true" loext:opacity="0%" fo:font-family="&apos;Liberation Serif&apos;" style:font-family-generic="roman" style:font-pitch="variable" fo:font-size="12pt" fo:language="en" fo:country="US" style:letter-kerning="true" style:font-family-asian="&apos;Segoe UI&apos;" style:font-family-generic-asian="system" style:font-pitch-asian="variable" style:font-size-asian="12pt" style:language-asian="zh" style:country-asian="CN" style:font-family-complex="Tahoma" style:font-family-generic-complex="system" style:font-pitch-complex="variable" style:font-size-complex="12pt" style:language-complex="hi" style:country-complex="IN"/>
+  </style:default-style>
+  <style:style style:name="Default" style:family="graphic"/>
+  <style:style style:name="Note" style:family="graphic" style:parent-style-name="Default">
+   <style:graphic-properties draw:stroke="solid" draw:marker-start="Arrowheads_20_1" draw:marker-start-width="0.0787in" draw:marker-start-center="false" draw:fill="solid" draw:fill-color="#ffffc0" draw:auto-grow-height="true" draw:auto-grow-width="false" fo:padding-top="0.0394in" fo:padding-bottom="0.0394in" fo:padding-left="0.0394in" fo:padding-right="0.0394in" draw:shadow="visible" draw:shadow-offset-x="0.0394in" draw:shadow-offset-y="0.0394in"/>
+   <style:text-properties style:font-name="Liberation Sans" fo:font-family="&apos;Liberation Sans&apos;" style:font-family-generic="swiss" style:font-pitch="variable" fo:font-size="10pt" style:font-name-asian="Microsoft YaHei" style:font-family-asian="&apos;Microsoft YaHei&apos;" style:font-family-generic-asian="system" style:font-pitch-asian="variable" style:font-size-asian="10pt" style:font-name-complex="Lucida Sans" style:font-family-complex="&apos;Lucida Sans&apos;" style:font-family-generic-complex="system" style:font-pitch-complex="variable" style:font-size-complex="10pt"/>
+  </style:style>
+  <number:number-style style:name="N0">
+   <number:number number:min-integer-digits="1"/>
+  </number:number-style>
+  <number:currency-style style:name="N129P0" style:volatile="true">
+   <number:currency-symbol number:language="en" number:country="US">$</number:currency-symbol>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:currency-style>
+  <number:currency-style style:name="N129">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>-</number:text>
+   <number:currency-symbol number:language="en" number:country="US">$</number:currency-symbol>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N129P0"/>
+  </number:currency-style>
+  <number:number-style style:name="N130P0" style:volatile="true">
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:number-style style:name="N130">
+   <number:text>-</number:text>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N130P0"/>
+  </number:number-style>
+  <number:number-style style:name="N131P0" style:volatile="true">
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:number-style style:name="N131">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>-</number:text>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N131P0"/>
+  </number:number-style>
+  <number:number-style style:name="N132P0" style:volatile="true">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:number-style style:name="N132">
+   <number:text>-</number:text>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N132P0"/>
+  </number:number-style>
+  <number:number-style style:name="N133P0" style:volatile="true">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+  </number:number-style>
+  <number:number-style style:name="N133">
+   <style:text-properties fo:color="#ff0000"/>
+   <number:text>-</number:text>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <style:map style:condition="value()&gt;=0" style:apply-style-name="N133P0"/>
+  </number:number-style>
+  <number:number-style style:name="N134P0" style:volatile="true">
+   <number:text loext:blank-width-char="-"> </number:text>
+   <number:fill-character> </number:fill-character>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text loext:blank-width-char="-"> </number:text>
+  </number:number-style>
+  <number:number-style style:name="N134P1" style:volatile="true">
+   <number:text>-</number:text>
+   <number:fill-character> </number:fill-character>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text loext:blank-width-char="-"> </number:text>
+  </number:number-style>
+  <number:number-style style:name="N134P2" style:volatile="true">
+   <number:text loext:blank-width-char="-"> </number:text>
+   <number:fill-character> </number:fill-character>
+   <number:text loext:blank-width-char="-1">- </number:text>
+  </number:number-style>
+  <number:text-style style:name="N134">
+   <number:text loext:blank-width-char="-"> </number:text>
+   <number:text-content/>
+   <number:text loext:blank-width-char="-"> </number:text>
+   <style:map style:condition="value()&gt;0" style:apply-style-name="N134P0"/>
+   <style:map style:condition="value()&lt;0" style:apply-style-name="N134P1"/>
+   <style:map style:condition="value()=0" style:apply-style-name="N134P2"/>
+  </number:text-style>
+  <number:number-style style:name="N135P0" style:volatile="true">
+   <number:text loext:blank-width-char="-"> </number:text>
+   <number:fill-character> </number:fill-character>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text loext:blank-width-char="-"> </number:text>
+  </number:number-style>
+  <number:number-style style:name="N135P1" style:volatile="true">
+   <number:text>-</number:text>
+   <number:fill-character> </number:fill-character>
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text loext:blank-width-char="-"> </number:text>
+  </number:number-style>
+  <number:number-style style:name="N135P2" style:volatile="true">
+   <number:text loext:blank-width-char="-"> </number:text>
+   <number:fill-character> </number:fill-character>
+   <number:text>-</number:text>
+   <number:number number:decimal-places="0" number:min-decimal-places="0" number:min-integer-digits="2" loext:max-blank-integer-digits="2"/>
+   <number:text loext:blank-width-char="-"> </number:text>
+  </number:number-style>
+  <number:text-style style:name="N135">
+   <number:text loext:blank-width-char="-"> </number:text>
+   <number:text-content/>
+   <number:text loext:blank-width-char="-"> </number:text>
+   <style:map style:condition="value()&gt;0" style:apply-style-name="N135P0"/>
+   <style:map style:condition="value()&lt;0" style:apply-style-name="N135P1"/>
+   <style:map style:condition="value()=0" style:apply-style-name="N135P2"/>
+  </number:text-style>
+  <number:time-style style:name="N136">
+   <number:minutes number:style="long"/>
+   <number:text>:</number:text>
+   <number:seconds number:style="long"/>
+  </number:time-style>
+  <number:time-style style:name="N137" number:truncate-on-overflow="false">
+   <number:hours/>
+   <number:text>:</number:text>
+   <number:minutes number:style="long"/>
+   <number:text>:</number:text>
+   <number:seconds number:style="long"/>
+  </number:time-style>
+  <number:time-style style:name="N138">
+   <number:minutes number:style="long"/>
+   <number:text>:</number:text>
+   <number:seconds number:style="long" number:decimal-places="1"/>
+  </number:time-style>
+  <number:number-style style:name="N139">
+   <number:scientific-number number:decimal-places="1" number:min-decimal-places="1" number:min-integer-digits="1" number:min-exponent-digits="1" number:exponent-interval="3" number:forced-exponent-sign="true"/>
+  </number:number-style>
+  <number:number-style style:name="N140">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1" number:grouping="true"/>
+   <number:text loext:blank-width-char="k1_r3">    </number:text>
+  </number:number-style>
+  <style:style style:name="Default" style:family="table-cell">
+   <style:table-cell-properties style:rotation-align="none" style:vertical-align="bottom"/>
+   <style:text-properties fo:color="#000000" style:font-name="Arial" fo:font-family="Arial" style:font-name-complex="Arial" style:font-family-complex="Arial"/>
+  </style:style>
+  <style:style style:name="Heading" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:font-size="24pt" fo:font-style="normal" fo:font-weight="bold" style:font-size-asian="24pt" style:font-style-asian="normal" style:font-weight-asian="bold" style:font-size-complex="24pt" style:font-style-complex="normal" style:font-weight-complex="bold"/>
+  </style:style>
+  <style:style style:name="Heading_20_1" style:display-name="Heading 1" style:family="table-cell" style:parent-style-name="Heading">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:font-size="18pt" style:font-size-asian="18pt" style:font-size-complex="18pt"/>
+  </style:style>
+  <style:style style:name="Heading_20_2" style:display-name="Heading 2" style:family="table-cell" style:parent-style-name="Heading">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:font-size="12pt" style:font-size-asian="12pt" style:font-size-complex="12pt"/>
+  </style:style>
+  <style:style style:name="Text" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+  </style:style>
+  <style:style style:name="Note" style:family="table-cell" style:parent-style-name="Text">
+   <style:table-cell-properties fo:background-color="#ffffcc" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" fo:wrap-option="no-wrap" fo:border="0.74pt solid #808080" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#333333"/>
+  </style:style>
+  <style:style style:name="Footnote" style:family="table-cell" style:parent-style-name="Text">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#808080" fo:font-style="italic" style:font-style-asian="italic" style:font-style-complex="italic"/>
+  </style:style>
+  <style:style style:name="Hyperlink" style:family="table-cell" style:parent-style-name="Text">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#0000ee" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="#0000ee"/>
+  </style:style>
+  <style:style style:name="Status" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+  </style:style>
+  <style:style style:name="Good" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:background-color="#ccffcc" fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#006600"/>
+  </style:style>
+  <style:style style:name="Neutral" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:background-color="#ffffcc" fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#996600"/>
+  </style:style>
+  <style:style style:name="Bad" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:background-color="#ffcccc" fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#cc0000"/>
+  </style:style>
+  <style:style style:name="Warning" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#cc0000"/>
+  </style:style>
+  <style:style style:name="Error" style:family="table-cell" style:parent-style-name="Status">
+   <style:table-cell-properties fo:background-color="#cc0000" fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#ffffff" fo:font-weight="bold" style:font-weight-asian="bold" style:font-weight-complex="bold"/>
+  </style:style>
+  <style:style style:name="Accent" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:font-weight="bold" style:font-weight-asian="bold" style:font-weight-complex="bold"/>
+  </style:style>
+  <style:style style:name="Accent_20_1" style:display-name="Accent 1" style:family="table-cell" style:parent-style-name="Accent">
+   <style:table-cell-properties fo:background-color="#000000" fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#ffffff"/>
+  </style:style>
+  <style:style style:name="Accent_20_2" style:display-name="Accent 2" style:family="table-cell" style:parent-style-name="Accent">
+   <style:table-cell-properties fo:background-color="#808080" fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:color="#ffffff"/>
+  </style:style>
+  <style:style style:name="Accent_20_3" style:display-name="Accent 3" style:family="table-cell" style:parent-style-name="Accent">
+   <style:table-cell-properties fo:background-color="#dddddd" fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+  </style:style>
+  <style:style style:name="Result" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:wrap-option="no-wrap" style:shrink-to-fit="false"/>
+   <style:text-properties fo:font-style="italic" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-weight="bold" style:font-style-asian="italic" style:font-weight-asian="bold" style:font-style-complex="italic" style:font-weight-complex="bold"/>
+  </style:style>
+  <draw:marker draw:name="Arrowheads_20_1" draw:display-name="Arrowheads 1" svg:viewBox="0 0 20 30" svg:d="M10 0l-10 30h20z"/>
+  <loext:theme loext:name="Sheets">
+   <loext:theme-colors loext:name="Sheets">
+    <loext:color loext:name="dark1" loext:color="#000000"/>
+    <loext:color loext:name="light1" loext:color="#ffffff"/>
+    <loext:color loext:name="dark2" loext:color="#000000"/>
+    <loext:color loext:name="light2" loext:color="#ffffff"/>
+    <loext:color loext:name="accent1" loext:color="#4472c4"/>
+    <loext:color loext:name="accent2" loext:color="#ed7d31"/>
+    <loext:color loext:name="accent3" loext:color="#a5a5a5"/>
+    <loext:color loext:name="accent4" loext:color="#ffc000"/>
+    <loext:color loext:name="accent5" loext:color="#5b9bd5"/>
+    <loext:color loext:name="accent6" loext:color="#70ad47"/>
+    <loext:color loext:name="hyperlink" loext:color="#0563c1"/>
+    <loext:color loext:name="followed-hyperlink" loext:color="#0563c1"/>
+   </loext:theme-colors>
+  </loext:theme>
+ </office:styles>
+ <office:automatic-styles>
+  <style:style style:name="co1" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="1.6098in"/>
+  </style:style>
+  <style:style style:name="co2" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="2.3807in"/>
+  </style:style>
+  <style:style style:name="co3" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.7516in"/>
+  </style:style>
+  <style:style style:name="co4" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="3.9311in"/>
+  </style:style>
+  <style:style style:name="co5" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.6165in"/>
+  </style:style>
+  <style:style style:name="co6" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.9736in"/>
+  </style:style>
+  <style:style style:name="co7" style:family="table-column">
+   <style:table-column-properties fo:break-before="auto" style:column-width="0.6555in"/>
+  </style:style>
+  <style:style style:name="ro1" style:family="table-row">
+   <style:table-row-properties style:row-height="0.2409in" fo:break-before="auto" style:use-optimal-row-height="true"/>
+  </style:style>
+  <style:style style:name="ro2" style:family="table-row">
+   <style:table-row-properties style:row-height="0.198in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ro3" style:family="table-row">
+   <style:table-row-properties style:row-height="0.2083in" fo:break-before="auto" style:use-optimal-row-height="false"/>
+  </style:style>
+  <style:style style:name="ta1" style:family="table" style:master-page-name="PageStyle_5f_Blad1">
+   <style:table-properties table:display="true" style:writing-mode="lr-tb"/>
+  </style:style>
+  <style:style style:name="ta2" style:family="table" style:master-page-name="PageStyle_5f_Blad2">
+   <style:table-properties table:display="true" style:writing-mode="lr-tb"/>
+  </style:style>
+  <style:style style:name="ta3" style:family="table" style:master-page-name="PageStyle_5f_Blad3">
+   <style:table-properties table:display="true" style:writing-mode="lr-tb"/>
+  </style:style>
+  <number:number-style style:name="N2">
+   <number:number number:decimal-places="2" number:min-decimal-places="2" number:min-integer-digits="1"/>
+  </number:number-style>
+  <style:style style:name="ce1" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="14pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="14pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="14pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce2" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.06pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce3" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:rotation-align="none"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce4" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce5" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.74pt solid #44b3e1" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border-left="none" style:direction="ltr" fo:border-right="none" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" fo:border-top="0.74pt solid #44b3e1" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce6" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties fo:text-align="start" css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#272627" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="7pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="7pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="7pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce7" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:background-color="#ffffff" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties fo:text-align="start" css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#171717" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="&quot;Inter Tight&quot;" fo:font-size="8pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="8pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="&quot;Inter Tight&quot;" style:font-size-complex="8pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce8" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#171717" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce9" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:background-color="#f5f8fa" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties fo:text-align="start" css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#272627" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="12pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="12pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="12pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce10" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:background-color="#ffffff" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#171717" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce11" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N140">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.06pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce12" style:family="table-cell" style:parent-style-name="Default" style:data-style-name="N140">
+   <style:table-cell-properties fo:border-bottom="0.74pt solid #44b3e1" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="fix" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border-left="none" style:direction="ltr" fo:border-right="none" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" fo:border-top="0.74pt solid #44b3e1" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties fo:text-align="end" css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce13" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.06pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal">
+    <loext:char-complex-color loext:theme-type="dark1" loext:color-type="theme"/>
+   </style:text-properties>
+  </style:style>
+  <style:style style:name="ce14" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.74pt solid #44b3e1" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border-left="none" style:direction="ltr" fo:border-right="0.74pt solid #44b3e1" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" fo:border-top="0.74pt solid #44b3e1" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce15" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties fo:border-bottom="0.74pt solid #44b3e1" style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border-left="none" style:direction="ltr" fo:border-right="0.74pt solid #44b3e1" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" fo:border-top="0.74pt solid #44b3e1" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="none" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:style style:name="ce16" style:family="table-cell" style:parent-style-name="Default">
+   <style:table-cell-properties style:diagonal-bl-tr="none" style:diagonal-tl-br="none" style:text-align-source="value-type" style:repeat-content="false" fo:wrap-option="no-wrap" fo:border="0.06pt solid #000000" style:direction="ltr" style:rotation-angle="0" style:rotation-align="none" style:shrink-to-fit="false" style:vertical-align="bottom" loext:vertical-justify="auto"/>
+   <style:paragraph-properties css3t:text-justify="auto" fo:margin-left="0in" style:writing-mode="page"/>
+   <style:text-properties fo:color="#000000" style:text-outline="false" style:text-line-through-style="none" style:text-line-through-type="none" style:font-name="Calibri" fo:font-size="11pt" fo:font-style="normal" fo:text-shadow="none" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color" fo:font-weight="normal" style:font-size-asian="11pt" style:font-style-asian="normal" style:font-weight-asian="normal" style:font-name-complex="Calibri" style:font-size-complex="11pt" style:font-style-complex="normal" style:font-weight-complex="normal"/>
+  </style:style>
+  <style:page-layout style:name="pm1">
+   <style:page-layout-properties style:first-page-number="continue" style:writing-mode="lr-tb"/>
+   <style:header-style>
+    <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-bottom="0.0984in"/>
+   </style:header-style>
+   <style:footer-style>
+    <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-top="0.0984in"/>
+   </style:footer-style>
+  </style:page-layout>
+  <style:page-layout style:name="pm2">
+   <style:page-layout-properties style:writing-mode="lr-tb"/>
+   <style:header-style>
+    <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-bottom="0.0984in" fo:border="1.5pt solid #000000" fo:padding="0.0071in" fo:background-color="#c0c0c0">
+     <style:background-image/>
+    </style:header-footer-properties>
+   </style:header-style>
+   <style:footer-style>
+    <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-top="0.0984in" fo:border="1.5pt solid #000000" fo:padding="0.0071in" fo:background-color="#c0c0c0">
+     <style:background-image/>
+    </style:header-footer-properties>
+   </style:footer-style>
+  </style:page-layout>
+  <style:page-layout style:name="pm3">
+   <style:page-layout-properties fo:page-width="11in" fo:page-height="8.5in" style:num-format="1" style:print-orientation="landscape" fo:margin-top="0.75in" fo:margin-bottom="0.75in" fo:margin-left="0.7in" fo:margin-right="0.7in" style:print-page-order="ttb" style:first-page-number="continue" style:scale-to="100%" style:writing-mode="lr-tb" style:print="charts drawings objects zero-values"/>
+   <style:header-style>
+    <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-bottom="0.0984in"/>
+   </style:header-style>
+   <style:footer-style>
+    <style:header-footer-properties fo:min-height="0.2953in" fo:margin-left="0in" fo:margin-right="0in" fo:margin-top="0.0984in"/>
+   </style:footer-style>
+  </style:page-layout>
+  <style:style style:name="T1" style:family="text">
+   <style:text-properties fo:color="#000000" style:font-name="Calibri" fo:font-size="11pt" fo:font-weight="normal" style:text-underline-style="none" style:text-underline-color="font-color" style:text-line-through-type="none" fo:font-style="normal" style:text-outline="false" fo:text-shadow="none" style:text-position="0% 100%" style:font-name-complex="Calibri" style:font-size-asian="11pt" style:font-size-complex="11pt" style:font-weight-asian="normal" style:font-weight-complex="normal" style:font-style-asian="normal" style:font-style-complex="normal"/>
+  </style:style>
+  <style:style style:name="T2" style:family="text">
+   <style:text-properties fo:color="#000000" style:font-name="Calibri" fo:font-size="11pt" fo:font-weight="normal" style:text-line-through-type="none" fo:font-style="normal" style:text-outline="false" fo:text-shadow="none" style:text-position="0% 100%" style:font-name-complex="Calibri" style:font-size-asian="11pt" style:font-size-complex="11pt" style:font-weight-asian="normal" style:font-weight-complex="normal" style:font-style-asian="normal" style:font-style-complex="normal" style:text-underline-style="solid" style:text-underline-width="auto" style:text-underline-color="font-color"/>
+  </style:style>
+ </office:automatic-styles>
+ <office:master-styles>
+  <style:master-page style:name="Default" style:page-layout-name="pm1">
+   <style:header>
+    <text:p><text:sheet-name>???</text:sheet-name></text:p>
+   </style:header>
+   <style:header-left style:display="false"/>
+   <style:header-first style:display="false"/>
+   <style:footer>
+    <text:p>Page <text:page-number>1</text:page-number></text:p>
+   </style:footer>
+   <style:footer-left style:display="false"/>
+   <style:footer-first style:display="false"/>
+  </style:master-page>
+  <style:master-page style:name="Report" style:page-layout-name="pm2">
+   <style:header>
+    <style:region-left>
+     <text:p><text:sheet-name>???</text:sheet-name><text:s/>(<text:title>???</text:title>)</text:p>
+    </style:region-left>
+    <style:region-right>
+     <text:p><text:date style:data-style-name="N2" text:date-value="2026-09-11">00/00/0000</text:date>, <text:time>00:00:00</text:time></text:p>
+    </style:region-right>
+   </style:header>
+   <style:header-left style:display="false"/>
+   <style:header-first style:display="false"/>
+   <style:footer>
+    <text:p>Page <text:page-number>1</text:page-number><text:s/>/ <text:page-count>99</text:page-count></text:p>
+   </style:footer>
+   <style:footer-left style:display="false"/>
+   <style:footer-first style:display="false"/>
+  </style:master-page>
+  <style:master-page style:name="PageStyle_5f_Blad2" style:display-name="PageStyle_Blad2" style:page-layout-name="pm3">
+   <style:header style:display="false"/>
+   <style:header-left style:display="false"/>
+   <style:header-first style:display="false"/>
+   <style:footer style:display="false"/>
+   <style:footer-left style:display="false"/>
+   <style:footer-first style:display="false"/>
+  </style:master-page>
+  <style:master-page style:name="PageStyle_5f_Blad3" style:display-name="PageStyle_Blad3" style:page-layout-name="pm3">
+   <style:header style:display="false"/>
+   <style:header-left style:display="false"/>
+   <style:header-first style:display="false"/>
+   <style:footer style:display="false"/>
+   <style:footer-left style:display="false"/>
+   <style:footer-first style:display="false"/>
+  </style:master-page>
+  <style:master-page style:name="PageStyle_5f_Blad1" style:display-name="PageStyle_Blad1" style:page-layout-name="pm3">
+   <style:header style:display="false"/>
+   <style:header-left style:display="false"/>
+   <style:header-first style:display="false"/>
+   <style:footer style:display="false"/>
+   <style:footer-left style:display="false"/>
+   <style:footer-first style:display="false"/>
+  </style:master-page>
+ </office:master-styles>
+ <office:body>
+  <office:spreadsheet>
+   <table:calculation-settings table:case-sensitive="false" table:automatic-find-labels="false" table:use-regular-expressions="false" table:use-wildcards="true" table:null-year="1950">
+    <table:iteration table:maximum-difference="0.0001"/>
+   </table:calculation-settings>
+   <table:table table:name="Blad1" table:style-name="ta1">
+    <office:forms form:automatic-focus="false" form:apply-design-mode="false"/>
+    <table:table-column table:style-name="co1" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co2" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co1" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co3" table:number-columns-repeated="3" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co1" table:number-columns-repeated="2" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co4" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co5" table:number-columns-repeated="17" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co6" table:number-columns-repeated="16358"/>
+    <table:table-row table:style-name="ro1">
+     <table:table-cell table:style-name="ce1" office:value-type="string" calcext:value-type="string">
+      <text:p>Beställningslista</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Företag</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Beskrivning</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Artikelnummer</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Antal</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Pris/st</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Pris, tot</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Beställare</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Ansvarig</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce13" office:value-type="string" calcext:value-type="string">
+      <text:p>Kommentarer (länkar mm)</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Elektrokit</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Raspberry pi 5 2 GB</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="41022613" calcext:value-type="float">
+      <text:p>41022613</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
+      <text:p>1</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="2" table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>655.20 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Maher/Martin</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/raspberry-pi-5-2gb" xlink:type="simple">https://www.electrokit.com/raspberry-pi-5-2gb</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Elektrokit</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Raspberry pi 6mm vidvinkelobjektiv</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="41017554" calcext:value-type="float">
+      <text:p>41017554</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
+      <text:p>1</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="2" table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>295.20 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Maher/Martin</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/en/raspberry-pi-lins-for-hq-kamera-6mm" xlink:type="simple">https://www.electrokit.com/en/raspberry-pi-lins-for-hq-kamera-6mm</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Elektrokit</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
+      <text:p>Raspberry Pi CSI-kamerakabel, 200 mm</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="float" office:value="41020808" calcext:value-type="float">
+      <text:p>41020808</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
+      <text:p>1</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>23.20 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>23.20 KR</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Maher/Martin</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/en/raspberry-pi-kamerakabel-fpc-0.5mm-200mm" xlink:type="simple">https://www.electrokit.com/en/raspberry-pi-kamerakabel-fpc-0.5mm-200mm</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Elektrokit</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Digital hallsensor A3144</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="41015730" calcext:value-type="float">
+      <text:p>41015730</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="4" calcext:value-type="float">
+      <text:p>4</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>14.40 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>57.60 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Martin</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/en/halleffektsensor-digital" xlink:type="simple">https://www.electrokit.com/en/halleffektsensor-digital</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Elektrokit</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
+      <text:p>Neodymmagnet 4 x 3 mm, 320 mT</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="41035780" calcext:value-type="float">
+      <text:p>41035780</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="4" calcext:value-type="float">
+      <text:p>4</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>11.20 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>44.80 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Martin</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/magnet-neodym-4x3mm-320mt" xlink:type="simple">https://www.electrokit.com/magnet-neodym-4x3mm-320mt</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Elektrokit</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
+      <text:p>Neodymmagnet 5 x 3 mm, 5 N</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="float" office:value="41035779" calcext:value-type="float">
+      <text:p>41035779</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="2" calcext:value-type="float">
+      <text:p>2</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce12" office:value-type="string" calcext:value-type="string">
+      <text:p>19,20 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>38.40 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Martin</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce14" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/magnet-neodym-5x3mm-5n" xlink:type="simple">https://www.electrokit.com/magnet-neodym-5x3mm-5n</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Elektrokit</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce5" office:value-type="string" calcext:value-type="string">
+      <text:p>Kopplingsdäck, 170 anslutningar</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="10160170" calcext:value-type="float">
+      <text:p>10160170</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="8" calcext:value-type="float">
+      <text:p>8</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce12" office:value-type="string" calcext:value-type="string">
+      <text:p>28,00 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string"><text:p>224,00 kr
+</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Martin</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce15" office:value-type="string" calcext:value-type="string">
+      <text:p>https://www.electrokit.com/kopplingsdack-170-anslutningar - presentationen anger även 10 st för 252,00 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Elektrokit</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Motordrivare för borstlösa motorer 50V 11A - A89301</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce8" office:value-type="float" office:value="41015730" calcext:value-type="float">
+      <text:p>41015730</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
+      <text:p>1</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="2" table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>223.20 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="2" table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/motordrivare-for-bldc-50v-11a-a89301" xlink:type="simple">https://www.electrokit.com/motordrivare-for-bldc-50v-11a-a89301</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Batteriexperten</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce6" office:value-type="string" calcext:value-type="string">
+      <text:p>Vapex Li-Po Batteri 2S 7,4 V 25C 1.000 mAh JST-RCY (BEC)-kontakt</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce9" office:value-type="string" calcext:value-type="string">
+      <text:p>VPLP009F</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="1" calcext:value-type="float">
+      <text:p>1</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="2" table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>159.20 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="2" table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.batteriexperten.com/sv/artiklar/vapex-li-po-batteri-2s-74-v-25c-1000mah-jst-rcy-bec-kontakt.html?utm_source=google&amp;utm_medium=cpc&amp;utm_campaign=AR%20-%20SE%3A%20Standard%20Shopping%20-%20Mid%20-%20Batterier&amp;utm_id=23913167680&amp;gad_source=1&amp;gad_campaignid=23913167680&amp;gbraid=0AAAAAD9zpgy0BaYeaU_KkA9tZp9DIBDL_&amp;gclid=EAIaIQobChMI5PqercDNlgMVHVGRBR2CvCy4EAQYCiABEgJxI_D_BwE" xlink:type="simple">https://www.batteriexperten.com/sv/artiklar/vapex-li-po-batteri-2s-74-v-25c-1000mah-jst-rcy-bec-kontakt.html?utm_source=google&amp;utm_medium=cpc&amp;utm_campaign=AR%20-%20SE%3A%20Standard%20Shopping%20-%20Mid%20-%20Batterier&amp;utm_id=23913167680&amp;gad_source=1&amp;gad_campaignid=23913167680&amp;gbraid=0AAAAAD9zpgy0BaYeaU_KkA9tZp9DIBDL_&amp;gclid=EAIaIQobChMI5PqercDNlgMVHVGRBR2CvCy4EAQYCiABEgJxI_D_BwE</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2"/>
+     <table:table-cell table:style-name="ce7" office:value-type="string" calcext:value-type="string">
+      <text:p>Experimentkort - breadboard 270 hål formfaktor</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce10" office:value-type="float" office:value="41003657" calcext:value-type="float">
+      <text:p>41003657</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" office:value-type="float" office:value="3" calcext:value-type="float">
+      <text:p>3</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>22.40 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce11" office:value-type="string" calcext:value-type="string">
+      <text:p>67.2 kr</text:p>
+     </table:table-cell>
+     <table:table-cell table:number-columns-repeated="2" table:style-name="ce2" office:value-type="string" calcext:value-type="string">
+      <text:p>Daniel</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce16" office:value-type="string" calcext:value-type="string"><text:p><text:a xlink:href="https://www.electrokit.com/experimentkort-breadboard-pcb-270-hal" xlink:type="simple">https://www.electrokit.com/experimentkort-breadboard-pcb-270-hal</text:a></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2"/>
+     <table:table-cell/>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="2"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D13]*[.E13]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D14]*[.E14]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D15]*[.E15]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D16]*[.E16]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D17]*[.E17]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D18]*[.E18]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D19]*[.E19]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D20]*[.E20]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D21]*[.E21]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="4"/>
+     <table:table-cell table:style-name="ce11"/>
+     <table:table-cell table:style-name="ce11" table:formula="of:=[.D22]*[.E22]" office:value-type="float" office:value="0" calcext:value-type="float">
+      <text:p>0.00 <text:s text:c="3"/></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce2" table:number-columns-repeated="3"/>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="17"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce3" office:value-type="string" calcext:value-type="string">
+      <text:p>Företag är tex ELFA, Farnell, Electrokit, Mouser, …</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
+      <text:p>Beskrivning är artikelns namn/beskrivning</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
+      <text:p>Beställningsnummer är företagets artikelnummer på delen</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce3" office:value-type="string" calcext:value-type="string"><text:p><text:span text:style-name="T1">Pris ska vara </text:span><text:span text:style-name="T2">exkl. moms</text:span></text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
+      <text:p>Beställare är gruppens inköpsansvarig (eller annan utsedd)</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
+      <text:p>Ansvarig är din lärare, tex Erik eller Henrik.</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2">
+     <table:table-cell table:style-name="ce4" office:value-type="string" calcext:value-type="string">
+      <text:p>Kom ihåg att länka till artikeln! Det underlättar för den som lägger beställningen.</text:p>
+     </table:table-cell>
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="25"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="970">
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro3" table:number-rows-repeated="1047575">
+     <table:table-cell table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro3">
+     <table:table-cell table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+   </table:table>
+   <table:table table:name="Blad2" table:style-name="ta2">
+    <table:table-column table:style-name="co7" table:number-columns-repeated="6" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co5" table:number-columns-repeated="20" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co6" table:number-columns-repeated="16358"/>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="1000">
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro3" table:number-rows-repeated="1047575">
+     <table:table-cell table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro3">
+     <table:table-cell table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+   </table:table>
+   <table:table table:name="Blad3" table:style-name="ta3">
+    <table:table-column table:style-name="co7" table:number-columns-repeated="6" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co5" table:number-columns-repeated="20" table:default-cell-style-name="Default"/>
+    <table:table-column table:style-name="co6" table:number-columns-repeated="16358"/>
+    <table:table-row table:style-name="ro2" table:number-rows-repeated="1000">
+     <table:table-cell table:style-name="ce3" table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro3" table:number-rows-repeated="1047575">
+     <table:table-cell table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+    <table:table-row table:style-name="ro3">
+     <table:table-cell table:number-columns-repeated="26"/>
+     <table:table-cell table:style-name="Default" table:number-columns-repeated="16358"/>
+    </table:table-row>
+   </table:table>
+   <table:named-expressions/>
+  </office:spreadsheet>
+ </office:body>
+</office:document>
