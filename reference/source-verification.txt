@@ -1,0 +1,7 @@
+11 original Logic methods are unchanged.
+Four original driving methods differ only by MQTT stop-distance and duty parameters.
+Motor, PWM, IR and servo implementations match SCRUM-16.
+Wi-Fi/MQTT drivers and protocol Manager match SCRUM-50.
+Operator tools match SCRUM-50 except set-config duty limit extended to 1.0.
+SCRUM-50 Planner, Control::evaluate and applyOutput are not part of the experiment.
+Original project unchanged: 114 file hashes and Git status verified.

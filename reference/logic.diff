@@ -1,0 +1,137 @@
+--- SCRUM16/logic.cpp
++++ experiment/logic.cpp
+@@ -67,6 +67,7 @@
+     , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
+     , mySerial({factory.serial(SerialBaudRate)})
+     , mySteeringServoPwm{factory.pwm(SteeringPwmConfig)}
++    , myCommunication{factory, MqttTopics}
+ {
+     if (myMotorForwardsPwm && myMotorBackwardsPwm)
+     {
+@@ -105,6 +106,8 @@
+             vTaskDelay(pdMS_TO_TICKS(1000U));
+         }
+     }
++    // MQTT overlay: boot disarmed after SCRUM-16 driver initialization.
++    initializeMqttOverlay();
+ }
+ 
+ void Logic::setStartState() noexcept
+@@ -330,14 +333,14 @@
+         distanceToClosestObject = myDistanceToObstacleRight;
+     }
+ 
+-    if (distanceToClosestObject < 30.0F)
+-    {
+-        myPlannedAction.speed = 0.0F;
+-        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+-    }
+-    else
+-    {
+-        myPlannedAction.speed = 0.5F;
++    if (distanceToClosestObject < myStopDistanceCm)
++    {
++        myPlannedAction.speed = 0.0F;
++        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
++    }
++    else
++    {
++        myPlannedAction.speed = myDriveDuty;
+         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+     }
+ }
+@@ -355,14 +358,14 @@
+     }
+ 
+     myPlannedAction.steeringDegrees = mySweepSteeringDegrees;
+-    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+-    {
+-        myPlannedAction.speed = 0.0F;
+-        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+-    }
+-    else
+-    {
+-        myPlannedAction.speed = 0.2F;
++    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < myStopDistanceCm)
++    {
++        myPlannedAction.speed = 0.0F;
++        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
++    }
++    else
++    {
++        myPlannedAction.speed = myDriveDuty;
+         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+     }
+ 
+@@ -388,14 +391,14 @@
+     }
+ 
+     myPlannedAction.steeringDegrees = -90.0F;
+-    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+-    {
+-        myPlannedAction.speed = 0.0F;
+-        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+-    }
+-    else
+-    {
+-        myPlannedAction.speed = 0.2F;
++    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < myStopDistanceCm)
++    {
++        myPlannedAction.speed = 0.0F;
++        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
++    }
++    else
++    {
++        myPlannedAction.speed = myDriveDuty;
+         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+     }
+ }
+@@ -411,14 +414,14 @@
+     }
+ 
+     myPlannedAction.steeringDegrees = 90.0F;
+-    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+-    {
+-        myPlannedAction.speed = 0.0F;
+-        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+-    }
+-    else
+-    {
+-        myPlannedAction.speed = 0.2F;
++    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < myStopDistanceCm)
++    {
++        myPlannedAction.speed = 0.0F;
++        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
++    }
++    else
++    {
++        myPlannedAction.speed = myDriveDuty;
+         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+     }
+ }
+@@ -524,14 +527,23 @@
+ {
+     while (!stop.load())
+     {
++        const auto nowMs = static_cast<std::uint32_t>(
++            xTaskGetTickCount() * portTICK_PERIOD_MS);
++        processMqttOverlay(nowMs);
++
+         getEnvironmentPicture();
+         decideAction();
+-        executeAction();
++        // Only MQTT authorization surrounds the unchanged executeAction().
++        if (authorizeMqttAction(nowMs))
++        {
++            executeAction();
++        }
+         logState();
++        publishMqttTelemetry(nowMs);
+ 
+         vTaskDelay(pdMS_TO_TICKS(tickPeriod_ms));
+     }
+-    myMotor->stop(myPlannedAction.stopMode);
++    shutdownMqttOverlay();
+ }
+ 
+ } // namespace app::logic
