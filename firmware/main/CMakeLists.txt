@@ -1,0 +1,37 @@
+idf_component_register(
+    SRCS
+        "source/main.cpp"
+        "source/driver/adc/esp32s3.cpp"
+        "source/driver/factory/esp32s3.cpp"
+        "source/driver/gpio/esp32s3.cpp"
+        "source/driver/ir_sensor/esp32s3.cpp"
+        "source/driver/motor/l298n.cpp"
+        "source/driver/motor/mp6550.cpp"
+        "source/driver/pwm/esp32s3.cpp"
+        "source/driver/servo/vagrant.cpp"
+        "source/driver/serial/esp32s3.cpp"
+        "source/driver/serial/stub.cpp"
+        "source/driver/timer/esp32s3.cpp"
+        "source/system/pin_manager/esp32s3.cpp"
+        "source/driver/wifi/esp32s3.cpp"
+        "source/system/logic/logic.cpp"
+        "source/system/logic/logic_mqtt.cpp"
+        "source/driver/mqtt/esp32s3.cpp"
+        "source/system/communication/manager.cpp"
+        "source/system/runtime/control.cpp"
+        "source/system/runtime/scrum16_mqtt_control.cpp"
+
+    INCLUDE_DIRS
+        "include"
+    REQUIRES
+        esp_event
+        esp_netif
+        esp_wifi
+        esp_driver_gptimer
+        esp_driver_gpio
+        esp_driver_uart
+        esp_driver_usb_serial_jtag
+        esp_driver_mcpwm
+        esp_adc
+        mqtt
+        nvs_flash)

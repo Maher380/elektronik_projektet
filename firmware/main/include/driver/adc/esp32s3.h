@@ -1,0 +1,89 @@
+/**
+ * @file esp32s3.h
+ * @brief ADC driver for ESP32-S3. 
+ */
+#pragma once
+
+#include "driver/adc/interface.h"
+
+#include "esp_adc/adc_cali.h"
+#include "esp_adc/adc_oneshot.h"
+
+namespace driver::adc 
+{
+
+
+class Esp32s3 final : public Interface
+{
+
+        
+public:    
+    /**
+     * @brief Constructor.
+     * 
+     * @param[in] pin The pin to read analog value from (1-10).
+     */
+    explicit Esp32s3(std::uint8_t pin) noexcept;
+    /**
+     * @brief Destructor.
+     */
+    ~Esp32s3() noexcept override;
+     
+    /**
+     * @brief Check if the ADC is initialized.
+     * 
+     * @return True if initialized, false otherwise.
+     */
+    bool isInitialized() const noexcept override;
+
+     /**
+      * @brief Initialize ADC
+      *
+      * @return True if the ADC was initialized successfully, false otherwise.
+      */
+    bool init() noexcept override;
+
+     /**
+      * @brief Deinitialize ADC
+      *
+      * @return True if the ADC was deinitialized successfully, false otherwise.
+      *
+      */
+    bool deinit() noexcept override;
+
+    /**
+    * @brief Read input from the given pin.
+    *
+    * @return Input value.
+    */
+    std::uint16_t readRaw() const noexcept override;
+
+
+    /**
+     * @brief Read the input voltage in Volts.
+     * Converts the raw value to voltage.
+     * 
+     * @return Input voltage in Volts.
+     */
+    float readVoltage() const noexcept override;
+    std::int32_t lastRaw() const noexcept override { return myState ? myLastRaw : -1; }
+
+    Esp32s3(const Esp32s3&)            = delete; // No copy constructor.
+    Esp32s3(Esp32s3&&)                 = delete; // No move constructor.
+    Esp32s3& operator=(const Esp32s3&) = delete; // No copy assignment.
+    Esp32s3& operator=(Esp32s3&&)      = delete; // No move assignment.
+private:
+    mutable std::int32_t myLastRaw{-1};
+    /** ADC state. */
+    bool myState;
+    /** Target ADC pin. */
+    std::uint8_t myPin;
+    /** ESP-IDF ADC1 channel mapped from the GPIO pin.  */
+    adc_channel_t myChannel;
+    /** ESP-IDF ADC unit handle. */
+    adc_oneshot_unit_handle_t myHandle;
+    /** ESP-IDF calibration handle for this ADC channel. */
+    adc_cali_handle_t myCalibrationHandle;
+};
+
+} // namespace driver::adc 
