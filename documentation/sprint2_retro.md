@@ -1,0 +1,42 @@
+# Sprint 2 retro
+- Fortsätt sitta tillsammans, men jobba också  tillsammans.
+- Flera testmiljöer.
+- Dokumentera testresultat på ett mer effektivt sätt (Digital i Git).
+- Skapa ett flödesdiagram för att underlätta förståelse av kod och flöde.
+- Skapa en mer meningsfull stand-up genom att:
+    - Börja med vi där vi alla jobbar mot ett gemensamt mål som ar prio 1 för dagen. 
+    - Ta sedan sekundära "Jag" uppgifter.
+- Var tydlig med att be om hjälp, säkerställ bekräftelse av hjälp behovet (Ack).
+- Fortsätt med låg fokus på Jira.
+- Diskutera PR efter stand-up.
+# Brainstorm/planering
+- Bli färdig med Vagranten innan vi börjar med nästa. `DoD` = Vagranten kör ett varv helt automont.
+- Dela upp funktioner i olika testmiljöer.
+- Testerna omfattar både `hårdvara` & `mjukvara`.
+- Börja med att testa på en `Arduino Uno` och `Arduino IDE`.
+    - DOKUMENTERA RESULTAT EFTER VARJE TEST!!.
+    - Enhetstester
+        - Motorkontroller.
+        - IR-Sensor right.
+        - IR-Sensor left.
+        - IR-Sensor center.
+        - Servo.
+    - Intergrationstester (exempel).
+        - IR-sensor R+C+L
+        - Motorkontroller + IR-Sensor.
+        - Servo + IR-Sensor
+    - System/logik- tester
+        - Koppla ihop alla funktioner.
+- Flera drive modes.
+- Batteristatus.
+- Löda på stiftlistor på utvecklingsPCB:t i syfte att få en mer modulär design.
+- Implementera MPU inklusive enhetstestmiljö.
+- Implementera magnetsensorer inklusive enhetstestmiljö.
+- Implementera SLAM.
+- Ekonomi/BOM dokumentation i Git.
+- Skapa AGENTS.md i GitHub.
+- Skapa inköpslista och uppdatera ekonomi/BOM i Git.
+    - IR-Sensorer/avståndsmätare. 
+    - Kablar till IR-Sensorer.
+    - Kablar till batteri.
+    - Bättre strömbrytare.
