@@ -2748,7 +2748,7 @@
 		)
 		(uuid "dc3d359a-a9c1-4f4f-b962-dfa018c1de50")
 	)
-	(text "Ir-sensor to determen distan. If the distans is closer then X cm, \nthe car loses power to the engines\n\nNote. The IR-sensor uses 5 V from a voltage regulator and NOT 7.4 V from the battery"
+	(text "Ir-sensor to determine distance. If the distance is closer then X cm, \nthe car loses power to the engines\n\nNote. The IR-sensor uses 5 V from a voltage regulator and NOT 7.4 V from the battery"
 		(exclude_from_sim no)
 		(at 239.014 120.142 0)
 		(effects
