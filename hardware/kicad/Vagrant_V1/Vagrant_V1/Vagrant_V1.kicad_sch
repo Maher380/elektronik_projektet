@@ -2737,7 +2737,7 @@
 		)
 		(uuid "c8d7f139-650c-4c5e-969f-67d1f11971ed")
 	)
-	(text "L7805 is a voltage regulator that forces a voltage from x to 5 V. \nThis conponent is crucial becuse of the volage limit (5 V) on the\nIR-sensor and the servo for function. "
+	(text "L7805 is a voltage regulator that forces a voltage from x to 5 V. \nThis component is crucial becuse of the voltage limit (5 V) on the\nIR-sensor and the servo for function. "
 		(exclude_from_sim no)
 		(at 78.232 65.786 0)
 		(effects
