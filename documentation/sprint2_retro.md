@@ -1,8 +1,8 @@
 # Sprint 2 retro
-- Fortsätt sitta tillsammans med också jobba tillsammans.
-- Flera testmiljöjer.
+- Fortsätt sitta tillsammans, men jobba också  tillsammans.
+- Flera testmiljöer.
 - Dokumentera testresultat på ett mer effektivt sätt (Digital i Git).
-- Skapa en flödesdiagram för att underlätta förståelse av kod och flöde.
+- Skapa ett flödesdiagram för att underlätta förståelse av kod och flöde.
 - Skapa en mer meningsfull stand-up genom att:
     - Börja med vi där vi alla jobbar mot ett gemensamt mål som ar prio 1 för dagen. 
     - Ta sedan sekundära "Jag" uppgifter.
@@ -11,8 +11,8 @@
 - Diskutera PR efter stand-up.
 # Brainstorm/planering
 - Bli färdig med Vagranten innan vi börjar med nästa. `DoD` = Vagranten kör ett varv helt automont.
-- Dela upp funktioner i olika testmiljöjer.
-- Testerna omfattar båder `hårdvara` & `mjukvara`.
+- Dela upp funktioner i olika testmiljöer.
+- Testerna omfattar både `hårdvara` & `mjukvara`.
 - Börja med att testa på en `Arduino Uno` och `Arduino IDE`.
     - DOKUMENTERA RESULTAT EFTER VARJE TEST!!.
     - Enhetstester
@@ -29,7 +29,7 @@
         - Koppla ihop alla funktioner.
 - Flera drive modes.
 - Batteristatus.
-- Löda på styftlistor på utvecklings PCB:t i syfte på ett mer modulärt design.
+- Löda på stiftlistor på utvecklingsPCB:t i syfte att få en mer modulär design.
 - Implementera MPU inklusive enhetstestmiljö.
 - Implementera magnetsensorer inklusive enhetstestmiljö.
 - Implementera SLAM.
