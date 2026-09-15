@@ -2717,7 +2717,7 @@
 		)
 		(uuid "83f749ad-0e6f-4aa5-b025-8f87fbe9f2c1")
 	)
-	(text "MC6550 is a motor controller that uses a H-Bridge. This model can only power \none motor. The controller has multiple pins, but in this project only the listed\nones is in use. IN1 and IN2 determens direction (forward or backwards) and \nnSLEEP_HP (SLP on the actuall card) Is a PWM signal that determens speed. "
+	(text "MC6550 is a motor controller that uses a H-Bridge. This model can only power \none motor. The controller has multiple pins, but in this project only the listed\nones is in use. IN1 and IN2 determines direction (forward or backwards) and \nnSLEEP_HP (SLP on the actual card) Is a PWM signal that determines speed. "
 		(exclude_from_sim no)
 		(at 149.606 117.348 0)
 		(effects
