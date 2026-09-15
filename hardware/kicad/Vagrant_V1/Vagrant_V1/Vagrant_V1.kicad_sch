@@ -2687,7 +2687,7 @@
 		)
 		(uuid "e6900b7e-b33a-4ecd-b3fb-cd67b36fe70b")
 	)
-	(text "The ESP32 Arduino Nano is the brain of the car. In this version, only five Digital\npins are in use. The icon is handmade and prone to problems for an acual\nPCB design. This ican should only be seen as a visual guide. For an actual\nPCB desin, use headers. "
+	(text "The ESP32 Arduino Nano is the brain of the car. In this version, only four Digital\nand one Analog pins are in use. The icon is handmade and prone to problems for an acual\nPCB design. This icon should only be seen as a visual guide. For an actual\nPCB design, use headers. "
 		(exclude_from_sim no)
 		(at 53.086 122.936 0)
 		(effects
