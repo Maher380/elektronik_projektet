@@ -12,6 +12,9 @@
 #include "driver/motor/interface.h"
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
+#include "system/navigation/planner.h"
+#include "system/communication/manager.h"
+#include "system/runtime/control.h"
 
 #include <array>
 #include <atomic>
@@ -21,20 +24,7 @@
 
 namespace app::logic {
 
-enum class DriverStyle : std::uint8_t
-{
-    DecideAction,
-    SlowLeft,
-    SlowRight,
-    GradualSweep,
-};
-
-struct PlannedAction
-{
-    float speed{0.0F};
-    float steeringDegrees{0.0F};
-    driver::motor::StopMode stopMode{driver::motor::StopMode::Coast};
-};
+using DriverStyle = app::navigation::DriverStyle;
 
 /**
  * @brief Main system logic for the autonomous car starter application.
@@ -49,7 +39,8 @@ public:
     ~Logic() noexcept;
 
     void run(const std::atomic<bool>& stop) noexcept;
-    void setDriverStyle(DriverStyle style) noexcept;
+    /** Select a style locally; changes require disarmed control. */
+    bool setDriverStyle(DriverStyle style) noexcept;
 
     Logic(const Logic&) = delete;
     Logic& operator=(const Logic&) = delete;
@@ -60,25 +51,19 @@ private:
     void setStartState() noexcept;
     bool initializeDrivers() noexcept;
     void deinitializeDrivers() noexcept;
-    void processWifi() noexcept;
-    void processTimer() noexcept;
+    void publishTelemetry(std::uint32_t nowMs) noexcept;
 
     /**
      * @brief Get a picture of the environment.
      * makes use of relevant sensors and stores the data in member variables for further processing.
      */
     void getEnvironmentPicture() noexcept;
-    bool hasValidEnvironmentPicture() const noexcept;
 
     /**
      * @brief Decide on the next action based on the environment picture.
      * Analyzes the data from getEnvironmentPicture() and determines the appropriate action to take.
      */
-    void decideAction() noexcept;
-    void decideNormalAction() noexcept;
-    void decideGradualSweepAction() noexcept;
-    void decideSlowLeftAction() noexcept;
-    void decideSlowRightAction() noexcept;
+    void decideAction(std::uint32_t nowMs) noexcept;
 
     /**
      * @brief Execute the decided action.
@@ -98,9 +83,12 @@ private:
     void logState() noexcept;
 
 
-    static constexpr std::uint8_t IrSensorForwardAdcPin{2U};    // A1
-    static constexpr std::uint8_t IrSensorLeftAdcPin{1U};       // A0
-    static constexpr std::uint8_t IrSensorRightAdcPin{4U};      // A3
+    static constexpr std::size_t IrSensorCount{app::navigation::SensorCount};
+    static constexpr std::array<std::uint8_t, IrSensorCount> IrSensorAdcPins{
+        1U, // A0 / GPIO1 / ADC1_CH0
+        2U, // A1 / GPIO2 / ADC1_CH1
+        4U, // A3 / GPIO4 / ADC1_CH3; A2/GPIO3 is a strapping pin.
+    };
 
 
     // l298 Motor
@@ -112,36 +100,30 @@ private:
     static constexpr std::uint8_t mp6550MotorPwmForwardPin{5U};   // D2 / GPIO5
     static constexpr std::uint8_t mp6550MotorPwmBackwardPin{6U};  // D3 / GPIO6
     static constexpr std::uint8_t mp6550MotorSleepPin{7U};        // D4 / GPIO7
-    static constexpr std::uint8_t steeringServoPwmPin{9U};        // D6 /
-
 
     std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
     std::unique_ptr<driver::pwm::Interface> myMotorBackwardsPwm;
     std::unique_ptr<driver::gpio::Interface> myMotorSleep;
-    std::unique_ptr<driver::adc::Interface> myIrSensorForwardAdc;
-    std::unique_ptr<driver::adc::Interface> myIrSensorLeftAdc;
-    std::unique_ptr<driver::adc::Interface> myIrSensorRightAdc;
+    std::array<std::unique_ptr<driver::adc::Interface>, IrSensorCount> myIrSensorAdcs;
     std::unique_ptr<driver::motor::Interface> myMotor;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorForward;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorLeft;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorRight;
+    std::array<std::unique_ptr<driver::ir_sensor::Interface>, IrSensorCount> myIrSensors;
     std::unique_ptr<driver::serial::Interface> mySerial;
     std::unique_ptr<driver::pwm::Interface> mySteeringServoPwm;
     std::unique_ptr<driver::servo::Interface> mySteeringServo;
+    app::navigation::Planner myNavigation;
+    float mySteeringDegrees{0.0F};
+    app::communication::Manager myCommunication;
 
-    bool myBlinkEnabled{false};
-    std::uint32_t myPeriodMs{500U};
+    app::runtime::Control myRuntimeControl;
 
-    float myDistanceToObstacleForward{0.0F};
-    float myDistanceToObstacleLeft{0.0F};
-    float myDistanceToObstacleRight{0.0F};
+    // Distances are ordered left, center, right.
+    std::array<float, IrSensorCount> myDistancesToObstacles{};
+    std::array<std::int32_t, IrSensorCount> myAdcRaw{-1, -1, -1};
+
 
     // planned action data members can be added here for storing the decided action, etc.
     // For example, you might have an enum or struct to represent the action to be taken
-    DriverStyle myDriverStyle{DriverStyle::DecideAction};
-    float mySweepSteeringDegrees{-90.0F};
-    float mySweepDirection{1.0F};
-    PlannedAction myPlannedAction{};
+    float myPlannedSpeed{0.0f}; // Example member variable to store planned speed
 };
 
 } // namespace app::logic

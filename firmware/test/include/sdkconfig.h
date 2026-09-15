@@ -1,0 +1,11 @@
+#pragma once
+// Host-only configuration. No real network or credentials are used by tests.
+#define CONFIG_CNB_ENABLE_WIFI 1
+#define CONFIG_CNB_ENABLE_MQTT 1
+#define CONFIG_CNB_WIFI_SSID "host-test"
+#define CONFIG_CNB_WIFI_PASSWORD ""
+#define CONFIG_CNB_MQTT_BROKER_URI "mqtt://localhost"
+#define CONFIG_CNB_MQTT_CLIENT_ID "host-test"
+#define CONFIG_CNB_MQTT_USERNAME ""
+#define CONFIG_CNB_MQTT_PASSWORD ""
+#define CONFIG_CNB_MQTT_KEEPALIVE_SEC 30
