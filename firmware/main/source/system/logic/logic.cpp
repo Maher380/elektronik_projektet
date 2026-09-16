@@ -44,21 +44,22 @@ namespace
 
     constexpr const char* CommandHelpText{
         "Commands: SPEED <0-1>, FORWARD, BACKWARD, BRAKE, COAST, STOP, AUTO,\n"
-        "  PWMFREQFWD <hz>, PWMFREQBWD <hz>,\n"
+        "  PWMDUTYFWD <0-100>, PWMDUTYBWD <0-100>,\n"
         "  DRIVESTYLE <DECIDEACTION|SLOWLEFT|SLOWRIGHT|GRADUALSWEEP|MANUAL>, HELP\n"};
 
-    bool trySetPwmFrequency(driver::pwm::Interface* pwm, const char* argument, driver::serial::Interface& serial) noexcept
+    bool trySetPwmDutyPercent(driver::pwm::Interface* pwm, const char* argument, driver::serial::Interface& serial) noexcept
     {
-        unsigned int frequencyHz{0U};
-        if (std::sscanf(argument, "%u", &frequencyHz) != 1)
+        float percent{0.0F};
+        if (std::sscanf(argument, "%f", &percent) != 1)
         {
-            serial.write("Usage: PWMFREQFWD/PWMFREQBWD <hz>\n");
+            serial.write("Usage: PWMDUTYFWD/PWMDUTYBWD <0-100>\n");
             return false;
         }
 
-        if ((pwm == nullptr) || !pwm->setFrequencyHz(frequencyHz))
+        const float duty{std::clamp(percent, 0.0F, 100.0F) / 100.0F};
+        if ((pwm == nullptr) || !pwm->setDuty(duty))
         {
-            serial.write("Failed to set PWM frequency\n");
+            serial.write("Failed to set PWM duty cycle\n");
             return false;
         }
 
@@ -399,13 +400,13 @@ void Logic::processSerialCommand() noexcept
     {
         setDriverStyle(DriverStyle::DecideAction);
     }
-    else if ((std::strcmp(command, "PWMFREQFWD") == 0) && (parsed == 2))
+    else if ((std::strcmp(command, "PWMDUTYFWD") == 0) && (parsed == 2))
     {
-        trySetPwmFrequency(myMotorForwardsPwm.get(), argument, *mySerial);
+        trySetPwmDutyPercent(myMotorForwardsPwm.get(), argument, *mySerial);
     }
-    else if ((std::strcmp(command, "PWMFREQBWD") == 0) && (parsed == 2))
+    else if ((std::strcmp(command, "PWMDUTYBWD") == 0) && (parsed == 2))
     {
-        trySetPwmFrequency(myMotorBackwardsPwm.get(), argument, *mySerial);
+        trySetPwmDutyPercent(myMotorBackwardsPwm.get(), argument, *mySerial);
     }
     else if (isDriveStyle && (parsed == 2))
     {
