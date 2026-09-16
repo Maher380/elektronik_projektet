@@ -27,11 +27,13 @@ enum class DriverStyle : std::uint8_t
     SlowLeft,
     SlowRight,
     GradualSweep,
+    Manual,
 };
 
 struct PlannedAction
 {
     float speed{0.0F};
+    driver::motor::Direction direction{driver::motor::Direction::Forward};
     float steeringDegrees{0.0F};
     driver::motor::StopMode stopMode{driver::motor::StopMode::Coast};
 };
@@ -62,6 +64,14 @@ private:
     void deinitializeDrivers() noexcept;
     void processWifi() noexcept;
     void processTimer() noexcept;
+
+    /**
+     * @brief Read and apply a manual motor command from serial, if one is waiting.
+     * Recognized lines: "SPEED <0-1>", "FORWARD", "BACKWARD", "BRAKE", "COAST", "STOP", "AUTO".
+     * Any command other than AUTO switches myDriverStyle to Manual so the
+     * sensor-based decideAction() stops overriding the commanded state.
+     */
+    void processSerialCommand() noexcept;
 
     /**
      * @brief Get a picture of the environment.

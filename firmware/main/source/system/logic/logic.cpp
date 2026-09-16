@@ -3,6 +3,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <cstring>
 #include <limits>
 
 #include "system/logic/logic.h"
@@ -41,6 +42,38 @@ namespace
     constexpr int logInterval_ms{1000};
     constexpr int logInterval_ticks{logInterval_ms/tickPeriod_ms};
 
+    constexpr const char* CommandHelpText{
+        "Commands: SPEED <0-1>, FORWARD, BACKWARD, BRAKE, COAST, STOP, AUTO,\n"
+        "  PWMFREQFWD <hz>, PWMFREQBWD <hz>,\n"
+        "  DRIVESTYLE <DECIDEACTION|SLOWLEFT|SLOWRIGHT|GRADUALSWEEP|MANUAL>, HELP\n"};
+
+    bool trySetPwmFrequency(driver::pwm::Interface* pwm, const char* argument, driver::serial::Interface& serial) noexcept
+    {
+        unsigned int frequencyHz{0U};
+        if (std::sscanf(argument, "%u", &frequencyHz) != 1)
+        {
+            serial.write("Usage: PWMFREQFWD/PWMFREQBWD <hz>\n");
+            return false;
+        }
+
+        if ((pwm == nullptr) || !pwm->setFrequencyHz(frequencyHz))
+        {
+            serial.write("Failed to set PWM frequency\n");
+            return false;
+        }
+
+        return true;
+    }
+
+    bool tryParseDriverStyle(const char* name, app::logic::DriverStyle& style) noexcept
+    {
+        if (std::strcmp(name, "DECIDEACTION") == 0) { style = app::logic::DriverStyle::DecideAction; return true; }
+        if (std::strcmp(name, "SLOWLEFT") == 0) { style = app::logic::DriverStyle::SlowLeft; return true; }
+        if (std::strcmp(name, "SLOWRIGHT") == 0) { style = app::logic::DriverStyle::SlowRight; return true; }
+        if (std::strcmp(name, "GRADUALSWEEP") == 0) { style = app::logic::DriverStyle::GradualSweep; return true; }
+        if (std::strcmp(name, "MANUAL") == 0) { style = app::logic::DriverStyle::Manual; return true; }
+        return false;
+    }
 
 } // namespace
 
@@ -128,6 +161,7 @@ bool Logic::initializeDrivers() noexcept
     if (mySerial &&mySerial->connect())
     {
         mySerial->write("CnB serial ready\n");
+        mySerial->write(CommandHelpText);
     }
     else
     {
@@ -300,6 +334,99 @@ void Logic::decideAction() noexcept
     case DriverStyle::SlowRight:
         decideSlowRightAction();
         break;
+    case DriverStyle::Manual:
+        // myPlannedAction was already updated by processSerialCommand().
+        break;
+    }
+}
+
+void Logic::processSerialCommand() noexcept
+{
+    if (!mySerial || !mySerial->isInitialized() || !mySerial->isDataAvailable())
+    {
+        return;
+    }
+
+    char line[32]{'\0'};
+    if (mySerial->read(line, sizeof(line)) == 0U)
+    {
+        return;
+    }
+
+    char command[16]{'\0'};
+    char argument[16]{'\0'};
+    const int parsed = std::sscanf(line, "%15s %15s", command, argument);
+    if (parsed < 1)
+    {
+        return;
+    }
+
+    const bool isHelp = std::strcmp(command, "HELP") == 0;
+    const bool isDriveStyle = std::strcmp(command, "DRIVESTYLE") == 0;
+
+    if (!isHelp && !isDriveStyle && (myDriverStyle != DriverStyle::Manual))
+    {
+        mySerial->write("Ignored: switch to manual mode first with DRIVESTYLE MANUAL\n");
+        return;
+    }
+
+    float speed{0.0F};
+    if ((std::strcmp(command, "SPEED") == 0) && (parsed == 2) && (std::sscanf(argument, "%f", &speed) == 1))
+    {
+        myPlannedAction.speed = std::clamp(speed, 0.0F, 1.0F);
+    }
+    else if (std::strcmp(command, "FORWARD") == 0)
+    {
+        myPlannedAction.direction = driver::motor::Direction::Forward;
+    }
+    else if (std::strcmp(command, "BACKWARD") == 0)
+    {
+        myPlannedAction.direction = driver::motor::Direction::Backward;
+    }
+    else if (std::strcmp(command, "BRAKE") == 0)
+    {
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+    }
+    else if (std::strcmp(command, "COAST") == 0)
+    {
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+    }
+    else if (std::strcmp(command, "STOP") == 0)
+    {
+        myPlannedAction.speed = 0.0F;
+    }
+    else if (std::strcmp(command, "AUTO") == 0)
+    {
+        setDriverStyle(DriverStyle::DecideAction);
+    }
+    else if ((std::strcmp(command, "PWMFREQFWD") == 0) && (parsed == 2))
+    {
+        trySetPwmFrequency(myMotorForwardsPwm.get(), argument, *mySerial);
+    }
+    else if ((std::strcmp(command, "PWMFREQBWD") == 0) && (parsed == 2))
+    {
+        trySetPwmFrequency(myMotorBackwardsPwm.get(), argument, *mySerial);
+    }
+    else if (isDriveStyle && (parsed == 2))
+    {
+        DriverStyle style{};
+        if (tryParseDriverStyle(argument, style))
+        {
+            setDriverStyle(style);
+        }
+        else
+        {
+            mySerial->write("Unknown drive style. Use DECIDEACTION, SLOWLEFT, SLOWRIGHT, GRADUALSWEEP, MANUAL\n");
+        }
+    }
+    else if (isHelp)
+    {
+        mySerial->write(CommandHelpText);
+    }
+    else
+    {
+        mySerial->write("Unknown command. ");
+        mySerial->write(CommandHelpText);
     }
 }
 
@@ -437,7 +564,7 @@ void Logic::executeAction() noexcept
 
     if (myPlannedAction.speed > 0.0F)
     {
-        myMotor->setDirection(driver::motor::Direction::Forward);
+        myMotor->setDirection(myPlannedAction.direction);
         myMotor->setSpeed(myPlannedAction.speed, myPlannedAction.stopMode);
     }
     else
@@ -496,12 +623,13 @@ void Logic::logState() noexcept
             buf,
             sizeof(buf),
             "IR cm L: %.2f (avg %.2f), C: %.2f (avg %.2f), R: %.2f (avg %.2f), "
-            "Direction: %.1f deg, Speed: %.2f, Brake mode: %s\n",
+            "Steering: %.1f deg, Speed: %.2f, Motor: %s, Brake mode: %s\n",
             static_cast<double>(myDistanceToObstacleLeft), averageLeft,
             static_cast<double>(myDistanceToObstacleForward), averageForward,
             static_cast<double>(myDistanceToObstacleRight), averageRight,
             static_cast<double>(myPlannedAction.steeringDegrees),
             static_cast<double>(myPlannedAction.speed),
+            myPlannedAction.direction == driver::motor::Direction::Forward ? "Forward" : "Backward",
             myPlannedAction.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast");
 
         if (mySerial && mySerial->isInitialized())
@@ -524,6 +652,7 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 {
     while (!stop.load())
     {
+        processSerialCommand();
         getEnvironmentPicture();
         decideAction();
         executeAction();
