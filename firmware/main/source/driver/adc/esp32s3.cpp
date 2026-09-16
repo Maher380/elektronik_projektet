@@ -14,6 +14,11 @@ namespace
 constexpr adc_atten_t AdcAttenuation{ADC_ATTEN_DB_12};
 constexpr adc_bitwidth_t AdcBitWidth{ADC_BITWIDTH_DEFAULT};
 
+// Number of raw samples averaged per readVoltage() call to reduce ESP32-S3
+// SAR ADC single-shot noise, which the IR sensor's inverse power-law distance
+// formula otherwise amplifies heavily at longer distances (low voltage).
+constexpr int VoltageSampleCount{32};
+
 class SharedAdcUnit final
 {
 public:
@@ -205,14 +210,20 @@ float Esp32s3::readVoltage() const noexcept
         return std::numeric_limits<float>::quiet_NaN();
     }
 
-    int rawValue{0};
-    if (adc_oneshot_read(myHandle, myChannel, &rawValue) != ESP_OK)
+    long rawSum{0};
+    for (int i = 0; i < VoltageSampleCount; ++i)
     {
-        return std::numeric_limits<float>::quiet_NaN();
+        int rawValue{0};
+        if (adc_oneshot_read(myHandle, myChannel, &rawValue) != ESP_OK)
+        {
+            return std::numeric_limits<float>::quiet_NaN();
+        }
+        rawSum += rawValue;
     }
+    const int averagedRaw = static_cast<int>(rawSum / VoltageSampleCount);
 
     int voltageMillivolts{0};
-    if (adc_cali_raw_to_voltage(myCalibrationHandle, rawValue, &voltageMillivolts) != ESP_OK)
+    if (adc_cali_raw_to_voltage(myCalibrationHandle, averagedRaw, &voltageMillivolts) != ESP_OK)
     {
         return std::numeric_limits<float>::quiet_NaN();
     }
