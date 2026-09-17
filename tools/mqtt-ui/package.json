@@ -1,0 +1,7 @@
+{
+  "name": "cnb-mqtt-console",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.mjs", "demo": "node server.mjs --demo", "test": "node --test tests/console.test.mjs tests/mqtt.test.mjs" }
+}
