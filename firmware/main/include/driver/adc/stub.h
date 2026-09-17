@@ -40,6 +40,7 @@ public:
         // Return false if the ADC is already initialized.
         if (myIsInitialized) { return false; }
         myIsInitialized = true;
+        myLastRaw = -1;
         std::printf("ADC initialized!\n");
         return true;
     }
@@ -73,7 +74,8 @@ public:
      */
     std::uint16_t readRaw() const noexcept override 
     { 
-        return myRawInput; 
+        myLastRaw = myIsInitialized ? myRawInput : -1;
+        return myIsInitialized ? myRawInput : 0U;
     }
 
     /**
@@ -83,6 +85,7 @@ public:
      */
     float readVoltage() const noexcept override 
     {
+        myLastRaw = myIsInitialized ? myRawInput : -1;
         if (!myIsInitialized)
         {
             return std::numeric_limits<float>::quiet_NaN();
@@ -90,6 +93,8 @@ public:
 
         return (static_cast<float>(myRawInput) / 4095.0f) * 3.3f; 
     }
+
+    std::int32_t lastRaw() const noexcept override { return myIsInitialized ? myLastRaw : -1; }
 
     /**
      * @brief Simulation of hardware input.
@@ -107,6 +112,7 @@ public:
     Stub& operator=(Stub&&)      = delete;
 
 private:
+    mutable std::int32_t myLastRaw{-1};
     std::uint16_t myRawInput;
     bool          myIsInitialized; 
 };
