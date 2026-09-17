@@ -68,7 +68,7 @@ MQTT-start aktiverar inte körning om SCRUM-16:s hinder- eller sensorvillkor bro
 Projektroten är:
 
 ```text
-C:\Users\Maher\Documents\Codex\2026-09-07\new-chat\outputs\elektronik_projektet-SCRUM16-mqtt-experiment
+C:\path\to\elektronik_projektet
 ```
 
 `tools` ligger i projektroten, inte inne i `firmware`.
@@ -94,7 +94,7 @@ Förväntat: under Wi-Fi-adaptern visas datorns aktuella IPv4-adress.
 Öppna terminal A och gå till firmwaremappen:
 
 ```powershell
-Set-Location 'C:\Users\Maher\Documents\Codex\2026-09-07\new-chat\outputs\elektronik_projektet-SCRUM16-mqtt-experiment\firmware'
+Set-Location 'C:\path\to\elektronik_projektet\firmware'
 ```
 
 Förväntat: prompten slutar med `SCRUM16-mqtt-experiment\firmware`.
@@ -126,7 +126,7 @@ eller radera `sdkconfig` som rutin vid uppdatering av den här kopian.
 Öppna vid behov klientkonfigurationen:
 
 ```powershell
-notepad 'C:\Users\Maher\Documents\Codex\2026-09-07\new-chat\outputs\elektronik_projektet-SCRUM16-mqtt-experiment\tools\mqtt\.env'
+notepad 'C:\path\to\elektronik_projektet\tools\mqtt\.env'
 ```
 
 Förväntat: filen öppnas. `CNB_MQTT_HOST` ska vara samma brokeradress som bilen
@@ -142,7 +142,7 @@ inte skapa om dem för experimentet. Om rätt broker redan körs, låt den forts
 Annars startar du brokern i terminal B:
 
 ```powershell
-& 'C:\Program Files\mosquitto\mosquitto.exe' -c 'C:\Users\Maher\cnb-mqtt\mosquitto.conf' -v
+& 'C:\Program Files\mosquitto\mosquitto.exe' -c "$env:USERPROFILE\cnb-mqtt\mosquitto.conf" -v
 ```
 
 Förväntat: brokern lyssnar på port 1883. Låt terminalen vara öppen.
@@ -185,7 +185,7 @@ behövs för ett vanligt byte mellan de här firmwareversionerna.
 Öppna terminal C och gå till experimentets projektrot:
 
 ```powershell
-Set-Location 'C:\Users\Maher\Documents\Codex\2026-09-07\new-chat\outputs\elektronik_projektet-SCRUM16-mqtt-experiment'
+Set-Location 'C:\path\to\elektronik_projektet'
 ```
 
 Förväntat: prompten visar experimentets projektrot.
@@ -382,7 +382,7 @@ Stoppa experimentet och avsluta dess `run-car.ps1`. Gå till den oförändrade
 SCRUM-50-firmwaren i ESP-IDF-terminalen:
 
 ```powershell
-Set-Location 'C:\Users\Maher\Documents\Codex\2026-09-07\new-chat\outputs\elektronik_projektet-SCRUM-50\firmware'
+Set-Location 'C:\path\to\previous-checkout\firmware'
 ```
 
 Förväntat: du står i det ursprungliga projektets firmwaremapp.
