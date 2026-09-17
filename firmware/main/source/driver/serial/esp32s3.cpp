@@ -166,32 +166,51 @@ std::uint8_t Esp32s3::read() noexcept
     return byte;
 }
 
+void Esp32s3::readAndEchoLine() const noexcept
+{
+    if (myLineReady) { return; }
+
+    const std::uint16_t limit{static_cast<std::uint16_t>(LineBufSize - 1U)};
+    while (myLineLen < limit)
+    {
+        std::uint8_t ch{};
+        if (usb_serial_jtag_read_bytes(&ch, 1U, 0) <= 0) { break; }
+        if ((ch == '\n') || (ch == '\r'))
+        {
+            // Echo a full CRLF so the terminal moves to a fresh line
+            // regardless of whether Enter sent '\r', '\n', or both -
+            // otherwise the command's response can overwrite this line.
+            constexpr std::uint8_t crlf[2]{'\r', '\n'};
+            usb_serial_jtag_write_bytes(crlf, 2U, pdMS_TO_TICKS(10U));
+            myLineReady = true;
+            break;
+        }
+        usb_serial_jtag_write_bytes(&ch, 1U, pdMS_TO_TICKS(10U)); // echo so the sender's terminal shows what was typed.
+        myLineBuf[myLineLen++] = static_cast<char>(ch);
+    }
+}
+
 std::uint16_t Esp32s3::read(char* buf, std::uint16_t maxLen) noexcept
 {
     if (!myConnected || (buf == nullptr) || (maxLen == 0U)) { return 0U; }
 
     if (myConfig.useUsbJtag)
     {
-        const std::uint16_t limit{static_cast<std::uint16_t>(LineBufSize - 1U)};
-        while (myLineLen < limit)
+        readAndEchoLine();
+        if (!myLineReady)
         {
-            std::uint8_t ch{};
-            if (usb_serial_jtag_read_bytes(&ch, 1U, 0) <= 0) { break; }
-            if ((ch == '\n') || (ch == '\r'))
-            {
-                const std::uint16_t n{(myLineLen < static_cast<std::uint16_t>(maxLen - 1U))
-                                           ? myLineLen
-                                           : static_cast<std::uint16_t>(maxLen - 1U)};
-                std::memcpy(buf, myLineBuf, n);
-                buf[n] = '\0';
-                myLineLen = 0U;
-                return n;
-            }
-            myLineBuf[myLineLen++] = static_cast<char>(ch);
+            buf[0] = '\0';
+            return 0U;
         }
 
-        buf[0] = '\0';
-        return 0U;
+        const std::uint16_t n{(myLineLen < static_cast<std::uint16_t>(maxLen - 1U))
+                                   ? myLineLen
+                                   : static_cast<std::uint16_t>(maxLen - 1U)};
+        std::memcpy(buf, myLineBuf, n);
+        buf[n] = '\0';
+        myLineLen = 0U;
+        myLineReady = false;
+        return n;
     }
 
     const int patternPos = uart_pattern_pop_pos(myConfig.port);
@@ -218,7 +237,11 @@ std::uint16_t Esp32s3::read(char* buf, std::uint16_t maxLen) noexcept
 bool Esp32s3::isDataAvailable() const noexcept
 {
     if (!myConnected) { return false; }
-    if (myConfig.useUsbJtag) { return myLineLen > 0U; }
+    if (myConfig.useUsbJtag)
+    {
+        readAndEchoLine();
+        return myLineReady;
+    }
     return uart_pattern_get_pos(myConfig.port) >= 0;
 }
 
