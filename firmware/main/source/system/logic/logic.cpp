@@ -45,7 +45,8 @@ namespace
     constexpr const char* CommandHelpText{
         "Commands: SPEED <0-1>, FORWARD, BACKWARD, BRAKE, COAST, STOP, AUTO,\n"
         "  PWMDUTYFWD <0-100>, PWMDUTYBWD <0-100>,\n"
-        "  DRIVESTYLE <DECIDEACTION|SLOWLEFT|SLOWRIGHT|GRADUALSWEEP|MANUAL>, HELP\n"};
+        "  DRIVESTYLE <DECIDEACTION|SLOWLEFT|SLOWRIGHT|GRADUALSWEEP|MANUAL_BY_SERIAL>,\n"
+        "  LOG <ON|OFF>, HELP\n"};
 
     bool trySetPwmDutyPercent(driver::pwm::Interface* pwm, const char* argument, driver::serial::Interface& serial) noexcept
     {
@@ -66,13 +67,35 @@ namespace
         return true;
     }
 
+    void printMotorSettings(driver::serial::Interface& serial, const app::logic::PlannedAction& action) noexcept
+    {
+        char buf[96]{'\0'};
+        std::snprintf(buf, sizeof(buf), "Motor: direction=%s, speed=%.2f, stopMode=%s\n",
+            action.direction == driver::motor::Direction::Forward ? "Forward" : "Backward",
+            static_cast<double>(action.speed),
+            action.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast");
+        serial.write(buf);
+    }
+
+    void printPwmSettings(driver::serial::Interface& serial, const char* label, const driver::pwm::Interface* pwm) noexcept
+    {
+        if (pwm == nullptr) { return; }
+
+        char buf[96]{'\0'};
+        std::snprintf(buf, sizeof(buf), "PWM %s: duty=%.1f%%, frequency=%luHz\n",
+            label,
+            static_cast<double>(pwm->duty() * 100.0F),
+            static_cast<unsigned long>(pwm->frequencyHz()));
+        serial.write(buf);
+    }
+
     bool tryParseDriverStyle(const char* name, app::logic::DriverStyle& style) noexcept
     {
         if (std::strcmp(name, "DECIDEACTION") == 0) { style = app::logic::DriverStyle::DecideAction; return true; }
         if (std::strcmp(name, "SLOWLEFT") == 0) { style = app::logic::DriverStyle::SlowLeft; return true; }
         if (std::strcmp(name, "SLOWRIGHT") == 0) { style = app::logic::DriverStyle::SlowRight; return true; }
         if (std::strcmp(name, "GRADUALSWEEP") == 0) { style = app::logic::DriverStyle::GradualSweep; return true; }
-        if (std::strcmp(name, "MANUAL") == 0) { style = app::logic::DriverStyle::Manual; return true; }
+        if (std::strcmp(name, "MANUAL_BY_SERIAL") == 0) { style = app::logic::DriverStyle::ManualBySerial; return true; }
         return false;
     }
 
@@ -335,7 +358,7 @@ void Logic::decideAction() noexcept
     case DriverStyle::SlowRight:
         decideSlowRightAction();
         break;
-    case DriverStyle::Manual:
+    case DriverStyle::ManualBySerial:
         // myPlannedAction was already updated by processSerialCommand().
         break;
     }
@@ -355,8 +378,8 @@ void Logic::processSerialCommand() noexcept
     }
 
     char command[16]{'\0'};
-    char argument[16]{'\0'};
-    const int parsed = std::sscanf(line, "%15s %15s", command, argument);
+    char argument[20]{'\0'};
+    const int parsed = std::sscanf(line, "%15s %19s", command, argument);
     if (parsed < 1)
     {
         return;
@@ -364,37 +387,48 @@ void Logic::processSerialCommand() noexcept
 
     const bool isHelp = std::strcmp(command, "HELP") == 0;
     const bool isDriveStyle = std::strcmp(command, "DRIVESTYLE") == 0;
+    const bool isLog = std::strcmp(command, "LOG") == 0;
 
-    if (!isHelp && !isDriveStyle && (myDriverStyle != DriverStyle::Manual))
+    if (!isHelp && !isDriveStyle && !isLog && (myDriverStyle != DriverStyle::ManualBySerial))
     {
-        mySerial->write("Ignored: switch to manual mode first with DRIVESTYLE MANUAL\n");
+        mySerial->write("Ignored: switch to manual mode first with DRIVESTYLE MANUAL_BY_SERIAL\n");
         return;
     }
+
+    bool isMotorCommand{false};
+    bool isPwmFwdCommand{false};
+    bool isPwmBwdCommand{false};
 
     float speed{0.0F};
     if ((std::strcmp(command, "SPEED") == 0) && (parsed == 2) && (std::sscanf(argument, "%f", &speed) == 1))
     {
         myPlannedAction.speed = std::clamp(speed, 0.0F, 1.0F);
+        isMotorCommand = true;
     }
     else if (std::strcmp(command, "FORWARD") == 0)
     {
         myPlannedAction.direction = driver::motor::Direction::Forward;
+        isMotorCommand = true;
     }
     else if (std::strcmp(command, "BACKWARD") == 0)
     {
         myPlannedAction.direction = driver::motor::Direction::Backward;
+        isMotorCommand = true;
     }
     else if (std::strcmp(command, "BRAKE") == 0)
     {
         myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+        isMotorCommand = true;
     }
     else if (std::strcmp(command, "COAST") == 0)
     {
         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+        isMotorCommand = true;
     }
     else if (std::strcmp(command, "STOP") == 0)
     {
         myPlannedAction.speed = 0.0F;
+        isMotorCommand = true;
     }
     else if (std::strcmp(command, "AUTO") == 0)
     {
@@ -402,11 +436,11 @@ void Logic::processSerialCommand() noexcept
     }
     else if ((std::strcmp(command, "PWMDUTYFWD") == 0) && (parsed == 2))
     {
-        trySetPwmDutyPercent(myMotorForwardsPwm.get(), argument, *mySerial);
+        isPwmFwdCommand = trySetPwmDutyPercent(myMotorForwardsPwm.get(), argument, *mySerial);
     }
     else if ((std::strcmp(command, "PWMDUTYBWD") == 0) && (parsed == 2))
     {
-        trySetPwmDutyPercent(myMotorBackwardsPwm.get(), argument, *mySerial);
+        isPwmBwdCommand = trySetPwmDutyPercent(myMotorBackwardsPwm.get(), argument, *mySerial);
     }
     else if (isDriveStyle && (parsed == 2))
     {
@@ -417,7 +451,24 @@ void Logic::processSerialCommand() noexcept
         }
         else
         {
-            mySerial->write("Unknown drive style. Use DECIDEACTION, SLOWLEFT, SLOWRIGHT, GRADUALSWEEP, MANUAL\n");
+            mySerial->write("Unknown drive style. Use DECIDEACTION, SLOWLEFT, SLOWRIGHT, GRADUALSWEEP, MANUAL_BY_SERIAL\n");
+        }
+    }
+    else if (isLog && (parsed == 2))
+    {
+        if (std::strcmp(argument, "ON") == 0)
+        {
+            myLogEnabled = true;
+            mySerial->write("Logging enabled\n");
+        }
+        else if (std::strcmp(argument, "OFF") == 0)
+        {
+            myLogEnabled = false;
+            mySerial->write("Logging disabled\n");
+        }
+        else
+        {
+            mySerial->write("Usage: LOG <ON|OFF>\n");
         }
     }
     else if (isHelp)
@@ -428,6 +479,19 @@ void Logic::processSerialCommand() noexcept
     {
         mySerial->write("Unknown command. ");
         mySerial->write(CommandHelpText);
+    }
+
+    if (isMotorCommand)
+    {
+        myMotorCommandPending = true;
+    }
+    if (isPwmFwdCommand)
+    {
+        printPwmSettings(*mySerial, "FWD", myMotorForwardsPwm.get());
+    }
+    if (isPwmBwdCommand)
+    {
+        printPwmSettings(*mySerial, "BWD", myMotorBackwardsPwm.get());
     }
 }
 
@@ -657,7 +721,17 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         getEnvironmentPicture();
         decideAction();
         executeAction();
-        logState();
+        if (myMotorCommandPending)
+        {
+            printMotorSettings(*mySerial, myPlannedAction);
+            printPwmSettings(*mySerial, "FWD", myMotorForwardsPwm.get());
+            printPwmSettings(*mySerial, "BWD", myMotorBackwardsPwm.get());
+            myMotorCommandPending = false;
+        }
+        if (myLogEnabled)
+        {
+            logState();
+        }
 
         vTaskDelay(pdMS_TO_TICKS(tickPeriod_ms));
     }
