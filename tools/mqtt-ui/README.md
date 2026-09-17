@@ -5,7 +5,8 @@ Fem grafer visar de senaste tio sekunderna: vänster, center, höger,
 begärd styrvinkel och begärd motor-duty. Panelen kan starta/stoppa bilen och
 ändra experimentets befintliga MQTT-inställningar. Firmware ändras inte.
 
-[Förhandsbild av graferna med simulerad data](preview.png).
+Live-läget kräver MQTT-firmwaren från `SCRUM-50-mqtt-firmware-clean` och
+dess brokerkonfiguration. Merga MQTT-PR:n först. Demo kan köras separat.
 
 ## 1. Förbered datorn
 
@@ -17,7 +18,7 @@ Codex-installationen. Node kan annars installeras från [nodejs.org](https://nod
 Öppna PowerShell i experimentets projektrot:
 
 ```powershell
-Set-Location 'C:\Users\Maher\Documents\Codex\2026-09-07\new-chat\outputs\elektronik_projektet-SCRUM16-mqtt-experiment'
+Set-Location 'C:\path\to\elektronik_projektet'
 ```
 
 ## 2. Prova utseendet utan bilen
