@@ -1,6 +1,7 @@
 #include <cstdio>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
 #include <cstring>
@@ -47,6 +48,14 @@ namespace
         "  PWMDUTYFWD <0-100>, PWMDUTYBWD <0-100>,\n"
         "  DRIVESTYLE <DECIDEACTION|SLOWLEFT|SLOWRIGHT|GRADUALSWEEP|MANUAL_BY_SERIAL>,\n"
         "  LOG <ON|OFF>, HELP\n"};
+
+    void toUpperInPlace(char* text) noexcept
+    {
+        for (; *text != '\0'; ++text)
+        {
+            *text = static_cast<char>(std::toupper(static_cast<unsigned char>(*text)));
+        }
+    }
 
     bool trySetPwmDutyPercent(driver::pwm::Interface* pwm, const char* argument, driver::serial::Interface& serial) noexcept
     {
@@ -384,6 +393,9 @@ void Logic::processSerialCommand() noexcept
     {
         return;
     }
+
+    toUpperInPlace(command);
+    toUpperInPlace(argument);
 
     const bool isHelp = std::strcmp(command, "HELP") == 0;
     const bool isDriveStyle = std::strcmp(command, "DRIVESTYLE") == 0;
