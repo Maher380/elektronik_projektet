@@ -4,8 +4,11 @@
 #include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <cstring>
 #include <limits>
+
+#include "esp_timer.h"
 
 #include "system/logic/logic.h"
 
@@ -729,6 +732,8 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 {
     while (!stop.load())
     {
+        const std::int64_t tickStartUs{esp_timer_get_time()};
+
         processSerialCommand();
         getEnvironmentPicture();
         decideAction();
@@ -745,7 +750,9 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
             logState();
         }
 
-        vTaskDelay(pdMS_TO_TICKS(tickPeriod_ms));
+        const std::int64_t elapsedMs{(esp_timer_get_time() - tickStartUs) / 1000};
+        const std::int64_t remainingMs{static_cast<std::int64_t>(tickPeriod_ms) - elapsedMs};
+        vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
     myMotor->stop(myPlannedAction.stopMode);
 }
