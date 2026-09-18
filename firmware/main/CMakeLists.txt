@@ -28,4 +28,5 @@ idf_component_register(
         esp_driver_usb_serial_jtag
         esp_driver_mcpwm
         esp_adc
+        esp_timer
         nvs_flash)
