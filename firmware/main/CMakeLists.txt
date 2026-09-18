@@ -15,6 +15,10 @@ idf_component_register(
         "source/system/pin_manager/esp32s3.cpp"
         "source/driver/wifi/esp32s3.cpp"
         "source/system/logic/logic.cpp"
+        "source/system/logic/logic_mqtt.cpp"
+        "source/driver/mqtt/esp32s3.cpp"
+        "source/system/communication/manager.cpp"
+        "source/system/runtime/control.cpp"
 
     INCLUDE_DIRS
         "include"
@@ -28,4 +32,5 @@ idf_component_register(
         esp_driver_usb_serial_jtag
         esp_driver_mcpwm
         esp_adc
+        mqtt
         nvs_flash)
