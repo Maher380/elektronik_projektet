@@ -38,7 +38,7 @@ namespace
     constexpr const char *WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
     
 
-    constexpr std::uint8_t bufLen{192U};
+    constexpr std::uint16_t bufLen{224U};
     // @brief the sleep period between two ticks. 50 ms -> 20 Hz 
     constexpr int tickPeriod_ms{50U};
 
@@ -136,6 +136,11 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
     , mySerial({factory.serial(SerialBaudRate)})
     , mySteeringServoPwm{factory.pwm(SteeringPwmConfig)}
+    , myOdometer{factory.odometer(driver::odometer::Config{
+          .pin = odometerPin,
+          .pulsesPerRevolution = odometerPulsesPerRevolution,
+          .wheelDiameterM = odometerWheelDiameterM,
+      })}
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
     {
@@ -224,7 +229,8 @@ bool Logic::initializeDrivers() noexcept
         !myIrSensorRight ||
         !mySteeringServoPwm ||
         !mySteeringServo ||
-        !mySerial )
+        !mySerial ||
+        !myOdometer )
     {
         return false;
     }
@@ -242,6 +248,7 @@ bool Logic::initializeDrivers() noexcept
     myMotor->init();
     mySteeringServoPwm->init();
     mySteeringServo->init();
+    myOdometer->init();
     // no init function for myIrSensorLeft
     // no init function for myIrSensorRight
     // no init function for mySerial
@@ -259,6 +266,7 @@ bool Logic::initializeDrivers() noexcept
         !myIrSensorRight->isInitialized() ||
         !mySteeringServoPwm->isInitialized() ||
         !mySteeringServo->isInitialized() ||
+        !myOdometer->isInitialized() ||
         !mySerial->isInitialized())
     {
         return false;
@@ -271,6 +279,10 @@ bool Logic::initializeDrivers() noexcept
 
 void Logic::deinitializeDrivers() noexcept
 {
+    if (myOdometer && myOdometer->isInitialized())
+    {
+        myOdometer->deinit();
+    }
     if (mySteeringServo && mySteeringServo->isInitialized())
     {
         mySteeringServo->deinit();
@@ -699,18 +711,23 @@ void Logic::logState() noexcept
             ? accumulatedDistanceRight / static_cast<double>(validSamplesRight)
             : std::numeric_limits<double>::quiet_NaN();
 
+        const double odometerDistanceM{myOdometer ? static_cast<double>(myOdometer->distance()) : 0.0};
+        const double odometerSpeedMps{myOdometer ? static_cast<double>(myOdometer->speed()) : 0.0};
+
         std::snprintf(
             buf,
             sizeof(buf),
             "IR cm L: %.2f (avg %.2f), C: %.2f (avg %.2f), R: %.2f (avg %.2f), "
-            "Steering: %.1f deg, Speed: %.2f, Motor: %s, Brake mode: %s\n",
+            "Steering: %.1f deg, Speed: %.2f, Motor: %s, Brake mode: %s, "
+            "Odometer: %.2f m, %.2f m/s\n",
             static_cast<double>(myDistanceToObstacleLeft), averageLeft,
             static_cast<double>(myDistanceToObstacleForward), averageForward,
             static_cast<double>(myDistanceToObstacleRight), averageRight,
             static_cast<double>(myPlannedAction.steeringDegrees),
             static_cast<double>(myPlannedAction.speed),
             myPlannedAction.direction == driver::motor::Direction::Forward ? "Forward" : "Backward",
-            myPlannedAction.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast");
+            myPlannedAction.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast",
+            odometerDistanceM, odometerSpeedMps);
 
         if (mySerial && mySerial->isInitialized())
         {

@@ -12,6 +12,7 @@ namespace driver::ir_sensor {class Interface;}
 namespace driver::adc { class Interface; }
 namespace driver::gpio { class Interface; }
 namespace driver::motor { class Interface; }
+namespace driver::odometer { struct Config; class Interface; }
 namespace driver::pwm { struct Config; class Interface; }
 namespace driver::servo { class Interface; }
 namespace driver::serial { class Interface; }
@@ -95,6 +96,13 @@ public:
     virtual std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& MotorForwardsPwm,
                                                     driver::pwm::Interface& MotorBackwardsPwm) noexcept = 0;
 
+    /**
+     * @brief Create an odometer driver instance.
+     *
+     * @param[in] config Odometer configuration (pin, pulses per revolution, wheel circumference).
+     * @return A unique pointer to the created odometer interface instance.
+     */
+    virtual std::unique_ptr<odometer::Interface> odometer(const odometer::Config& config) noexcept = 0;
 
     /**
      * @brief Create a serial driver instance.

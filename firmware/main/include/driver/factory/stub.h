@@ -13,6 +13,7 @@
 #include "driver/gpio/stub.h"
 #include "driver/ir_sensor/stub.h"
 #include "driver/motor/stub.h"
+#include "driver/odometer/stub.h"
 #include "driver/pwm/stub.h"
 #include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
@@ -128,6 +129,17 @@ public:
         (void)motorForwardsPwm;
         (void)motorBackwardsPwm;
         return std::make_unique<driver::motor::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated odometer stub instance.
+     *
+     * @param[in] config Odometer configuration used to convert simulated pulses to distance.
+     * @return A unique pointer to the created simulated odometer interface instance.
+     */
+    std::unique_ptr<odometer::Interface> odometer(const driver::odometer::Config& config) noexcept override
+    {
+        return std::make_unique<driver::odometer::Stub>(config);
     }
 
     /**

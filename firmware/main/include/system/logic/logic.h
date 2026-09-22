@@ -10,6 +10,7 @@
 #include "driver/gpio/interface.h"
 #include "driver/ir_sensor/interface.h"
 #include "driver/motor/interface.h"
+#include "driver/odometer/interface.h"
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
 
@@ -125,6 +126,11 @@ private:
     static constexpr std::uint8_t mp6550MotorSleepPin{7U};        // D4 / GPIO7
     static constexpr std::uint8_t steeringServoPwmPin{9U};        // D6 /
 
+    // Odometer (A3144 Hall-effect sensor)
+    static constexpr std::uint8_t odometerPin{18U};                       // D9 / GPIO18 (ADC2_CH7)
+    static constexpr std::uint8_t odometerPulsesPerRevolution{2U};        // 2 magnets per wheel
+    static constexpr float odometerWheelDiameterM{0.031F};                // 31 mm wheel
+
 
     std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
     std::unique_ptr<driver::pwm::Interface> myMotorBackwardsPwm;
@@ -139,6 +145,7 @@ private:
     std::unique_ptr<driver::serial::Interface> mySerial;
     std::unique_ptr<driver::pwm::Interface> mySteeringServoPwm;
     std::unique_ptr<driver::servo::Interface> mySteeringServo;
+    std::unique_ptr<driver::odometer::Interface> myOdometer;
 
     bool myBlinkEnabled{false};
     bool myLogEnabled{false};

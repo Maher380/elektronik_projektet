@@ -5,6 +5,7 @@
 #include "driver/gpio/esp32s3.h"
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"
+#include "driver/odometer/esp32s3_a3144.h"
 #include "driver/pwm/esp32s3.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/esp32s3.h"
@@ -53,6 +54,11 @@ std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& MotorFo
                                                  driver::pwm::Interface& MotorBackwardsPwm) noexcept {
     // Create a real MP6550 motor driver from existing PWM outputs.
     return std::make_unique<driver::motor::MP6550>(MotorForwardsPwm, MotorBackwardsPwm);
+}
+
+std::unique_ptr<odometer::Interface> Esp32s3::odometer(const driver::odometer::Config& config) noexcept {
+    // Create a real A3144 Hall-effect odometer.
+    return std::make_unique<driver::odometer::Esp32s3A3144>(config);
 }
 
 std::unique_ptr<serial::Interface> Esp32s3::serial(std::uint32_t baud_bps) noexcept {

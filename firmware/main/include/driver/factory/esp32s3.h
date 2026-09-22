@@ -14,6 +14,7 @@ namespace driver {
     namespace adc { class Interface; }
     namespace gpio { class Interface; }
     namespace motor { class Interface; }
+    namespace odometer { struct Config; class Interface; }
     namespace pwm { struct Config; class Interface; }
     namespace servo { class Interface; }
     namespace serial { class Interface; }
@@ -95,6 +96,13 @@ public:
     std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& MotorForwardsPwm,
                                             driver::pwm::Interface& MotorBackwardsPwm) noexcept override;
 
+    /**
+     * @brief Create a real ESP32-S3 odometer driver using an A3144 Hall-effect sensor.
+     *
+     * @param[in] config Odometer configuration (pin, pulses per revolution, wheel circumference).
+     * @return A unique pointer to the created odometer interface instance.
+     */
+    std::unique_ptr<odometer::Interface> odometer(const odometer::Config& config) noexcept override;
     /**
      * @brief Create a real ESP32-S3 Serial hardware instance.
      *
