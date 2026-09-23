@@ -18,8 +18,8 @@ public:
     virtual ~Interface() noexcept = default;
 
     /**
-     * @brief Connect to the configured WiFi network.
-     * @return True if the network connection succeeded, false otherwise.
+     * @brief Initialize WiFi and start connecting without waiting for an IP address.
+     * @return True if the asynchronous connection attempt was started.
      */
     virtual bool connect() noexcept = 0;
 
