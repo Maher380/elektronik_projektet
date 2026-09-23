@@ -13,6 +13,9 @@
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
 
+#include "system/communication/manager.h"
+#include "system/runtime/control.h"
+
 #include <array>
 #include <atomic>
 #include <cstddef>
@@ -59,6 +62,19 @@ public:
     Logic& operator=(Logic&&) = delete;
 
 private:
+    // MQTT-only integration; original SCRUM-16 members and methods follow.
+    static constexpr app::communication::Topics MqttTopics{
+        {"cnb/vagrant/telemetry", "cnb/vagrant/config/state",
+         "cnb/vagrant/command/state", "cnb/vagrant/status"},
+        {"cnb/vagrant/config/set", "cnb/vagrant/command"},
+    };
+    void initializeMqttOverlay() noexcept;
+    void processMqttOverlay(std::uint32_t nowMs) noexcept;
+    bool authorizeMqttAction(std::uint32_t nowMs) noexcept;
+    void publishMqttTelemetry(std::uint32_t nowMs) noexcept;
+    void disableMqttOutput() noexcept;
+    void shutdownMqttOverlay() noexcept;
+
     void setStartState() noexcept;
     bool initializeDrivers() noexcept;
     void deinitializeDrivers() noexcept;
@@ -158,6 +174,14 @@ private:
     float mySweepSteeringDegrees{-90.0F};
     float mySweepDirection{1.0F};
     PlannedAction myPlannedAction{};
+
+    // MQTT parameters; all route/steering decisions remain in logic.cpp.
+    float myStopDistanceCm{30.0F};
+    float myDriveDuty{0.5F};
+
+    app::communication::Manager myCommunication;
+    app::runtime::Control myRuntimeControl;
+    float myMqttAppliedSpeed{0.0F};
 };
 
 } // namespace app::logic
