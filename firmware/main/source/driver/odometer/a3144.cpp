@@ -4,7 +4,7 @@
 #include "esp_attr.h"
 #include "esp_timer.h"
 
-#include "driver/odometer/esp32s3_a3144.h"
+#include "driver/odometer/a3144.h"
 #include "system/pin_manager/esp32s3.h"
 
 namespace driver::odometer
@@ -25,7 +25,7 @@ auto& myPinManager = sys::pin_manager::Esp32s3::instance();
 } // namespace
 
 // -----------------------------------------------------------------------------
-Esp32s3A3144::Esp32s3A3144(const Config& config) noexcept
+A3144::A3144(const Config& config) noexcept
     : myConfig{config}
     , myDistancePerPulse{distancePerPulse(config)}
     , myPulseCount{0U}
@@ -35,7 +35,7 @@ Esp32s3A3144::Esp32s3A3144(const Config& config) noexcept
 {}
 
 // -----------------------------------------------------------------------------
-Esp32s3A3144::~Esp32s3A3144() noexcept
+A3144::~A3144() noexcept
 {
     if (myInitialized)
     {
@@ -44,7 +44,7 @@ Esp32s3A3144::~Esp32s3A3144() noexcept
 }
 
 // -----------------------------------------------------------------------------
-bool Esp32s3A3144::init() noexcept
+bool A3144::init() noexcept
 {
     // Return false if the odometer is already initialized.
     if (myInitialized) { return false; }
@@ -90,7 +90,7 @@ bool Esp32s3A3144::init() noexcept
 }
 
 // -----------------------------------------------------------------------------
-bool Esp32s3A3144::deinit() noexcept
+bool A3144::deinit() noexcept
 {
     // Return false if init() never succeeded.
     if (!myInitialized) { return false; }
@@ -104,13 +104,13 @@ bool Esp32s3A3144::deinit() noexcept
 }
 
 // -----------------------------------------------------------------------------
-bool Esp32s3A3144::isInitialized() const noexcept
+bool A3144::isInitialized() const noexcept
 {
     return myInitialized;
 }
 
 // -----------------------------------------------------------------------------
-std::uint32_t Esp32s3A3144::pulseCount() const noexcept
+std::uint32_t A3144::pulseCount() const noexcept
 {
     if (!myInitialized) { return 0U; }
 
@@ -122,13 +122,13 @@ std::uint32_t Esp32s3A3144::pulseCount() const noexcept
 }
 
 // -----------------------------------------------------------------------------
-float Esp32s3A3144::distance() const noexcept
+float A3144::distance() const noexcept
 {
     return static_cast<float>(pulseCount()) * myDistancePerPulse;
 }
 
 // -----------------------------------------------------------------------------
-float Esp32s3A3144::speed() const noexcept
+float A3144::speed() const noexcept
 {
     if (!myInitialized) { return 0.0F; }
 
@@ -147,7 +147,7 @@ float Esp32s3A3144::speed() const noexcept
 }
 
 // -----------------------------------------------------------------------------
-void Esp32s3A3144::reset() noexcept
+void A3144::reset() noexcept
 {
     portENTER_CRITICAL(&myMux);
     myPulseCount    = 0U;
@@ -157,9 +157,9 @@ void Esp32s3A3144::reset() noexcept
 }
 
 // -----------------------------------------------------------------------------
-void IRAM_ATTR Esp32s3A3144::onPulse(void* arg) noexcept
+void IRAM_ATTR A3144::onPulse(void* arg) noexcept
 {
-    auto* self = static_cast<Esp32s3A3144*>(arg);
+    auto* self = static_cast<A3144*>(arg);
     const std::int64_t nowUs{esp_timer_get_time()};
 
     portENTER_CRITICAL_ISR(&self->myMux);

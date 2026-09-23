@@ -26,7 +26,7 @@ namespace driver::odometer
  *            is still safe for the 3.3 V ESP32-S3 input since it is open-collector
  *            and only pulled up to 3.3 V by the ESP32-S3.
  */
-class Esp32s3A3144 final : public Interface
+class A3144 final : public Interface
 {
 public:
     /**
@@ -34,12 +34,12 @@ public:
      *
      * @param[in] config Odometer configuration.
      */
-    explicit Esp32s3A3144(const Config& config) noexcept;
+    explicit A3144(const Config& config) noexcept;
 
     /**
      * @brief Destructor.
      */
-    ~Esp32s3A3144() noexcept override;
+    ~A3144() noexcept override;
 
     /**
      * @brief Initialize the odometer and start counting pulses.
@@ -91,11 +91,11 @@ public:
     void reset() noexcept override;
 
     // Delete default constructor, copy/move constructors and assignment operators.
-    Esp32s3A3144()                               = delete;
-    Esp32s3A3144(const Esp32s3A3144&)            = delete;
-    Esp32s3A3144(Esp32s3A3144&&)                 = delete;
-    Esp32s3A3144& operator=(const Esp32s3A3144&) = delete;
-    Esp32s3A3144& operator=(Esp32s3A3144&&)      = delete;
+    A3144()                               = delete;
+    A3144(const A3144&)            = delete;
+    A3144(A3144&&)                 = delete;
+    A3144& operator=(const A3144&) = delete;
+    A3144& operator=(A3144&&)      = delete;
 
 private:
     /**
