@@ -137,6 +137,7 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
     , mySerial({factory.serial(SerialBaudRate)})
     , mySteeringServoPwm{factory.pwm(SteeringPwmConfig)}
+    , myCommunication{factory, MqttTopics}
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
     {
@@ -182,6 +183,8 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
             vTaskDelay(pdMS_TO_TICKS(1000U));
         }
     }
+    // MQTT overlay: boot disarmed after SCRUM-16 driver initialization.
+    initializeMqttOverlay();
 }
 
 void Logic::setStartState() noexcept
@@ -552,14 +555,14 @@ void Logic::decideNormalAction() noexcept
         distanceToClosestObject = myDistanceToObstacleRight;
     }
 
-    if (distanceToClosestObject < 30.0F)
+    if (distanceToClosestObject < myStopDistanceCm)
     {
         myPlannedAction.speed = 0.0F;
         myPlannedAction.stopMode = driver::motor::StopMode::Brake;
     }
     else
     {
-        myPlannedAction.speed = 0.5F;
+        myPlannedAction.speed = myDriveDuty;
         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
     }
 }
@@ -577,14 +580,14 @@ void Logic::decideGradualSweepAction() noexcept
     }
 
     myPlannedAction.steeringDegrees = mySweepSteeringDegrees;
-    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < myStopDistanceCm)
     {
         myPlannedAction.speed = 0.0F;
         myPlannedAction.stopMode = driver::motor::StopMode::Brake;
     }
     else
     {
-        myPlannedAction.speed = 0.2F;
+        myPlannedAction.speed = myDriveDuty;
         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
     }
 
@@ -610,14 +613,14 @@ void Logic::decideSlowLeftAction() noexcept
     }
 
     myPlannedAction.steeringDegrees = -90.0F;
-    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < myStopDistanceCm)
     {
         myPlannedAction.speed = 0.0F;
         myPlannedAction.stopMode = driver::motor::StopMode::Brake;
     }
     else
     {
-        myPlannedAction.speed = 0.2F;
+        myPlannedAction.speed = myDriveDuty;
         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
     }
 }
@@ -633,14 +636,14 @@ void Logic::decideSlowRightAction() noexcept
     }
 
     myPlannedAction.steeringDegrees = 90.0F;
-    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < 30.0F)
+    if (std::min({myDistanceToObstacleForward, myDistanceToObstacleLeft, myDistanceToObstacleRight}) < myStopDistanceCm)
     {
         myPlannedAction.speed = 0.0F;
         myPlannedAction.stopMode = driver::motor::StopMode::Brake;
     }
     else
     {
-        myPlannedAction.speed = 0.2F;
+        myPlannedAction.speed = myDriveDuty;
         myPlannedAction.stopMode = driver::motor::StopMode::Coast;
     }
 }
@@ -754,10 +757,17 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
     {
         const std::int64_t tickStartUs{esp_timer_get_time()};
 
+        const auto nowMs = static_cast<std::uint32_t>(
+            xTaskGetTickCount() * portTICK_PERIOD_MS);
+
         processSerialCommand();
         getEnvironmentPicture();
         decideAction();
-        executeAction();
+        // Only MQTT authorization surrounds the unchanged executeAction().
+        if (authorizeMqttAction(nowMs))
+        {
+            executeAction();
+        }
         if (myMotorCommandPending)
         {
             printMotorSettings(*mySerial, myPlannedAction);
@@ -769,12 +779,15 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         {
             logState();
         }
+        processMqttOverlay(nowMs);
+
+        publishMqttTelemetry(nowMs);
 
         const std::int64_t elapsedMs{(esp_timer_get_time() - tickStartUs) / 1000};
         const std::int64_t remainingMs{static_cast<std::int64_t>(tickPeriod_ms) - elapsedMs};
         vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
-    myMotor->stop(myPlannedAction.stopMode);
+    shutdownMqttOverlay();
 }
 
 } // namespace app::logic

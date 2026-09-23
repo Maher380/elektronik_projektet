@@ -14,6 +14,7 @@
 #include "driver/ir_sensor/stub.h"
 #include "driver/motor/stub.h"
 #include "driver/odometer/stub.h"
+#include "driver/mqtt/stub.h"
 #include "driver/pwm/stub.h"
 #include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
@@ -140,6 +141,12 @@ public:
         (void)motorForwardsPwm;
         (void)motorBackwardsPwm;
         return std::make_unique<driver::motor::Stub>();
+    }
+
+    /** Create a simulated MQTT client. */
+    std::unique_ptr<mqtt::Interface> mqtt(const mqtt::Config& config) noexcept override
+    {
+        return std::make_unique<driver::mqtt::Stub>(config);
     }
 
     /**

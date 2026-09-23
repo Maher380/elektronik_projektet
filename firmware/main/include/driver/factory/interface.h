@@ -13,6 +13,7 @@ namespace driver::adc { class Interface; }
 namespace driver::gpio { class Interface; }
 namespace driver::motor { class Interface; }
 namespace driver::odometer { struct Config; class Interface; }
+namespace driver::mqtt { struct Config; class Interface; }
 namespace driver::pwm { struct Config; class Interface; }
 namespace driver::servo { class Interface; }
 namespace driver::serial { class Interface; }
@@ -113,6 +114,10 @@ public:
      */
     virtual std::unique_ptr<odometer::Interface> odometer(gpio::Interface& gpio,
                                                           const odometer::Config& config) noexcept = 0;
+    
+    /** Create an MQTT client from immutable connection configuration. */
+    virtual std::unique_ptr<mqtt::Interface> mqtt(const mqtt::Config& config) noexcept = 0;
+
 
     /**
      * @brief Create a serial driver instance.

@@ -6,6 +6,7 @@
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"
 #include "driver/odometer/a3144.h"
+#include "driver/mqtt/esp32s3.h"
 #include "driver/pwm/esp32s3.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/esp32s3.h"
@@ -65,6 +66,11 @@ std::unique_ptr<odometer::Interface> Esp32s3::odometer(driver::gpio::Interface& 
                                                        const driver::odometer::Config& config) noexcept {
     // Create a real A3144 Hall-effect odometer from an existing GPIO input.
     return std::make_unique<driver::odometer::A3144>(gpio, config);
+}
+
+std::unique_ptr<mqtt::Interface> Esp32s3::mqtt(const mqtt::Config& config) noexcept
+{
+    return std::make_unique<driver::mqtt::Esp32s3>(config);
 }
 
 std::unique_ptr<serial::Interface> Esp32s3::serial(std::uint32_t baud_bps) noexcept {
