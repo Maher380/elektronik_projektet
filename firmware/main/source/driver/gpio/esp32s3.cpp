@@ -87,6 +87,9 @@ Esp32s3::Esp32s3(std::uint8_t pin, Direction direction) noexcept
 // -----------------------------------------------------------------------------
 Esp32s3::~Esp32s3() noexcept 
 {
+    // Only clean up a pin this instance actually reserved and configured.
+    if (!myInitialized) { return; }
+
     // Unregister the interrupt handler, if any.
     disableInterrupt();
 
@@ -98,6 +101,9 @@ Esp32s3::~Esp32s3() noexcept
 // -----------------------------------------------------------------------------
 void Esp32s3::write(bool state) noexcept
 {
+    // Ignore if the pin is not owned by this instance.
+    if (!myInitialized) { return; }
+
     // Check data direction, ignore if input.
     if (Direction::Output != myDirection) { return; }
 
@@ -110,6 +116,9 @@ void Esp32s3::write(bool state) noexcept
 // -----------------------------------------------------------------------------
 bool Esp32s3::read() const noexcept
 {
+    // Read as low if the pin is not owned by this instance.
+    if (!myInitialized) { return false; }
+
     // Read state, cast to bool (1 => true, 0 => false).
     const uint8_t gpioLevel = gpio_get_level(static_cast<gpio_num_t>(myPin));
     const bool state = static_cast<bool>(gpioLevel);
