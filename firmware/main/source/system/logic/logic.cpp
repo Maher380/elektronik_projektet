@@ -735,10 +735,12 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 {
     while (!stop.load())
     {
+        const std::int64_t tickStartUs{esp_timer_get_time()};
         const auto nowMs = static_cast<std::uint32_t>(
             xTaskGetTickCount() * portTICK_PERIOD_MS);
         processMqttOverlay(nowMs);
 
+        processSerialCommand();
         getEnvironmentPicture();
         decideAction();
         // Only MQTT authorization surrounds the unchanged executeAction().
@@ -746,13 +748,24 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         {
             executeAction();
         }
-        logState();
+        if (myMotorCommandPending)
+        {
+            printMotorSettings(*mySerial, myPlannedAction);
+            printPwmSettings(*mySerial, "FWD", myMotorForwardsPwm.get());
+            printPwmSettings(*mySerial, "BWD", myMotorBackwardsPwm.get());
+            myMotorCommandPending = false;
+        }
+        if (myLogEnabled)
+        {
+            logState();
+        }
         publishMqttTelemetry(nowMs);
 
         const std::int64_t elapsedMs{(esp_timer_get_time() - tickStartUs) / 1000};
         const std::int64_t remainingMs{static_cast<std::int64_t>(tickPeriod_ms) - elapsedMs};
         vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
+    myMotor->stop(myPlannedAction.stopMode);
     shutdownMqttOverlay();
 }
 
