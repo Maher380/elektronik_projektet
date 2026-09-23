@@ -15,9 +15,6 @@ namespace driver::odometer
  */
 struct Config
 {
-    /** GPIO pin connected to the sensor output. */
-    std::uint8_t pin{0U};
-
     /** Number of pulses the sensor produces per wheel revolution (i.e. number of magnets). */
     std::uint8_t pulsesPerRevolution{1U};
 

@@ -1,11 +1,10 @@
 #include <cstdint>
 
-#include "driver/gpio.h"
 #include "esp_attr.h"
 #include "esp_timer.h"
 
+#include "driver/gpio/edge.h"
 #include "driver/odometer/a3144.h"
-#include "system/pin_manager/esp32s3.h"
 
 namespace driver::odometer
 {
@@ -19,14 +18,11 @@ constexpr std::int64_t StandstillTimeoutUs{1'000'000};
 
 constexpr float UsToS{1.0e-6F};
 
-// Singleton pin manager instance.
-auto& myPinManager = sys::pin_manager::Esp32s3::instance();
-
 } // namespace
 
 // -----------------------------------------------------------------------------
-A3144::A3144(const Config& config) noexcept
-    : myConfig{config}
+A3144::A3144(gpio::Interface& gpio, const Config& config) noexcept
+    : myGpio{gpio}
     , myDistancePerPulse{distancePerPulse(config)}
     , myPulseCount{0U}
     , myLastPulseUs{0}
@@ -49,41 +45,14 @@ bool A3144::init() noexcept
     // Return false if the odometer is already initialized.
     if (myInitialized) { return false; }
 
-    // Try to book the GPIO pin via the pin manager, return false on failure.
-    if (!myPinManager.reservePin(myConfig.pin)) { return false; }
+    // Return false if the GPIO failed to initialize.
+    if (!myGpio.isInitialized()) { return false; }
 
     reset();
 
-    // A3144 output is open-collector and active-low: use the internal pull-up
-    // and count the falling edge that occurs when a magnet passes the sensor.
-    gpio_config_t config{};
-    config.pin_bit_mask = (1ULL << myConfig.pin);
-    config.mode         = GPIO_MODE_INPUT;
-    config.pull_up_en   = GPIO_PULLUP_ENABLE;
-    config.pull_down_en = GPIO_PULLDOWN_DISABLE;
-    config.intr_type    = GPIO_INTR_NEGEDGE;
-
-    if (gpio_config(&config) != ESP_OK)
-    {
-        myPinManager.releasePin(myConfig.pin);
-        return false;
-    }
-
-    // The ISR service is shared by all pins. ESP_ERR_INVALID_STATE means it is already installed.
-    const esp_err_t serviceResult{gpio_install_isr_service(0)};
-    if ((serviceResult != ESP_OK) && (serviceResult != ESP_ERR_INVALID_STATE))
-    {
-        gpio_reset_pin(static_cast<gpio_num_t>(myConfig.pin));
-        myPinManager.releasePin(myConfig.pin);
-        return false;
-    }
-
-    if (gpio_isr_handler_add(static_cast<gpio_num_t>(myConfig.pin), onPulse, this) != ESP_OK)
-    {
-        gpio_reset_pin(static_cast<gpio_num_t>(myConfig.pin));
-        myPinManager.releasePin(myConfig.pin);
-        return false;
-    }
+    // A3144 output is open-collector and active-low: count the falling edge
+    // that occurs when a magnet passes the sensor.
+    if (!myGpio.enableInterrupt(gpio::Edge::Falling, onPulse, this)) { return false; }
 
     myInitialized = true;
     return true;
@@ -95,9 +64,7 @@ bool A3144::deinit() noexcept
     // Return false if init() never succeeded.
     if (!myInitialized) { return false; }
 
-    gpio_isr_handler_remove(static_cast<gpio_num_t>(myConfig.pin));
-    gpio_reset_pin(static_cast<gpio_num_t>(myConfig.pin));
-    myPinManager.releasePin(myConfig.pin);
+    myGpio.disableInterrupt();
 
     myInitialized = false;
     return true;

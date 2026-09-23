@@ -30,6 +30,11 @@ std::unique_ptr<gpio::Interface> Esp32s3::gpioInput(std::uint8_t pin) noexcept {
     return std::make_unique<driver::gpio::Esp32s3>(pin, driver::gpio::Direction::Input);
 }
 
+std::unique_ptr<gpio::Interface> Esp32s3::gpioInputPullup(std::uint8_t pin) noexcept {
+    // Create a real GPIO pin configured as an input with the internal pull-up enabled
+    return std::make_unique<driver::gpio::Esp32s3>(pin, driver::gpio::Direction::InputPullup);
+}
+
 
 std::unique_ptr<gpio::Interface> Esp32s3::gpioOutput(std::uint8_t pin) noexcept {
     // Create a real GPIO pin configured as an output
@@ -56,9 +61,10 @@ std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& MotorFo
     return std::make_unique<driver::motor::MP6550>(MotorForwardsPwm, MotorBackwardsPwm);
 }
 
-std::unique_ptr<odometer::Interface> Esp32s3::odometer(const driver::odometer::Config& config) noexcept {
-    // Create a real A3144 Hall-effect odometer.
-    return std::make_unique<driver::odometer::A3144>(config);
+std::unique_ptr<odometer::Interface> Esp32s3::odometer(driver::gpio::Interface& gpio,
+                                                       const driver::odometer::Config& config) noexcept {
+    // Create a real A3144 Hall-effect odometer from an existing GPIO input.
+    return std::make_unique<driver::odometer::A3144>(gpio, config);
 }
 
 std::unique_ptr<serial::Interface> Esp32s3::serial(std::uint32_t baud_bps) noexcept {

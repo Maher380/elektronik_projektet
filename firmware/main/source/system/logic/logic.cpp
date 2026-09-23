@@ -131,16 +131,12 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     : myMotorForwardsPwm{factory.pwm(mp6550MotorPwmForwardPin)}
     , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
     , myMotorSleep{factory.gpioOutput(mp6550MotorSleepPin)}
+    , myOdometerGpio{factory.gpioInputPullup(odometerPin)}
     , myIrSensorForwardAdc{factory.adc(IrSensorForwardAdcPin)}
     , myIrSensorLeftAdc{factory.adc(IrSensorLeftAdcPin)}
     , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
     , mySerial({factory.serial(SerialBaudRate)})
     , mySteeringServoPwm{factory.pwm(SteeringPwmConfig)}
-    , myOdometer{factory.odometer(driver::odometer::Config{
-          .pin = odometerPin,
-          .pulsesPerRevolution = odometerPulsesPerRevolution,
-          .wheelDiameterM = odometerWheelDiameterM,
-      })}
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
     {
@@ -162,6 +158,13 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     if (mySteeringServoPwm)
     {
         mySteeringServo = factory.servo(*mySteeringServoPwm);
+    }
+    if (myOdometerGpio)
+    {
+        myOdometer = factory.odometer(*myOdometerGpio, driver::odometer::Config{
+            .pulsesPerRevolution = odometerPulsesPerRevolution,
+            .wheelDiameterM = odometerWheelDiameterM,
+        });
     }
 
     setStartState();

@@ -3,6 +3,7 @@
 #include "driver/gpio.h"
 
 #include "driver/gpio/direction.h"
+#include "driver/gpio/edge.h"
 #include "driver/gpio/esp32s3.h"
 #include "system/pin_manager/esp32s3.h"
 #include "esp_log.h"
@@ -25,6 +26,21 @@ gpio_mode_t gpioModeFromDirection(const Direction direction) noexcept
 
     return GPIO_MODE_DISABLE;
 }
+
+gpio_int_type_t gpioIntrTypeFromEdge(const Edge edge) noexcept
+{
+    switch (edge)
+    {
+    case Edge::Rising:
+        return GPIO_INTR_POSEDGE;
+    case Edge::Falling:
+        return GPIO_INTR_NEGEDGE;
+    case Edge::Both:
+        return GPIO_INTR_ANYEDGE;
+    }
+
+    return GPIO_INTR_DISABLE;
+}
 } // namespace
 
 // -----------------------------------------------------------------------------
@@ -38,6 +54,7 @@ Esp32s3::Esp32s3(std::uint8_t pin, Direction direction) noexcept
     , myDirection{direction}
     , myInitialized{false}
     , myState{false}
+    , myInterruptEnabled{false}
 {
     // Validate and reserve pin.
     if (!myPinManager.reservePin(myPin)) { return; }
@@ -70,6 +87,9 @@ Esp32s3::Esp32s3(std::uint8_t pin, Direction direction) noexcept
 // -----------------------------------------------------------------------------
 Esp32s3::~Esp32s3() noexcept 
 {
+    // Unregister the interrupt handler, if any.
+    disableInterrupt();
+
     // Reset the gpio pin and pin manager.
     gpio_reset_pin(static_cast<gpio_num_t>(myPin));
     myPinManager.releasePin(myPin);
@@ -108,5 +128,53 @@ void Esp32s3::toggle() noexcept
 bool Esp32s3::isInitialized() const noexcept
 {
     return myInitialized;
+}
+
+// -----------------------------------------------------------------------------
+bool Esp32s3::enableInterrupt(const Edge edge, const InterruptCallback callback, void* arg) noexcept
+{
+    // Only one handler per pin, and only on a configured pin.
+    if (!myInitialized || myInterruptEnabled || (nullptr == callback)) { return false; }
+
+    const auto pin = static_cast<gpio_num_t>(myPin);
+
+    if (ESP_OK != gpio_set_intr_type(pin, gpioIntrTypeFromEdge(edge))) { return false; }
+
+    // The ISR service is shared by all pins. ESP_ERR_INVALID_STATE means it is already installed.
+    const esp_err_t serviceResult{gpio_install_isr_service(0)};
+    if ((ESP_OK != serviceResult) && (ESP_ERR_INVALID_STATE != serviceResult))
+    {
+        gpio_set_intr_type(pin, GPIO_INTR_DISABLE);
+        return false;
+    }
+
+    if (ESP_OK != gpio_isr_handler_add(pin, callback, arg))
+    {
+        gpio_set_intr_type(pin, GPIO_INTR_DISABLE);
+        return false;
+    }
+
+    if (ESP_OK != gpio_intr_enable(pin))
+    {
+        gpio_isr_handler_remove(pin);
+        gpio_set_intr_type(pin, GPIO_INTR_DISABLE);
+        return false;
+    }
+
+    myInterruptEnabled = true;
+    return true;
+}
+
+// -----------------------------------------------------------------------------
+void Esp32s3::disableInterrupt() noexcept
+{
+    if (!myInterruptEnabled) { return; }
+
+    const auto pin = static_cast<gpio_num_t>(myPin);
+    gpio_intr_disable(pin);
+    gpio_isr_handler_remove(pin);
+    gpio_set_intr_type(pin, GPIO_INTR_DISABLE);
+
+    myInterruptEnabled = false;
 }
 } // namespace driver::gpio

@@ -51,6 +51,17 @@ public:
     }
 
     /**
+     * @brief Create a simulated GPIO input (with pull-up) stub instance.
+     *
+     * @param[in] pin The hardware pin number to simulate (unused).
+     * @return A unique pointer to the created simulated GPIO interface instance.
+     */
+    std::unique_ptr<gpio::Interface> gpioInputPullup(std::uint8_t pin) noexcept override {
+        (void)pin;
+        return std::make_unique<driver::gpio::Stub>();
+    }
+
+    /**
      * @brief Create a simulated GPIO output stub instance.
      *
      * @param[in] pin The hardware pin number to simulate (unused).
@@ -134,11 +145,14 @@ public:
     /**
      * @brief Create a simulated odometer stub instance.
      *
+     * @param[in] gpio Reference to the GPIO connected to the sensor output (unused).
      * @param[in] config Odometer configuration used to convert simulated pulses to distance.
      * @return A unique pointer to the created simulated odometer interface instance.
      */
-    std::unique_ptr<odometer::Interface> odometer(const driver::odometer::Config& config) noexcept override
+    std::unique_ptr<odometer::Interface> odometer(driver::gpio::Interface& gpio,
+                                                  const driver::odometer::Config& config) noexcept override
     {
+        (void)gpio;
         return std::make_unique<driver::odometer::Stub>(config);
     }
 

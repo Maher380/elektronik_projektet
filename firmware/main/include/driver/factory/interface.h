@@ -47,6 +47,14 @@ public:
     virtual std::unique_ptr<gpio::Interface> gpioInput(std::uint8_t pin) noexcept = 0;
 
     /**
+     * @brief Create a GPIO input driver instance with the internal pull-up enabled.
+     *
+     * @param[in] pin The hardware pin number to configure as input.
+     * @return A unique pointer to the created GPIO interface instance.
+     */
+    virtual std::unique_ptr<gpio::Interface> gpioInputPullup(std::uint8_t pin) noexcept = 0;
+
+    /**
      * @brief Create a GPIO output driver instance.
      *
      * @param[in] pin The hardware pin number to configure as output.
@@ -99,10 +107,12 @@ public:
     /**
      * @brief Create an odometer driver instance.
      *
-     * @param[in] config Odometer configuration (pin, pulses per revolution, wheel circumference).
+     * @param[in] gpio Reference to the GPIO connected to the sensor output.
+     * @param[in] config Odometer configuration (pulses per revolution, wheel diameter).
      * @return A unique pointer to the created odometer interface instance.
      */
-    virtual std::unique_ptr<odometer::Interface> odometer(const odometer::Config& config) noexcept = 0;
+    virtual std::unique_ptr<odometer::Interface> odometer(gpio::Interface& gpio,
+                                                          const odometer::Config& config) noexcept = 0;
 
     /**
      * @brief Create a serial driver instance.

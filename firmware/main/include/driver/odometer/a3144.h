@@ -1,6 +1,6 @@
 /**
- * @file esp32s3_a3144.h
- * @brief Odometer driver for ESP32-S3 using an A3144 Hall-effect sensor.
+ * @file a3144.h
+ * @brief Odometer driver using an A3144 Hall-effect sensor.
  */
 
 #pragma once
@@ -9,6 +9,7 @@
 
 #include "freertos/FreeRTOS.h"
 
+#include "driver/gpio/interface.h"
 #include "driver/odometer/interface.h"
 
 namespace driver::odometer
@@ -20,7 +21,8 @@ namespace driver::odometer
  * The A3144 has an open-collector, active-low output: it is pulled low while a
  * magnet (south pole) passes the sensor. Pulses are counted by a GPIO interrupt
  * on the falling edge, so no pulses are missed regardless of the main loop rate.
- * The internal pull-up is enabled, so no external pull-up is required.
+ * The GPIO should be configured as an input with pull-up (Direction::InputPullup),
+ * then no external pull-up is required.
  *
  * @attention The A3144 needs a 4.5-24 V supply. When supplied with 5 V the output
  *            is still safe for the 3.3 V ESP32-S3 input since it is open-collector
@@ -32,9 +34,10 @@ public:
     /**
      * @brief Constructor.
      *
+     * @param[in] gpio Reference to the GPIO connected to the sensor output.
      * @param[in] config Odometer configuration.
      */
-    explicit A3144(const Config& config) noexcept;
+    A3144(gpio::Interface& gpio, const Config& config) noexcept;
 
     /**
      * @brief Destructor.
@@ -49,7 +52,7 @@ public:
     bool init() noexcept override;
 
     /**
-     * @brief Stop counting pulses and release the pin.
+     * @brief Stop counting pulses.
      *
      * @return True if the odometer was deinitialized successfully, false otherwise.
      */
@@ -101,12 +104,12 @@ private:
     /**
      * @brief GPIO interrupt handler, called on every falling edge of the sensor output.
      *
-     * @param[in] arg Pointer to the Esp32s3A3144 instance.
+     * @param[in] arg Pointer to the A3144 instance.
      */
     static void onPulse(void* arg) noexcept;
 
-    /** Odometer configuration. */
-    const Config myConfig;
+    /** GPIO connected to the sensor output. */
+    gpio::Interface& myGpio;
 
     /** Distance travelled per pulse in meters. */
     const float myDistancePerPulse;

@@ -135,6 +135,7 @@ private:
     std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
     std::unique_ptr<driver::pwm::Interface> myMotorBackwardsPwm;
     std::unique_ptr<driver::gpio::Interface> myMotorSleep;
+    std::unique_ptr<driver::gpio::Interface> myOdometerGpio;
     std::unique_ptr<driver::adc::Interface> myIrSensorForwardAdc;
     std::unique_ptr<driver::adc::Interface> myIrSensorLeftAdc;
     std::unique_ptr<driver::adc::Interface> myIrSensorRightAdc;
