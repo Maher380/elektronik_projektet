@@ -119,6 +119,12 @@ Each pull request should include:
 - how it was tested
 - the related Jira task, if one exists
 
+## System test in main.cpp
+
+This branch runs the integrated IR/motor/servo test directly from `main.cpp`.
+See [system test setup and MQTT extensions](documentation/guides/main_system_test.md)
+for wiring, behavior, configuration and host tests.
+
 ## Attribution
 
 This project includes code derived from

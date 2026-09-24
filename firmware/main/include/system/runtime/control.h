@@ -20,6 +20,10 @@ inline constexpr std::size_t SessionIdSize{33U};
 struct Configuration
 {
     float stopDistanceCm{30.0F};
+    /** Upper decision distance; non-finite readings also use this value. */
+    float reactionDistanceCm{40.0F};
+    /** Sensor and navigation period; networking is serviced independently. */
+    std::uint32_t loopIntervalMs{250U};
     float driveDuty{0.5F};
     std::uint32_t telemetryIntervalMs{1000U};
     navigation::DriverStyle driverStyle{navigation::DriverStyle::DecideAction};
@@ -32,6 +36,9 @@ struct ConfigurationRequest
     Configuration values{};
     /** Legacy MQTT payloads omit the style and preserve the active RAM value. */
     bool hasDriverStyle{true};
+    /** Omitted extension fields preserve the current values. */
+    bool hasReactionDistance{true};
+    bool hasLoopInterval{true};
 };
 
 /** Result of applying a runtime configuration request. */
@@ -42,6 +49,8 @@ enum class ConfigurationResult : std::uint8_t
     InvalidRevision,
     StopDistanceOutOfRange,
     DriveDutyOutOfRange,
+    ReactionDistanceOutOfRange,
+    LoopIntervalOutOfRange,
     TelemetryIntervalOutOfRange,
     StaleRevision,
     InvalidDriverStyle,
@@ -54,6 +63,7 @@ enum class CommandType : std::uint8_t
     Start,
     Stop,
     Heartbeat,
+    Servo,
 };
 
 /** Parsed transient command. */
@@ -62,6 +72,8 @@ struct Command
     CommandType type{CommandType::Stop};
     std::uint32_t requestId{0U};
     bool hasRequestId{false};
+    /** Requested servo angle for the transient Servo command only. */
+    float servoAngleDegrees{0.0F};
     std::array<char, SessionIdSize> sessionId{};
 };
 
@@ -122,6 +134,15 @@ enum class StateReason : std::uint8_t
 class Control final
 {
 public:
+    /** Enable the main.cpp system test protocol; legacy Logic stays compatible. */
+    explicit Control(bool systemTest = false) noexcept : mySystemTest{systemTest} {}
+    /** Whether the active application implements the main.cpp system test. */
+    bool isSystemTest() const noexcept { return mySystemTest; }
+    /** True while a manual servo command owns steering with the motor disabled. */
+    bool isServoTest() const noexcept { return myServoTest; }
+    /** Angle requested by the most recently accepted manual servo command. */
+    float servoAngleDegrees() const noexcept { return myServoAngleDegrees; }
+
     static constexpr std::uint32_t HeartbeatTimeoutMs{3000U};
 
     /** Apply a complete runtime configuration atomically. */
@@ -133,7 +154,7 @@ public:
     /** Update whether the MQTT control connection is currently available. */
     void setMqttConnected(bool connected) noexcept;
 
-    /** Handle one parsed start, stop, or heartbeat command. */
+    /** Handle one parsed start, stop, heartbeat, or manual servo command. */
     CommandResult handleCommand(const Command& command, std::uint32_t nowMs) noexcept;
 
     /** Force a fail-safe disarm for a local runtime error. */
@@ -144,7 +165,7 @@ public:
      * applies SCRUM-16's original brake mode. Does not choose a path or duty.
      */
     bool authorizeAction(std::uint32_t nowMs, bool validEnvironment,
-                         float plannedDuty, bool brakeRequested) noexcept;
+                               float plannedDuty, bool brakeRequested) noexcept;
 
     const Configuration& configuration() const noexcept;
     std::uint32_t configurationRevision() const noexcept;
@@ -161,6 +182,9 @@ private:
     bool isActiveSession(const std::array<char, SessionIdSize>& sessionId) const noexcept;
     void disarm(StateReason reason) noexcept;
 
+    const bool mySystemTest;
+    bool myServoTest{false};
+    float myServoAngleDegrees{0.0F};
     Configuration myConfiguration{};
     std::uint32_t myConfigurationRevision{0U};
     bool myHasConfigurationRevision{false};

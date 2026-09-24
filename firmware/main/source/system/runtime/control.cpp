@@ -31,7 +31,7 @@ ConfigurationResult Control::applyConfiguration(
     {
         return ConfigurationResult::InvalidRevision;
     }
-    if (!isFiniteInRange(request.values.stopDistanceCm, 30.0F, 70.0F))
+    if (!isFiniteInRange(request.values.stopDistanceCm, mySystemTest ? 1.0F : 30.0F, mySystemTest ? 100.0F : 70.0F))
     {
         return ConfigurationResult::StopDistanceOutOfRange;
     }
@@ -46,8 +46,19 @@ ConfigurationResult Control::applyConfiguration(
     }
 
     Configuration candidate = request.values;
+    if (!request.hasReactionDistance) { candidate.reactionDistanceCm = myConfiguration.reactionDistanceCm; }
+    if (!request.hasLoopInterval) { candidate.loopIntervalMs = myConfiguration.loopIntervalMs; }
+    if (!isFiniteInRange(candidate.reactionDistanceCm, 1.0F, 200.0F)
+        || (mySystemTest && candidate.reactionDistanceCm <= candidate.stopDistanceCm))
+    {
+        return ConfigurationResult::ReactionDistanceOutOfRange;
+    }
+    if (candidate.loopIntervalMs < 20U || candidate.loopIntervalMs > 1000U)
+    {
+        return ConfigurationResult::LoopIntervalOutOfRange;
+    }
     if (!request.hasDriverStyle) { candidate.driverStyle = myConfiguration.driverStyle; }
-    if (!isValidDriverStyle(candidate.driverStyle)) { return ConfigurationResult::InvalidDriverStyle; }
+    if ((mySystemTest && candidate.driverStyle != navigation::DriverStyle::DecideAction) || !isValidDriverStyle(candidate.driverStyle)) { return ConfigurationResult::InvalidDriverStyle; }
     // Reject the entire update: neither values nor revision may advance.
     if (candidate.driverStyle != myConfiguration.driverStyle && myControlState != ControlState::Disarmed)
     {
@@ -75,7 +86,7 @@ ConfigurationResult Control::applyConfiguration(
 
 bool Control::setDriverStyle(navigation::DriverStyle style) noexcept
 {
-    if (!isValidDriverStyle(style)) { return false; }
+    if ((mySystemTest && style != navigation::DriverStyle::DecideAction) || !isValidDriverStyle(style)) { return false; }
     if (style != myConfiguration.driverStyle && myControlState != ControlState::Disarmed) { return false; }
     myConfiguration.driverStyle = style;
     return true;
@@ -126,6 +137,7 @@ CommandResult Control::handleCommand(const Command& command,
             }
             myLastControlRequestId = command.requestId;
             myLastStartRequestId = command.requestId;
+            myServoTest = false;
             myActiveSession = command.sessionId;
             myLastHeartbeatMs = nowMs;
             myControlState = ControlState::Armed;
@@ -136,6 +148,21 @@ CommandResult Control::handleCommand(const Command& command,
         case CommandType::Stop:
             myLastControlRequestId = std::max(myLastControlRequestId, command.requestId);
             disarm(StateReason::OperatorStop);
+            return {true, CommandError::None};
+
+        case CommandType::Servo:
+            if (!mySystemTest || myActuatorFault || !command.hasRequestId
+                || command.requestId == 0U
+                || !isFiniteInRange(command.servoAngleDegrees, -90.0F, 90.0F))
+            {
+                return {false, CommandError::InvalidRequest};
+            }
+            if (!myMqttConnected) { return {false, CommandError::MqttDisconnected}; }
+            if (command.requestId <= myLastControlRequestId) { return {false, CommandError::StaleRequest}; }
+            myLastControlRequestId = command.requestId;
+            disarm(StateReason::OperatorStop);
+            myServoAngleDegrees = command.servoAngleDegrees;
+            myServoTest = true;
             return {true, CommandError::None};
 
         case CommandType::Heartbeat:
@@ -210,6 +237,8 @@ bool Control::sameConfiguration(const Configuration& lhs,
                                 const Configuration& rhs) noexcept
 {
     return (lhs.stopDistanceCm == rhs.stopDistanceCm)
+        && (lhs.reactionDistanceCm == rhs.reactionDistanceCm)
+        && (lhs.loopIntervalMs == rhs.loopIntervalMs)
         && (lhs.driveDuty == rhs.driveDuty)
         && (lhs.telemetryIntervalMs == rhs.telemetryIntervalMs)
         && (lhs.driverStyle == rhs.driverStyle);
@@ -223,6 +252,7 @@ bool Control::isActiveSession(
 
 void Control::disarm(StateReason reason) noexcept
 {
+    myServoTest = false;
     myControlState = ControlState::Disarmed;
     myMotionState = MotionState::Stopped;
     myStateReason = myActuatorFault ? StateReason::ActuatorFault : reason;

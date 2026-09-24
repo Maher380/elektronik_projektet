@@ -4,6 +4,7 @@
  */
 
  #include <cstdint>
+ #include <cmath>
 
  #include "driver/motor/interface.h"
  #include "driver/motor/mp6550.h"
@@ -97,36 +98,21 @@ namespace driver::motor
      */
     bool MP6550::setSpeed(float speed, StopMode mode ) noexcept
     {
-        if(myInitialized == false)
+        if (!myInitialized || !std::isfinite(speed) || speed < 0.0F || speed > 1.0F)
+        {
             return false;
-
-        mySpeed = speed;
-        if (Direction::Forward == myDirection)
-        {
-            myForwardPwmDriver.setDuty(mySpeed);
-            if(StopMode::Brake == mode)
-            {
-                myBackwardPwmDriver.setDuty(hardbreak);
-            }
-            else 
-            {
-                myBackwardPwmDriver.setDuty(coast);
-            }
         }
-        else
-        {
-            myBackwardPwmDriver.setDuty(mySpeed);
-            if(StopMode::Brake == mode)
-            {
-                myForwardPwmDriver.setDuty(hardbreak);
-            }
-            else 
-            {
-                myForwardPwmDriver.setDuty(coast);
-            }
-        }
+        const float idleDuty = mode == StopMode::Brake ? hardbreak : coast;
+        const float forward = myDirection == Direction::Forward ? speed : idleDuty;
+        const float backward = myDirection == Direction::Forward ? idleDuty : speed;
 
-        return true;
+        // Attempt both outputs, report either failure, and avoid redundant writes.
+        const bool forwardOk = myForwardPwmDriver.isInitialized()
+            && (myForwardPwmDriver.duty() == forward || myForwardPwmDriver.setDuty(forward));
+        const bool backwardOk = myBackwardPwmDriver.isInitialized()
+            && (myBackwardPwmDriver.duty() == backward || myBackwardPwmDriver.setDuty(backward));
+        if (forwardOk && backwardOk) { mySpeed = speed; }
+        return forwardOk && backwardOk;
     }
 
     /**
@@ -137,23 +123,14 @@ namespace driver::motor
      */
     bool MP6550::stop(StopMode mode) noexcept
     {
-        if(!myInitialized)
-            return false;
-
-        mySpeed = 0.0F;
-
-        if (StopMode::Coast == mode)
-        {
-            myForwardPwmDriver.setDuty(coast);
-            myBackwardPwmDriver.setDuty(coast);
-        }
-        else 
-        {
-            myForwardPwmDriver.setDuty(hardbreak);
-            myBackwardPwmDriver.setDuty(hardbreak);
-        }
-
-        return true;
+        if (!myInitialized) { return false; }
+        const float duty = mode == StopMode::Brake ? hardbreak : coast;
+        const bool forwardOk = myForwardPwmDriver.isInitialized()
+            && (myForwardPwmDriver.duty() == duty || myForwardPwmDriver.setDuty(duty));
+        const bool backwardOk = myBackwardPwmDriver.isInitialized()
+            && (myBackwardPwmDriver.duty() == duty || myBackwardPwmDriver.setDuty(duty));
+        if (forwardOk && backwardOk) { mySpeed = 0.0F; }
+        return forwardOk && backwardOk;
     }
 
 } // namespace driver::motor

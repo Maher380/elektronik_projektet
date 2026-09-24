@@ -5,6 +5,7 @@
 #include <cmath>
 #include <cstring>
 #include <iterator>
+#include <initializer_list>
 #include <limits>
 #include <utility>
 
@@ -61,6 +62,9 @@ struct WireTelemetrySnapshot
     std::uint32_t sequence{0U};
     std::uint32_t uptimeMs{0U};
     std::array<float, runtime::IrSensorCount> distancesCm{};
+    std::array<float, runtime::IrSensorCount> decisionDistancesCm{};
+    bool systemTest{false};
+    bool servoTest{false};
     std::array<std::int32_t, runtime::IrSensorCount> adcRaw{-1, -1, -1};
     float speedCommand{0.0F};
     float steeringDegrees{0.0F};
@@ -135,9 +139,9 @@ bool boundedJson(const char* payload) noexcept
 bool validateFields(const cJSON* object,
                     const char* const* fields,
                     std::size_t fieldCount,
-                    ParseError& error, const char* optionalField = nullptr) noexcept
+                    ParseError& error, std::initializer_list<const char*> optionalFields = {}) noexcept
 {
-    std::array<bool, 8U> seen{};
+    std::array<bool, 10U> seen{};
     if ((fieldCount > seen.size()) || !cJSON_IsObject(object))
     {
         error = ParseError::InvalidType;
@@ -171,7 +175,9 @@ bool validateFields(const cJSON* object,
 
     for (std::size_t index{0U}; index < fieldCount; ++index)
     {
-        if (!seen[index] && (optionalField == nullptr || std::strcmp(fields[index], optionalField) != 0))
+        const bool optional = std::any_of(optionalFields.begin(), optionalFields.end(),
+            [&](const char* field) { return std::strcmp(fields[index], field) == 0; });
+        if (!seen[index] && !optional)
         {
             error = ParseError::MissingField;
             return false;
@@ -250,6 +256,8 @@ bool addConfiguration(cJSON* root, const runtime::Configuration& config) noexcep
 {
     return (cJSON_AddStringToObject(root, "driver_style", toString(config.driverStyle)) != nullptr)
         && (cJSON_AddNumberToObject(root, "stop_distance_cm", config.stopDistanceCm) != nullptr)
+        && (cJSON_AddNumberToObject(root, "reaction_distance_cm", config.reactionDistanceCm) != nullptr)
+        && (cJSON_AddNumberToObject(root, "loop_interval_ms", config.loopIntervalMs) != nullptr)
         && (cJSON_AddNumberToObject(root, "drive_duty", config.driveDuty) != nullptr)
         && (cJSON_AddNumberToObject(root,
                                     "telemetry_interval_ms",
@@ -281,9 +289,11 @@ bool parseConfiguration(const char* payload,
         "drive_duty",
         "telemetry_interval_ms",
         "driver_style",
+        "reaction_distance_cm",
+        "loop_interval_ms",
     };
 
-    bool valid = validateFields(root, Fields, std::size(Fields), error, "driver_style")
+    bool valid = validateFields(root, Fields, std::size(Fields), error, {"driver_style", "reaction_distance_cm", "loop_interval_ms"})
         && readSchema(root, error)
         && readUnsigned(root, "revision", request.revision)
         && readFloat(root, "stop_distance_cm", request.values.stopDistanceCm)
@@ -292,6 +302,16 @@ bool parseConfiguration(const char* payload,
                         "telemetry_interval_ms",
                         request.values.telemetryIntervalMs);
 
+    request.hasReactionDistance = cJSON_HasObjectItem(root, "reaction_distance_cm");
+    request.hasLoopInterval = cJSON_HasObjectItem(root, "loop_interval_ms");
+    if (valid && request.hasReactionDistance)
+    {
+        valid = readFloat(root, "reaction_distance_cm", request.values.reactionDistanceCm);
+    }
+    if (valid && request.hasLoopInterval)
+    {
+        valid = readUnsigned(root, "loop_interval_ms", request.values.loopIntervalMs);
+    }
     const cJSON* style = cJSON_GetObjectItemCaseSensitive(root, "driver_style");
     request.hasDriverStyle = style != nullptr;
     if (valid && request.hasDriverStyle)
@@ -339,14 +359,17 @@ bool parseCommand(const char* payload,
         return false;
     }
 
+    const bool servo = std::strcmp(commandItem->valuestring, "servo") == 0;
     const bool heartbeat = std::strcmp(commandItem->valuestring, "heartbeat") == 0;
     constexpr const char* HeartbeatFields[]{"schema_version", "session_id", "command"};
     constexpr const char* ControlFields[]{
         "schema_version", "request_id", "session_id", "command"};
 
-    const char* const* fields = heartbeat ? HeartbeatFields : ControlFields;
+    constexpr const char* ServoFields[]{
+        "schema_version", "request_id", "session_id", "command", "angle_deg"};
+    const char* const* fields = heartbeat ? HeartbeatFields : servo ? ServoFields : ControlFields;
     const std::size_t fieldCount = heartbeat ? std::size(HeartbeatFields)
-                                             : std::size(ControlFields);
+                                             : servo ? std::size(ServoFields) : std::size(ControlFields);
     bool valid = validateFields(root, fields, fieldCount, error) && readSchema(root, error)
         && copySession(root, command.sessionId);
 
@@ -375,6 +398,16 @@ bool parseCommand(const char* payload,
         if (std::strcmp(commandItem->valuestring, "start") == 0)
         {
             command.type = runtime::CommandType::Start;
+        }
+        else if (servo)
+        {
+            command.type = runtime::CommandType::Servo;
+            if (!readFloat(root, "angle_deg", command.servoAngleDegrees))
+            {
+                error = ParseError::InvalidType;
+                cJSON_Delete(root);
+                return false;
+            }
         }
         else if (std::strcmp(commandItem->valuestring, "stop") == 0)
         {
@@ -411,7 +444,8 @@ bool writeConfigurationState(char* destination,
     {
         valid = valid && (cJSON_AddStringToObject(root, "error", error) != nullptr);
     }
-    valid = valid && addConfiguration(root, control.configuration());
+    valid = valid && addConfiguration(root, control.configuration())
+        && cJSON_AddBoolToObject(root, "system_test", control.isSystemTest()) != nullptr;
     if (!valid)
     {
         cJSON_Delete(root);
@@ -432,6 +466,8 @@ bool writeCommandState(char* destination,
 
     bool valid = (cJSON_AddNumberToObject(root, "schema_version", SchemaVersion) != nullptr)
         && (cJSON_AddNumberToObject(root, "last_request_id", requestId) != nullptr)
+        && (cJSON_AddBoolToObject(root, "servo_test", control.isServoTest()) != nullptr)
+        && (cJSON_AddNumberToObject(root, "servo_angle_deg", control.servoAngleDegrees()) != nullptr)
         && (cJSON_AddStringToObject(root, "session_id", control.activeSessionId()) != nullptr)
         && (cJSON_AddStringToObject(root, "driver_style", toString(control.configuration().driverStyle)) != nullptr)
         && (cJSON_AddStringToObject(root, "result", result) != nullptr)
@@ -477,6 +513,17 @@ bool writeTelemetry(char* destination,
         && (cJSON_AddNumberToObject(root, "uptime_ms", snapshot.uptimeMs) != nullptr);
 
     constexpr const char* SensorNames[]{"left", "center", "right"};
+    if (snapshot.systemTest)
+    {
+        cJSON* decision = cJSON_AddObjectToObject(root, "decision_distance_cm");
+        valid = valid && decision != nullptr;
+        for (std::size_t index{0U}; valid && index < snapshot.decisionDistancesCm.size(); ++index)
+        {
+            valid = cJSON_AddNumberToObject(decision, SensorNames[index], snapshot.decisionDistancesCm[index]) != nullptr;
+        }
+    }
+    valid = valid && cJSON_AddBoolToObject(root, "system_test", snapshot.systemTest) != nullptr
+        && cJSON_AddBoolToObject(root, "servo_test", snapshot.servoTest) != nullptr;
     bool hasClosest{false};
     std::size_t closestIndex{0U};
     float closestDistance{std::numeric_limits<float>::infinity()};
@@ -573,6 +620,8 @@ const char* toString(runtime::ConfigurationResult result) noexcept
         case runtime::ConfigurationResult::InvalidRevision: return "invalid_revision";
         case runtime::ConfigurationResult::StopDistanceOutOfRange:
             return "stop_distance_out_of_range";
+        case runtime::ConfigurationResult::ReactionDistanceOutOfRange: return "reaction_distance_out_of_range";
+        case runtime::ConfigurationResult::LoopIntervalOutOfRange: return "loop_interval_out_of_range";
         case runtime::ConfigurationResult::DriveDutyOutOfRange:
             return "drive_duty_out_of_range";
         case runtime::ConfigurationResult::TelemetryIntervalOutOfRange:
@@ -801,6 +850,9 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.sequence = myTelemetrySequence + 1U;
     wireSnapshot.uptimeMs = nowMs;
     wireSnapshot.distancesCm = snapshot.distancesCm;
+    wireSnapshot.decisionDistancesCm = snapshot.decisionDistancesCm;
+    wireSnapshot.systemTest = control.isSystemTest();
+    wireSnapshot.servoTest = control.isServoTest();
     wireSnapshot.adcRaw = snapshot.adcRaw;
     wireSnapshot.speedCommand = snapshot.speedCommand;
     wireSnapshot.steeringDegrees = snapshot.steeringDegrees;

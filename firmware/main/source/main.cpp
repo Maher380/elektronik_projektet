@@ -117,7 +117,7 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
                 static_cast<double>(decision.distances[2]));
         }
         const float plannedDuty = decision.blocked ? 0.0F : config.driveDuty;
-        const bool authorized = control.authorizeScrum16Action(now, true, plannedDuty, decision.blocked);
+        const bool authorized = control.authorizeAction(now, true, plannedDuty, decision.blocked);
         const bool brake = authorized && decision.blocked && !actuatorFault;
         const float duty = authorized && !actuatorFault ? plannedDuty : 0.0F;
         const float angle = control.isServoTest() ? control.servoAngleDegrees() : authorized ? decision.angle : 0.0F;
@@ -129,8 +129,8 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
             if (!brake && duty == 0.0F) { sleep->write(false); }
             const auto mode = brake ? driver::motor::StopMode::Brake : driver::motor::StopMode::Coast;
             outputOk = duty > 0.0F ? motor->setSpeed(duty) : motor->stop(mode);
-            // The MP6550 wrapper does not propagate PWM errors; verify the writes
-            // directly as well, before enabling nSLEEP.
+            // Verify both output writes before enabling nSLEEP, preserving
+            // the tested main.cpp output sequence.
             const bool forwardOk = forwardPwm->setDuty(brake ? 1.0F : duty);
             const bool backwardOk = backwardPwm->setDuty(brake ? 1.0F : 0.0F);
             outputOk = outputOk && forwardOk && backwardOk;
