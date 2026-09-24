@@ -1,6 +1,6 @@
 
 
-#include "driver/ir_sensor/gp2y0a21yk.h"
+#include "driver/distance_sensor/gp2y0a21yk.h"
 #include <cmath>
 #include <limits>
 
@@ -13,7 +13,7 @@ namespace
 
 } // namespace
 
-namespace driver::ir_sensor
+namespace driver::distance_sensor
 {
 
 
@@ -48,4 +48,4 @@ namespace driver::ir_sensor
         return myAdc.isInitialized();
     }
 
-} // namespace driver::ir_sensor
+} // namespace driver::distance_sensor

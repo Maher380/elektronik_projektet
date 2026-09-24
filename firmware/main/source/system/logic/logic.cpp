@@ -14,7 +14,7 @@
 
 #include "driver/adc/interface.h"
 #include "driver/gpio/interface.h"
-#include "driver/ir_sensor/interface.h"
+#include "driver/distance_sensor/interface.h"
 #include "driver/motor/interface.h"
 #include "driver/serial/interface.h"
 #include "driver/timer/interface.h"
