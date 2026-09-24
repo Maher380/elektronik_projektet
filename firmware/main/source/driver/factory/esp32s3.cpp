@@ -5,6 +5,7 @@
 #include "driver/gpio/esp32s3.h"
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"
+#include "driver/odometer/a3144.h"
 #include "driver/mqtt/esp32s3.h"
 #include "driver/pwm/esp32s3.h"
 #include "driver/servo/vagrant.h"
@@ -28,6 +29,11 @@ std::unique_ptr < ir_sensor::Interface> Esp32s3::ir_sensor(adc::Interface& adc) 
 std::unique_ptr<gpio::Interface> Esp32s3::gpioInput(std::uint8_t pin) noexcept {
     // Create a real GPIO pin configured as an input
     return std::make_unique<driver::gpio::Esp32s3>(pin, driver::gpio::Direction::Input);
+}
+
+std::unique_ptr<gpio::Interface> Esp32s3::gpioInputPullup(std::uint8_t pin) noexcept {
+    // Create a real GPIO pin configured as an input with the internal pull-up enabled
+    return std::make_unique<driver::gpio::Esp32s3>(pin, driver::gpio::Direction::InputPullup);
 }
 
 
@@ -54,6 +60,12 @@ std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& MotorFo
                                                  driver::pwm::Interface& MotorBackwardsPwm) noexcept {
     // Create a real MP6550 motor driver from existing PWM outputs.
     return std::make_unique<driver::motor::MP6550>(MotorForwardsPwm, MotorBackwardsPwm);
+}
+
+std::unique_ptr<odometer::Interface> Esp32s3::odometer(driver::gpio::Interface& gpio,
+                                                       const driver::odometer::Config& config) noexcept {
+    // Create a real A3144 Hall-effect odometer from an existing GPIO input.
+    return std::make_unique<driver::odometer::A3144>(gpio, config);
 }
 
 std::unique_ptr<mqtt::Interface> Esp32s3::mqtt(const mqtt::Config& config) noexcept

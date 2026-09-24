@@ -14,6 +14,7 @@ namespace driver {
     namespace adc { class Interface; }
     namespace gpio { class Interface; }
     namespace motor { class Interface; }
+    namespace odometer { struct Config; class Interface; }
     namespace mqtt { struct Config; class Interface; }
     namespace pwm { struct Config; class Interface; }
     namespace servo { class Interface; }
@@ -54,6 +55,13 @@ public:
      * @return A unique pointer to the created GPIO interface instance.
      */
     std::unique_ptr<gpio::Interface> gpioInput(std::uint8_t pin) noexcept override;
+
+    /**
+     * @brief Create a real ESP32-S3 GPIO input hardware instance with the internal pull-up enabled.
+     * * @param[in] pin The hardware pin number to configure as input.
+     * @return A unique pointer to the created GPIO interface instance.
+     */
+    std::unique_ptr<gpio::Interface> gpioInputPullup(std::uint8_t pin) noexcept override;
 
     /**
      * @brief Create a real ESP32-S3 GPIO output hardware instance.
@@ -99,6 +107,15 @@ public:
     /** Create a real ESP-MQTT client. */
     std::unique_ptr<mqtt::Interface> mqtt(const mqtt::Config& config) noexcept override;
 
+    /**
+     * @brief Create a real ESP32-S3 odometer driver using an A3144 Hall-effect sensor.
+     *
+     * @param[in] gpio Reference to the GPIO connected to the sensor output (input with pull-up).
+     * @param[in] config Odometer configuration (pulses per revolution, wheel diameter).
+     * @return A unique pointer to the created odometer interface instance.
+     */
+    std::unique_ptr<odometer::Interface> odometer(driver::gpio::Interface& gpio,
+                                                  const odometer::Config& config) noexcept override;
     /**
      * @brief Create a real ESP32-S3 Serial hardware instance.
      *

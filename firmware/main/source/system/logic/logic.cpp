@@ -1,9 +1,14 @@
 #include <cstdio>
 
 #include <algorithm>
+#include <cctype>
 #include <cmath>
 #include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <limits>
+
+#include "esp_timer.h"
 
 #include "system/logic/logic.h"
 
@@ -33,7 +38,7 @@ namespace
     constexpr const char *WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
     
 
-    constexpr std::uint8_t bufLen{192U};
+    constexpr std::uint16_t bufLen{224U};
     // @brief the sleep period between two ticks. 50 ms -> 20 Hz 
     constexpr int tickPeriod_ms{50U};
 
@@ -41,6 +46,70 @@ namespace
     constexpr int logInterval_ms{1000};
     constexpr int logInterval_ticks{logInterval_ms/tickPeriod_ms};
 
+    constexpr const char* CommandHelpText{
+        "Commands: SPEED <0-1>, FORWARD, BACKWARD, BRAKE, COAST, STOP, AUTO,\n"
+        "  PWMDUTYFWD <0-100>, PWMDUTYBWD <0-100>,\n"
+        "  DRIVESTYLE <DECIDEACTION|SLOWLEFT|SLOWRIGHT|GRADUALSWEEP|MANUAL_BY_SERIAL>,\n"
+        "  LOG <ON|OFF>, HELP\n"};
+
+    void toUpperInPlace(char* text) noexcept
+    {
+        for (; *text != '\0'; ++text)
+        {
+            *text = static_cast<char>(std::toupper(static_cast<unsigned char>(*text)));
+        }
+    }
+
+    bool trySetPwmDutyPercent(driver::pwm::Interface* pwm, const char* argument, driver::serial::Interface& serial) noexcept
+    {
+        float percent{0.0F};
+        if (std::sscanf(argument, "%f", &percent) != 1)
+        {
+            serial.write("Usage: PWMDUTYFWD/PWMDUTYBWD <0-100>\n");
+            return false;
+        }
+
+        const float duty{std::clamp(percent, 0.0F, 100.0F) / 100.0F};
+        if ((pwm == nullptr) || !pwm->setDuty(duty))
+        {
+            serial.write("Failed to set PWM duty cycle\n");
+            return false;
+        }
+
+        return true;
+    }
+
+    void printMotorSettings(driver::serial::Interface& serial, const app::logic::PlannedAction& action) noexcept
+    {
+        char buf[96]{'\0'};
+        std::snprintf(buf, sizeof(buf), "Motor: direction=%s, speed=%.2f, stopMode=%s\n",
+            action.direction == driver::motor::Direction::Forward ? "Forward" : "Backward",
+            static_cast<double>(action.speed),
+            action.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast");
+        serial.write(buf);
+    }
+
+    void printPwmSettings(driver::serial::Interface& serial, const char* label, const driver::pwm::Interface* pwm) noexcept
+    {
+        if (pwm == nullptr) { return; }
+
+        char buf[96]{'\0'};
+        std::snprintf(buf, sizeof(buf), "PWM %s: duty=%.1f%%, frequency=%luHz\n",
+            label,
+            static_cast<double>(pwm->duty() * 100.0F),
+            static_cast<unsigned long>(pwm->frequencyHz()));
+        serial.write(buf);
+    }
+
+    bool tryParseDriverStyle(const char* name, app::logic::DriverStyle& style) noexcept
+    {
+        if (std::strcmp(name, "DECIDEACTION") == 0) { style = app::logic::DriverStyle::DecideAction; return true; }
+        if (std::strcmp(name, "SLOWLEFT") == 0) { style = app::logic::DriverStyle::SlowLeft; return true; }
+        if (std::strcmp(name, "SLOWRIGHT") == 0) { style = app::logic::DriverStyle::SlowRight; return true; }
+        if (std::strcmp(name, "GRADUALSWEEP") == 0) { style = app::logic::DriverStyle::GradualSweep; return true; }
+        if (std::strcmp(name, "MANUAL_BY_SERIAL") == 0) { style = app::logic::DriverStyle::ManualBySerial; return true; }
+        return false;
+    }
 
 } // namespace
 
@@ -62,6 +131,7 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     : myMotorForwardsPwm{factory.pwm(mp6550MotorPwmForwardPin)}
     , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
     , myMotorSleep{factory.gpioOutput(mp6550MotorSleepPin)}
+    , myOdometerGpio{factory.gpioInputPullup(odometerPin)}
     , myIrSensorForwardAdc{factory.adc(IrSensorForwardAdcPin)}
     , myIrSensorLeftAdc{factory.adc(IrSensorLeftAdcPin)}
     , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
@@ -89,6 +159,13 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     if (mySteeringServoPwm)
     {
         mySteeringServo = factory.servo(*mySteeringServoPwm);
+    }
+    if (myOdometerGpio)
+    {
+        myOdometer = factory.odometer(*myOdometerGpio, driver::odometer::Config{
+            .pulsesPerRevolution = odometerPulsesPerRevolution,
+            .wheelDiameterM = odometerWheelDiameterM,
+        });
     }
 
     setStartState();
@@ -131,6 +208,7 @@ bool Logic::initializeDrivers() noexcept
     if (mySerial &&mySerial->connect())
     {
         mySerial->write("CnB serial ready\n");
+        mySerial->write(CommandHelpText);
     }
     else
     {
@@ -157,7 +235,8 @@ bool Logic::initializeDrivers() noexcept
         !myIrSensorRight ||
         !mySteeringServoPwm ||
         !mySteeringServo ||
-        !mySerial )
+        !mySerial ||
+        !myOdometer )
     {
         return false;
     }
@@ -175,6 +254,7 @@ bool Logic::initializeDrivers() noexcept
     myMotor->init();
     mySteeringServoPwm->init();
     mySteeringServo->init();
+    myOdometer->init();
     // no init function for myIrSensorLeft
     // no init function for myIrSensorRight
     // no init function for mySerial
@@ -192,6 +272,7 @@ bool Logic::initializeDrivers() noexcept
         !myIrSensorRight->isInitialized() ||
         !mySteeringServoPwm->isInitialized() ||
         !mySteeringServo->isInitialized() ||
+        !myOdometer->isInitialized() ||
         !mySerial->isInitialized())
     {
         return false;
@@ -204,6 +285,10 @@ bool Logic::initializeDrivers() noexcept
 
 void Logic::deinitializeDrivers() noexcept
 {
+    if (myOdometer && myOdometer->isInitialized())
+    {
+        myOdometer->deinit();
+    }
     if (mySteeringServo && mySteeringServo->isInitialized())
     {
         mySteeringServo->deinit();
@@ -303,6 +388,143 @@ void Logic::decideAction() noexcept
     case DriverStyle::SlowRight:
         decideSlowRightAction();
         break;
+    case DriverStyle::ManualBySerial:
+        // myPlannedAction was already updated by processSerialCommand().
+        break;
+    }
+}
+
+void Logic::processSerialCommand() noexcept
+{
+    if (!mySerial || !mySerial->isInitialized() || !mySerial->isDataAvailable())
+    {
+        return;
+    }
+
+    char line[32]{'\0'};
+    if (mySerial->read(line, sizeof(line)) == 0U)
+    {
+        return;
+    }
+
+    char command[16]{'\0'};
+    char argument[20]{'\0'};
+    const int parsed = std::sscanf(line, "%15s %19s", command, argument);
+    if (parsed < 1)
+    {
+        return;
+    }
+
+    toUpperInPlace(command);
+    toUpperInPlace(argument);
+
+    const bool isHelp = std::strcmp(command, "HELP") == 0;
+    const bool isDriveStyle = std::strcmp(command, "DRIVESTYLE") == 0;
+    const bool isLog = std::strcmp(command, "LOG") == 0;
+
+    if (!isHelp && !isDriveStyle && !isLog && (myDriverStyle != DriverStyle::ManualBySerial))
+    {
+        mySerial->write("Ignored: switch to manual mode first with DRIVESTYLE MANUAL_BY_SERIAL\n");
+        return;
+    }
+
+    bool isMotorCommand{false};
+    bool isPwmFwdCommand{false};
+    bool isPwmBwdCommand{false};
+
+    float speed{0.0F};
+    if ((std::strcmp(command, "SPEED") == 0) && (parsed == 2) && (std::sscanf(argument, "%f", &speed) == 1))
+    {
+        myPlannedAction.speed = std::clamp(speed, 0.0F, 1.0F);
+        isMotorCommand = true;
+    }
+    else if (std::strcmp(command, "FORWARD") == 0)
+    {
+        myPlannedAction.direction = driver::motor::Direction::Forward;
+        isMotorCommand = true;
+    }
+    else if (std::strcmp(command, "BACKWARD") == 0)
+    {
+        myPlannedAction.direction = driver::motor::Direction::Backward;
+        isMotorCommand = true;
+    }
+    else if (std::strcmp(command, "BRAKE") == 0)
+    {
+        myPlannedAction.stopMode = driver::motor::StopMode::Brake;
+        isMotorCommand = true;
+    }
+    else if (std::strcmp(command, "COAST") == 0)
+    {
+        myPlannedAction.stopMode = driver::motor::StopMode::Coast;
+        isMotorCommand = true;
+    }
+    else if (std::strcmp(command, "STOP") == 0)
+    {
+        myPlannedAction.speed = 0.0F;
+        isMotorCommand = true;
+    }
+    else if (std::strcmp(command, "AUTO") == 0)
+    {
+        setDriverStyle(DriverStyle::DecideAction);
+    }
+    else if ((std::strcmp(command, "PWMDUTYFWD") == 0) && (parsed == 2))
+    {
+        isPwmFwdCommand = trySetPwmDutyPercent(myMotorForwardsPwm.get(), argument, *mySerial);
+    }
+    else if ((std::strcmp(command, "PWMDUTYBWD") == 0) && (parsed == 2))
+    {
+        isPwmBwdCommand = trySetPwmDutyPercent(myMotorBackwardsPwm.get(), argument, *mySerial);
+    }
+    else if (isDriveStyle && (parsed == 2))
+    {
+        DriverStyle style{};
+        if (tryParseDriverStyle(argument, style))
+        {
+            setDriverStyle(style);
+        }
+        else
+        {
+            mySerial->write("Unknown drive style. Use DECIDEACTION, SLOWLEFT, SLOWRIGHT, GRADUALSWEEP, MANUAL_BY_SERIAL\n");
+        }
+    }
+    else if (isLog && (parsed == 2))
+    {
+        if (std::strcmp(argument, "ON") == 0)
+        {
+            myLogEnabled = true;
+            mySerial->write("Logging enabled\n");
+        }
+        else if (std::strcmp(argument, "OFF") == 0)
+        {
+            myLogEnabled = false;
+            mySerial->write("Logging disabled\n");
+        }
+        else
+        {
+            mySerial->write("Usage: LOG <ON|OFF>\n");
+        }
+    }
+    else if (isHelp)
+    {
+        mySerial->write(CommandHelpText);
+    }
+    else
+    {
+        mySerial->write("Unknown command. ");
+        mySerial->write(CommandHelpText);
+    }
+
+    if (isMotorCommand)
+    {
+        myMotorCommandPending = true;
+    }
+    if (isPwmFwdCommand)
+    {
+        printPwmSettings(*mySerial, "FWD", myMotorForwardsPwm.get());
+    }
+    if (isPwmBwdCommand)
+    {
+        printPwmSettings(*mySerial, "BWD", myMotorBackwardsPwm.get());
     }
 }
 
@@ -440,7 +662,7 @@ void Logic::executeAction() noexcept
 
     if (myPlannedAction.speed > 0.0F)
     {
-        myMotor->setDirection(driver::motor::Direction::Forward);
+        myMotor->setDirection(myPlannedAction.direction);
         myMotor->setSpeed(myPlannedAction.speed, myPlannedAction.stopMode);
     }
     else
@@ -495,17 +717,23 @@ void Logic::logState() noexcept
             ? accumulatedDistanceRight / static_cast<double>(validSamplesRight)
             : std::numeric_limits<double>::quiet_NaN();
 
+        const double odometerDistanceM{myOdometer ? static_cast<double>(myOdometer->distance()) : 0.0};
+        const double odometerSpeedMps{myOdometer ? static_cast<double>(myOdometer->speed()) : 0.0};
+
         std::snprintf(
             buf,
             sizeof(buf),
             "IR cm L: %.2f (avg %.2f), C: %.2f (avg %.2f), R: %.2f (avg %.2f), "
-            "Direction: %.1f deg, Speed: %.2f, Brake mode: %s\n",
+            "Steering: %.1f deg, Speed: %.2f, Motor: %s, Brake mode: %s, "
+            "Odometer: %.2f m, %.2f m/s\n",
             static_cast<double>(myDistanceToObstacleLeft), averageLeft,
             static_cast<double>(myDistanceToObstacleForward), averageForward,
             static_cast<double>(myDistanceToObstacleRight), averageRight,
             static_cast<double>(myPlannedAction.steeringDegrees),
             static_cast<double>(myPlannedAction.speed),
-            myPlannedAction.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast");
+            myPlannedAction.direction == driver::motor::Direction::Forward ? "Forward" : "Backward",
+            myPlannedAction.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast",
+            odometerDistanceM, odometerSpeedMps);
 
         if (mySerial && mySerial->isInitialized())
         {
@@ -529,8 +757,8 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
     {
         const auto nowMs = static_cast<std::uint32_t>(
             xTaskGetTickCount() * portTICK_PERIOD_MS);
-        processMqttOverlay(nowMs);
 
+        processSerialCommand();
         getEnvironmentPicture();
         decideAction();
         // Only MQTT authorization surrounds the unchanged executeAction().
@@ -538,11 +766,28 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         {
             executeAction();
         }
-        logState();
+        if (myMotorCommandPending)
+        {
+            printMotorSettings(*mySerial, myPlannedAction);
+            printPwmSettings(*mySerial, "FWD", myMotorForwardsPwm.get());
+            printPwmSettings(*mySerial, "BWD", myMotorBackwardsPwm.get());
+            myMotorCommandPending = false;
+        }
+        if (myLogEnabled)
+        {
+            logState();
+        }
+        processMqttOverlay(nowMs);
+
         publishMqttTelemetry(nowMs);
 
-        vTaskDelay(pdMS_TO_TICKS(tickPeriod_ms));
+        const auto afterLoopMs = static_cast<std::uint32_t>(
+                        xTaskGetTickCount() * portTICK_PERIOD_MS);
+        const auto elapsedMs{(afterLoopMs - nowMs)};
+        const auto  remainingMs{static_cast<std::int32_t>(tickPeriod_ms) - elapsedMs};
+        vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
+    myMotor->stop(myPlannedAction.stopMode);
     shutdownMqttOverlay();
 }
 

@@ -10,6 +10,7 @@
 #include "driver/gpio/interface.h"
 #include "driver/ir_sensor/interface.h"
 #include "driver/motor/interface.h"
+#include "driver/odometer/interface.h"
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
 
@@ -30,11 +31,13 @@ enum class DriverStyle : std::uint8_t
     SlowLeft,
     SlowRight,
     GradualSweep,
+    ManualBySerial,
 };
 
 struct PlannedAction
 {
     float speed{0.0F};
+    driver::motor::Direction direction{driver::motor::Direction::Forward};
     float steeringDegrees{0.0F};
     driver::motor::StopMode stopMode{driver::motor::StopMode::Coast};
 };
@@ -78,6 +81,15 @@ private:
     void deinitializeDrivers() noexcept;
     void processWifi() noexcept;
     void processTimer() noexcept;
+
+    /**
+     * @brief Read and apply a manual motor command from serial, if one is waiting.
+     * Recognized lines: "SPEED <0-1>", "FORWARD", "BACKWARD", "BRAKE", "COAST", "STOP", "AUTO",
+     * "PWMDUTYFWD <0-100>", "PWMDUTYBWD <0-100>", "DRIVESTYLE <style>", "LOG <ON|OFF>", "HELP".
+     * Any command other than AUTO, DRIVESTYLE, LOG or HELP switches myDriverStyle to
+     * ManualBySerial so the sensor-based decideAction() stops overriding the commanded state.
+     */
+    void processSerialCommand() noexcept;
 
     /**
      * @brief Get a picture of the environment.
@@ -130,10 +142,16 @@ private:
     static constexpr std::uint8_t mp6550MotorSleepPin{7U};        // D4 / GPIO7
     static constexpr std::uint8_t steeringServoPwmPin{9U};        // D6 /
 
+    // Odometer (A3144 Hall-effect sensor)
+    static constexpr std::uint8_t odometerPin{18U};                       // D9 / GPIO18 (ADC2_CH7)
+    static constexpr std::uint8_t odometerPulsesPerRevolution{2U};        // 2 magnets per wheel
+    static constexpr float odometerWheelDiameterM{0.031F};                // 31 mm wheel
+
 
     std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
     std::unique_ptr<driver::pwm::Interface> myMotorBackwardsPwm;
     std::unique_ptr<driver::gpio::Interface> myMotorSleep;
+    std::unique_ptr<driver::gpio::Interface> myOdometerGpio;
     std::unique_ptr<driver::adc::Interface> myIrSensorForwardAdc;
     std::unique_ptr<driver::adc::Interface> myIrSensorLeftAdc;
     std::unique_ptr<driver::adc::Interface> myIrSensorRightAdc;
@@ -144,8 +162,14 @@ private:
     std::unique_ptr<driver::serial::Interface> mySerial;
     std::unique_ptr<driver::pwm::Interface> mySteeringServoPwm;
     std::unique_ptr<driver::servo::Interface> mySteeringServo;
+    std::unique_ptr<driver::odometer::Interface> myOdometer;
 
     bool myBlinkEnabled{false};
+    bool myLogEnabled{false};
+    // Set by processSerialCommand() when a motor command was issued; consumed
+    // in run() after executeAction() so the printed PWM duty reflects the
+    // value actually just written to hardware, not the previous tick's.
+    bool myMotorCommandPending{false};
     std::uint32_t myPeriodMs{500U};
 
     float myDistanceToObstacleForward{0.0F};

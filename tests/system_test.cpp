@@ -15,6 +15,7 @@
 #include "driver/mqtt/stub.h"
 #include "driver/pwm/stub.h"
 #include "driver/motor/mp6550.h"
+#include "driver/odometer/stub.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/stub.h"
 #include "driver/timer/stub.h"
@@ -62,6 +63,13 @@ struct Factory final : driver::factory::Interface {
     }
     std::unique_ptr<driver::gpio::Interface> gpioInput(std::uint8_t) noexcept override {
         return std::make_unique<driver::gpio::Stub>();
+    }
+    std::unique_ptr<driver::gpio::Interface> gpioInputPullup(std::uint8_t pin) noexcept override {
+        return gpioInput(pin);
+    }
+    std::unique_ptr<driver::odometer::Interface> odometer(driver::gpio::Interface&,
+        const driver::odometer::Config& config) noexcept override {
+        return std::make_unique<driver::odometer::Stub>(config);
     }
     std::unique_ptr<driver::gpio::Interface> gpioOutput(std::uint8_t) noexcept override {
         auto value = std::make_unique<driver::gpio::Stub>(); sleep = value.get(); return value;

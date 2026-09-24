@@ -57,6 +57,24 @@ public:
      */
     bool isInitialized() const noexcept override;
 
+    /**
+     * @brief Call a function whenever the given edge occurs on the GPIO pin.
+     * The callback runs in interrupt context and should be placed in IRAM (IRAM_ATTR).
+     *
+     * @param[in] edge The edge that triggers the interrupt.
+     * @param[in] callback Function to call on each interrupt.
+     * @param[in] arg User argument passed to the callback.
+     *
+     * @return True if the interrupt was enabled, false if the pin is not initialized,
+     *         the callback is null, an interrupt is already enabled or configuration failed.
+     */
+    bool enableInterrupt(Edge edge, InterruptCallback callback, void* arg) noexcept override;
+
+    /**
+     * @brief Stop calling the interrupt callback. Does nothing if no interrupt is enabled.
+     */
+    void disableInterrupt() noexcept override;
+
     // Delete default constructor, copy/move constructors and assignment operators
     Esp32s3()                          = delete;
     Esp32s3(const Esp32s3&)            = delete; 
@@ -73,5 +91,7 @@ private:
     bool myInitialized;
     /** @brief Last state written to an output pin. */
     bool myState;
+    /** @brief Flag indicating if an interrupt handler is registered. */
+    bool myInterruptEnabled;
 };
 } // namespace driver::gpio
