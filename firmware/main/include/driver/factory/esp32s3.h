@@ -50,6 +50,16 @@ public:
     std::unique_ptr<distance_sensor::Interface> ir_sensor(driver::adc::Interface& adc) noexcept override;
 
     /**
+     * @brief Create a real ESP32-S3 ultrasonic distance sensor driver using an SRF05.
+     *
+     * @param[in] trigger Reference to the GPIO output connected to the sensor trigger pin.
+     * @param[in] echo Reference to the GPIO input connected to the sensor echo pin.
+     * @return A unique pointer to the created distance sensor interface instance.
+     */
+    std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(driver::gpio::Interface& trigger,
+                                                                  driver::gpio::Interface& echo) noexcept override;
+
+    /**
      * @brief Create a real ESP32-S3 GPIO input hardware instance.
      * * @param[in] pin The hardware pin number to configure as input.
      * @return A unique pointer to the created GPIO interface instance.

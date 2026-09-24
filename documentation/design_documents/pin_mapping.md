@@ -25,6 +25,8 @@ These are the calls and physical pins used by the current three-sensor code on
 | `factory.gpioOutput(7)` | `~D4` | 🔌 Digital output | MP6550 nSLEEP | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo | 🔵 Used |
 | `factory.odometer(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor | 🔵 Used |
+| `factory.gpioInput(10)` | `~D7` | 🔌 Digital input (interrupt) | SRF05 Echo, via 5 V → 3.3 V divider | 🔵 Used |
+| `factory.gpioOutput(17)` | `~D8` | 🔌 Digital output | SRF05 Trigger | 🔵 Used |
 
 Power connections do not use driver factory calls:
 
@@ -32,7 +34,7 @@ Power connections do not use driver factory calls:
 | --- | --- |
 | `VIN` | Approximately 7.2 V battery supply after the power switch |
 | `GND` | Common ground for Arduino, MP6550, regulator, and sensors |
-| External regulated 5 V rail | IR sensor power; the demo used an L7805CV |
+| External regulated 5 V rail | IR sensor and SRF05 power; the demo used an L7805CV |
 
 ## Code Value To Board Pin
 
@@ -62,13 +64,13 @@ Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,
 | `6` | `~D3` | ✅ ADC1_CH5 | ✅ | Digital / PWM | 🔵 MP6550 IN2 |
 | `7` | `~D4` | ✅ ADC1_CH6 | ✅ | Digital / PWM | 🔵 MP6550 nSLEEP |
 | `8` | `~D5` | ✅ ADC1_CH7 | ✅ | Digital / PWM | 🟢 Available |
-| `9` | `~D6` | ✅ ADC1_CH8 | ✅ | Digital / PWM | 🟢 Available |
-| `10` | `~D7` | ✅ ADC1_CH9 | ✅ | Digital / PWM | 🟢 Available |
+| `9` | `~D6` | ✅ ADC1_CH8 | ✅ | Digital / PWM | 🔵 Steering servo |
+| `10` | `~D7` | ✅ ADC1_CH9 | ✅ | Digital / PWM | 🔵 SRF05 Echo |
 | `11` | `A4 / ~D21` | ⚠️ ADC2_CH0 | ✅ | I2C SDA | 🟡 Shared function |
 | `12` | `A5 / ~D22` | ⚠️ ADC2_CH1 | ✅ | I2C SCL | 🟡 Shared function |
 | `13` | `A6 / ~D23` | ⚠️ ADC2_CH2 | ✅ | Analog / digital | 🟢 Available |
 | `14` | `A7 / ~D24` | ⚠️ ADC2_CH3 | ✅ | Analog / digital | 🟢 Available |
-| `17` | `~D8` | ⚠️ ADC2_CH6 | ✅ | Digital / PWM | 🟢 Available |
+| `17` | `~D8` | ⚠️ ADC2_CH6 | ✅ | Digital / PWM | 🔵 SRF05 Trigger |
 | `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🔵 Odometer (A3144 Hall sensor) |
 | `21` | `~D10` | - | ✅ | Digital / PWM | 🟢 Available |
 | `38` | `~D11` | - | ✅ | SPI COPI | 🟡 Shared function |

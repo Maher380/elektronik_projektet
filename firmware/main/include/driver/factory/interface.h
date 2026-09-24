@@ -96,6 +96,16 @@ public:
     virtual std::unique_ptr<distance_sensor::Interface> ir_sensor(adc::Interface&) noexcept = 0;
 
     /**
+     * @brief Create an ultrasonic distance sensor driver instance.
+     *
+     * @param[in] trigger Reference to the GPIO output connected to the sensor trigger pin.
+     * @param[in] echo Reference to the GPIO input connected to the sensor echo pin.
+     * @return A unique pointer to the created distance sensor interface instance.
+     */
+    virtual std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(gpio::Interface& trigger,
+                                                                          gpio::Interface& echo) noexcept = 0;
+
+    /**
      * @brief Create a motor driver instance.
      *
      * @param[in] MotorForwardsPwm PWM output driver used for IN1.

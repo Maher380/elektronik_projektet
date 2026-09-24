@@ -129,6 +129,18 @@ public:
     }
 
     /**
+     * @brief Create a simulated ultrasonic distance sensor stub instance.
+     *
+     * @param[in] trigger Reference to the GPIO output connected to the sensor trigger pin.
+     * @param[in] echo Reference to the GPIO input connected to the sensor echo pin.
+     * @return A unique pointer to the created simulated distance sensor interface instance.
+     */
+    std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(gpio::Interface&, gpio::Interface&) noexcept override
+    {
+        return std::make_unique<driver::distance_sensor::Stub>();
+    }
+
+    /**
      * @brief Create a simulated motor stub instance.
      *
      * @param[in] motorForwardsPwm PWM driver used for the forward input.
