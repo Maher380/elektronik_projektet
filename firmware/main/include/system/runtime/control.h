@@ -23,7 +23,7 @@ struct Configuration
     /** Upper decision distance; non-finite readings also use this value. */
     float reactionDistanceCm{40.0F};
     /** Sensor and navigation period; networking is serviced independently. */
-    std::uint32_t loopIntervalMs{250U};
+    std::uint32_t loopIntervalMs{20U};
     float driveDuty{0.5F};
     std::uint32_t telemetryIntervalMs{1000U};
     navigation::DriverStyle driverStyle{navigation::DriverStyle::DecideAction};

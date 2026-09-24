@@ -176,13 +176,24 @@ int main() {
         forward.deinit();
         check(!motor.stop(), "zero cached duty cannot hide an unavailable PWM driver");
     }
-    struct Row { std::array<float, 3> distances; float angle; bool blocked; };
+    check(Configuration{}.loopIntervalMs == 20U, "default sensor loop is 20 ms");
+    struct Row { std::array<float, 3> distances; float angle; bool blocked; unsigned hz; };
     const Row cases[]{
-        {{60,60,60},0,false}, {{60,20,15},-90,false}, {{15,20,60},90,false},
-        {{20,10,20},0,true}, {{30,30,30},0,true}, {{31,20,10},-90,false},
-        {{40,20,40},0,false}, {{40,40,10},0,false}, {{10,40,40},0,false},
-        {{nan,nan,nan},0,false}, {{nan,20,15},-90,false}, {{15,nan,20},0,false},
-        {{-1,0,20},0,true}, {{31,39,32},0,false}, {{39,38,32},-90,false}};
+        {{60,60,60},0,false,330}, {{60,20,15},-90,false,500}, {{15,20,60},90,false,215},
+        {{20,10,20},0,true,330}, {{30,30,30},0,true,330}, {{31,20,10},-90,false,500},
+        {{40,20,40},0,false,330}, {{40,40,10},-30,false,386}, {{10,40,40},30,false,291},
+        {{nan,nan,nan},0,false,330}, {{nan,20,15},-90,false,500}, {{15,nan,20},4,false,324},
+        {{-1,0,20},0,true,330}, {{31,39,32},0,false,330}, {{39,38,32},-90,false,500},
+        {{70,60,15},-24,false,375}, {{15,60,70},24,false,299},
+        {{40,40,30},0,false,330}, {{40,40,27},0,false,330},
+        {{40,40,26},-2,false,333}, {{26,40,40},2,false,327},
+        {{15,40,15},0,false,330}, {{20,40,18},0,false,330},
+        {{40,40,0},-30,false,386}};
+    for (const auto& row : cases) {
+        const auto decision = decide(row.distances, Configuration{});
+        check(decision.angle == row.angle && decision.blocked == row.blocked,
+              "route and proportional wall correction");
+    }
     // Test the real navigation block in main.cpp, rather than a copied helper.
     {
         Factory navigation; std::atomic<bool> done{false}; host::ticks = 0;
@@ -195,8 +206,7 @@ int main() {
                 navigation.start();
             } else if (tick % 2 == 1) {
                 const auto& row = cases[rowIndex];
-                const unsigned hz = row.angle < 0 ? 500 : row.angle > 0 ? 215 : 330;
-                navigation.output(row.blocked ? 1 : .5F, row.blocked ? 1 : 0, true, hz);
+                navigation.output(row.blocked ? 1 : .5F, row.blocked ? 1 : 0, true, row.hz);
                 if (++rowIndex == std::size(cases)) { done.store(true); }
                 else { const auto& next = cases[rowIndex].distances; navigation.distances(next[0], next[1], next[2]); }
             }
@@ -273,5 +283,5 @@ int main() {
     runSystemTest(f, stop);
     host::afterTick = {};
     check(ticks == 318 && telemetryCount > 0, "complete main loop exercised");
-    std::puts("PASS: 15 decision cases, configuration bounds, real main loop with MQTT start/servo/replay/stop, braking/recovery, telemetry and heartbeat expiry");
+    std::puts("PASS: 24 decision cases including wall correction, configuration bounds, real main loop with MQTT start/servo/replay/stop, braking/recovery, telemetry and heartbeat expiry");
 }

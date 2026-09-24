@@ -25,6 +25,11 @@ static_assert(CONFIG_ESP_MAIN_TASK_STACK_SIZE >= 8192,
 #endif
 namespace
 {
+// Wall correction applies only with a clear forward view. Tune these separately
+// from the full steering commands used to choose a route around an obstacle.
+constexpr float WallSteeringGain{2.0F}; // steering command degrees per cm
+constexpr float WallDeadbandCm{3.0F};
+constexpr float MaxWallSteeringDegrees{30.0F};
 constexpr app::communication::Topics Topics{
     {"cnb/vagrant/telemetry", "cnb/vagrant/config/state", "cnb/vagrant/command/state", "cnb/vagrant/status"},
     {"cnb/vagrant/config/set", "cnb/vagrant/command"}};
@@ -48,8 +53,20 @@ Decision decide(const std::array<float, 3U>& measured, const app::runtime::Confi
     result.blocked = d[0] <= config.stopDistanceCm && d[1] <= config.stopDistanceCm && d[2] <= config.stopDistanceCm;
     if (!result.blocked)
     {
-        // Only a unique longest side turns. A forward maximum or tied maxima centre.
-        if (d[0] > d[1] && d[0] > d[2]) { result.angle = -90.0F; }
+        if (d[1] >= config.reactionDistanceCm)
+        {
+            // Use the stop distance as the side-clearance target. Far-away
+            // readings exert no pull; equal proximity on both sides cancels.
+            const float leftProximity = std::max(0.0F, config.stopDistanceCm - d[0]);
+            const float rightProximity = std::max(0.0F, config.stopDistanceCm - d[2]);
+            const float error = leftProximity - rightProximity;
+            // Subtract the deadband so steering starts smoothly at its boundary.
+            const float correction = std::max(0.0F, std::abs(error) - WallDeadbandCm);
+            result.angle = std::copysign(std::min(MaxWallSteeringDegrees,
+                WallSteeringGain * correction), error);
+        }
+        // With a forward obstacle, preserve the tested route selection.
+        else if (d[0] > d[1] && d[0] > d[2]) { result.angle = -90.0F; }
         else if (d[2] > d[0] && d[2] > d[1]) { result.angle = 90.0F; }
     }
     return result;
@@ -93,7 +110,7 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
     auto previousReason = control.stateReason();
     float lastDuty{-1.0F}, lastAngle{std::numeric_limits<float>::quiet_NaN()};
     bool lastBrake{false}, actuatorFault{false};
-    ESP_LOGI("SYSTEM", "Ready: longest clearance, ties straight; waiting for MQTT Start");
+    ESP_LOGI("SYSTEM", "Ready: longest clearance with proportional wall correction; waiting for MQTT Start");
     while (!stop.load())
     {
         const auto now = static_cast<std::uint32_t>(xTaskGetTickCount() * portTICK_PERIOD_MS);
