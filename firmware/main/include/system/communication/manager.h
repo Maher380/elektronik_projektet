@@ -46,6 +46,8 @@ struct Topics
 struct TelemetrySnapshot
 {
     std::array<float, runtime::IrSensorCount> distancesCm{};
+    /** Exact distances used by main.cpp after applying the reaction cap. */
+    std::array<float, runtime::IrSensorCount> decisionDistancesCm{};
     float speedCommand{0.0F};
     float steeringDegrees{0.0F};
     float forwardDuty{0.0F};
@@ -58,7 +60,7 @@ struct TelemetrySnapshot
  * @brief Coordinate asynchronous Wi-Fi, MQTT, commands and telemetry.
  *
  * ESP-IDF callbacks remain inside the drivers. The manager is called by the
- * 20 Hz vehicle task and never controls hardware directly.
+ * vehicle task and never controls hardware directly.
  */
 class Manager final
 {

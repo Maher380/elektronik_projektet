@@ -6,14 +6,20 @@ export const STYLES = ['decide_action', 'slow_left', 'slow_right', 'gradual_swee
 export const clock = () => performance.timeOrigin + performance.now();
 const uint = n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff;
 
-export function validateConfig(value) {
-  const keys = ['stop_distance_cm', 'drive_duty', 'telemetry_interval_ms', 'driver_style'];
+export const CONFIG_KEYS = ['stop_distance_cm', 'drive_duty', 'telemetry_interval_ms', 'driver_style', 'reaction_distance_cm', 'loop_interval_ms'];
+const configValues = value => Object.fromEntries(CONFIG_KEYS.filter(k => value[k] !== undefined).map(k => [k, value[k]]));
+export function validateConfig(value, systemTest = false) {
+  const keys = CONFIG_KEYS;
   if (!value || Object.keys(value).some(k => !keys.includes(k))) throw Error('Unknown configuration field.');
-  for (const [key, min, max] of [['stop_distance_cm', 30, 70], ['drive_duty', 0, 1], ['telemetry_interval_ms', 200, 5000]]) {
+  for (const [key, min, max] of [['stop_distance_cm', systemTest ? 1 : 30, systemTest ? 100 : 70], ['drive_duty', 0, 1], ['telemetry_interval_ms', 200, 5000]]) {
     if (!Number.isFinite(value[key]) || value[key] < min || value[key] > max) throw Error(`${key}: allowed range ${min}–${max}.`);
   }
   if (!Number.isInteger(value.telemetry_interval_ms) || !STYLES.includes(value.driver_style)) throw Error('Invalid interval or driver style.');
-  return Object.fromEntries(keys.map(k => [k, value[k]]));
+  if (value.reaction_distance_cm !== undefined && (!Number.isFinite(value.reaction_distance_cm) || value.reaction_distance_cm < 1 || value.reaction_distance_cm > 200)) throw Error('Reaction distance: allowed range 1–200 cm.');
+  if (value.loop_interval_ms !== undefined && (!Number.isInteger(value.loop_interval_ms) || value.loop_interval_ms < 20 || value.loop_interval_ms > 1000)) throw Error('Loop interval: allowed range 20–1000 ms, whole milliseconds.');
+  if (systemTest && (value.reaction_distance_cm ?? 40) <= value.stop_distance_cm) throw Error('Reaction distance must be greater than stop distance.');
+  if (systemTest && value.driver_style !== 'decide_action') throw Error('This system test uses longest clearance steering.');
+  return configValues(value);
 }
 
 // Ten seconds of RECEIVED samples. Nulls and missing packets remain gaps.
@@ -75,7 +81,7 @@ export class ConsoleControl extends EventEmitter {
       if (this.owner?.armed && data.control_state !== 'armed') this.cancel('Car disarmed: ' + (data.reason || 'unknown'));
     }
     if (suffix === 'config/state' && uint(data.revision)) {
-      try { validateConfig(Object.fromEntries(['stop_distance_cm', 'drive_duty', 'telemetry_interval_ms', 'driver_style'].map(k => [k, data[k]]))); }
+      try { validateConfig(configValues(data), data.system_test === true); }
       catch { return; }
       this.config = data; this.highWater = Math.max(this.highWater, data.revision);
       if (!retained) this.pending.get('config:' + data.revision)?.resolve(data);
@@ -125,7 +131,7 @@ export class ConsoleControl extends EventEmitter {
   pulse(client) { if (this.owner?.client === client) this.owner.lastSeen = this.now(); }
   async start(client) {
     if (!this.fresh() || !this.config || !this.command) throw Error('Wait for fresh telemetry and configuration from the car.');
-    if (this.owner || this.telemetry.control_state === 'armed' || this.command.control_state === 'armed') throw Error('Already armed or controlled elsewhere. Stop before starting a new session.');
+    if (this.servoBusy || this.owner || this.telemetry.control_state === 'armed' || this.command.control_state === 'armed') throw Error('Already armed or controlled elsewhere. Stop before starting a new session.');
     const owner = { client, session: randomBytes(8).toString('hex'), armed: false, lastSeen: this.now() };
     this.owner = owner;
     const request_id = this.id();
@@ -159,8 +165,26 @@ export class ConsoleControl extends EventEmitter {
     if (state.result !== 'accepted' || state.control_state !== 'disarmed') throw Error('Stop was not confirmed by the car.');
     this.notice = 'Stop acknowledged by car.';
   }
+  async servo(client, angle) {
+    if (!Number.isFinite(angle) || angle < -90 || angle > 90) throw Error('Servo angle: allowed range −90 to +90 degrees.');
+    if (!this.fresh() || !this.config?.system_test) throw Error('Wait for live system-test firmware.');
+    if (this.servoBusy || (this.owner && this.owner.client !== client)) throw Error('Another operation controls the car.');
+    this.cancel('Manual servo requested; motor will be disabled.');
+    this.servoBusy = true;
+    try {
+      const request_id = this.id();
+      const state = await this.acknowledged('command', request_id, TOPIC + '/command', {
+        schema_version: 1, request_id, session_id: randomBytes(8).toString('hex'), command: 'servo', angle_deg: angle,
+      });
+      if (state.result !== 'accepted' || state.control_state !== 'disarmed' || state.servo_test !== true || !Number.isFinite(state.servo_angle_deg) || Math.abs(state.servo_angle_deg - angle) > 0.001) throw Error('Servo test was not confirmed by the car.');
+      this.notice = `Servo test acknowledged: ${angle}°. Motor disabled; Start resumes navigation.`;
+    } catch (error) { await this.sendStop().catch(() => {}); throw error; }
+    finally { this.servoBusy = false; }
+  }
   async configure(client, input) {
-    const config = validateConfig(input);
+    const systemTest = this.config?.system_test === true;
+    const config = validateConfig(systemTest ? { reaction_distance_cm: this.config.reaction_distance_cm,
+      loop_interval_ms: this.config.loop_interval_ms, ...input } : input, systemTest);
     if (!this.fresh() || !this.config) throw Error('Wait for fresh telemetry and configuration.');
     if (this.owner && this.owner.client !== client) throw Error('Another browser tab controls the car.');
     if ((this.telemetry.control_state === 'armed' || this.command?.control_state === 'armed') && config.driver_style !== this.config.driver_style) throw Error('Stop the car before changing driver style.');

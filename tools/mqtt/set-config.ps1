@@ -1,7 +1,9 @@
 param(
-    [Parameter(Mandatory)][ValidateRange(30.0, 70.0)][double]$StopDistanceCm,
+    [Parameter(Mandatory)][ValidateRange(1.0, 100.0)][double]$StopDistanceCm,
     [Parameter(Mandatory)][ValidateRange(0.0, 1.0)][double]$DriveDuty,
     [Parameter(Mandatory)][ValidateRange(200, 5000)][uint32]$TelemetryIntervalMs,
+    [ValidateRange(1.0, 200.0)][double]$ReactionDistanceCm,
+    [ValidateRange(20, 1000)][uint32]$LoopIntervalMs,
     [ValidateSet('DecideAction', 'SlowLeft', 'SlowRight', 'GradualSweep')][string]$DriverStyle
 )
 
@@ -21,6 +23,11 @@ if ($PSBoundParameters.ContainsKey('DriverStyle')) {
     $styles = @{ DecideAction = 'decide_action'; SlowLeft = 'slow_left'; SlowRight = 'slow_right'; GradualSweep = 'gradual_sweep' }
     $payload.driver_style = $styles[$DriverStyle]
 }
+if ($PSBoundParameters.ContainsKey('ReactionDistanceCm')) {
+    if ($ReactionDistanceCm -le $StopDistanceCm) { throw 'ReactionDistanceCm must be greater than StopDistanceCm.' }
+    $payload.reaction_distance_cm = $ReactionDistanceCm
+}
+if ($PSBoundParameters.ContainsKey('LoopIntervalMs')) { $payload.loop_interval_ms = $LoopIntervalMs }
 $payload = $payload | ConvertTo-Json -Compress
 
 Publish-CnbMqttMessage -Settings $settings `

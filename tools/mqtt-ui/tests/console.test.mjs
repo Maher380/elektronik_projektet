@@ -31,6 +31,53 @@ function autoAck(fixture) {
     if (topic.endsWith('/config/set')) fixture.receive('config/state', { ...data, result: 'applied' });
   };
 }
+
+test('system-test config validates reaction, stop and loop as one update', async () => {
+  const f = setup(); autoAck(f);
+  f.transport.callback = async (_, data) => f.receive('config/state', { ...data, system_test: true, result: 'applied' });
+  f.receive('config/state', { ...config, system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250 });
+  await f.control.configure('owner', { stop_distance_cm: 20, drive_duty: 1, telemetry_interval_ms: 200, driver_style: 'decide_action', reaction_distance_cm: 45, loop_interval_ms: 20 });
+  assert.equal(f.transport.sent.at(-1).data.reaction_distance_cm, 45);
+  assert.equal(f.transport.sent.at(-1).data.loop_interval_ms, 20);
+  const valid = { stop_distance_cm: 30, drive_duty: 0, telemetry_interval_ms: 1000, driver_style: 'decide_action', reaction_distance_cm: 40, loop_interval_ms: 250 };
+  for (const changes of [{ reaction_distance_cm: 30 }, { reaction_distance_cm: NaN }, { loop_interval_ms: 20.5 }, { loop_interval_ms: 1001 }, { driver_style: 'slow_left' }]) {
+    assert.throws(() => validateConfig({ ...valid, ...changes }, true));
+  }
+});
+
+test('manual servo stops heartbeat and requires matching disarmed angle ACK', async () => {
+  const f = setup(); autoAck(f); await f.control.start('owner');
+  f.receive('config/state', { ...config, system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250 });
+  f.transport.callback = async (_, data) => {
+    if (data.command === 'servo') f.receive('command/state', { ...command, last_request_id: data.request_id, result: 'accepted', servo_test: true, servo_angle_deg: data.angle_deg });
+  };
+  await f.control.servo('owner', -30);
+  assert.equal(f.control.owner, null);
+  assert.equal(f.transport.sent.at(-1).data.angle_deg, -30);
+  assert.equal(f.transport.sent.at(-1).retain, false);
+  const count = f.transport.sent.length; await f.control.tick(); assert.equal(f.transport.sent.length, count);
+  for (const angle of [NaN, 91, -91, '30']) await assert.rejects(f.control.servo('owner', angle));
+});
+
+test('servo ACK without an angle is rejected and sends a stop', async () => {
+  const f = setup();
+  f.receive('config/state', { ...config, system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250 });
+  f.transport.callback = async (_, data) => {
+    if (data.command === 'servo') f.receive('command/state', { ...command, last_request_id: data.request_id, result: 'accepted', servo_test: true });
+  };
+  await assert.rejects(f.control.servo('owner', 20), /not confirmed/);
+  assert.equal(f.transport.sent.at(-1).data.command, 'stop');
+});
+
+test('a pending servo test blocks Start; Stop cancels the manual operation', async () => {
+  const f = setup(); autoAck(f);
+  f.receive('config/state', { ...config, system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250 });
+  const servo = f.control.servo('owner', 25); const rejected = assert.rejects(servo, /Stop requested/);
+  await assert.rejects(f.control.start('owner'), /Already armed/);
+  await f.control.stop(); await rejected;
+  assert.equal(f.control.servoBusy, false);
+  assert.equal(f.transport.sent.at(-1).data.command, 'stop');
+});
 test('retained state alone cannot start a car; opening and ticking never publishes', async () => {
   const f = setup(); await f.control.tick(); assert.equal(f.transport.sent.length, 0);
   f.transport.emit('connection', false); f.transport.emit('connection', true);
