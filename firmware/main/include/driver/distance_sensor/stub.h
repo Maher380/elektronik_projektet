@@ -1,13 +1,13 @@
 /**
- * @file IR sensor stub.
+ * @file Distance sensor stub.
  */
 
 #pragma once 
 
-#include "driver/ir_sensor/interface.h"
+#include "driver/distance_sensor/interface.h"
 
 
-namespace driver::ir_sensor
+namespace driver::distance_sensor
 {
 
 class Stub final : public Interface
@@ -62,7 +62,7 @@ public:
     /**
      * @brief Enable mock sensor.
      * 
-     * @param[in] state initiate IR-sensor, true to enable, false to disable.
+     * @param[in] state initiate distance sensor, true to enable, false to disable.
      */
     void initSensor(const bool state) noexcept
     {
@@ -81,7 +81,7 @@ private:
     /** Simulated distance value. */
     float myDistance;
 
-    /** Simulated IR-sensor state. */
+    /** Simulated distance sensor state. */
     bool myState;
 };
-} // namespace driver::ir_sensor
+} // namespace driver::distance_sensor

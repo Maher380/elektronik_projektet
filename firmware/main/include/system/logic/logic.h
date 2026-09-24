@@ -8,7 +8,7 @@
 #include "driver/factory/interface.h"
 #include "driver/adc/interface.h"
 #include "driver/gpio/interface.h"
-#include "driver/ir_sensor/interface.h"
+#include "driver/distance_sensor/interface.h"
 #include "driver/motor/interface.h"
 #include "driver/odometer/interface.h"
 #include "driver/pwm/interface.h"
@@ -156,9 +156,9 @@ private:
     std::unique_ptr<driver::adc::Interface> myIrSensorLeftAdc;
     std::unique_ptr<driver::adc::Interface> myIrSensorRightAdc;
     std::unique_ptr<driver::motor::Interface> myMotor;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorForward;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorLeft;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorRight;
+    std::unique_ptr<driver::distance_sensor::Interface> myIrSensorForward;
+    std::unique_ptr<driver::distance_sensor::Interface> myIrSensorLeft;
+    std::unique_ptr<driver::distance_sensor::Interface> myIrSensorRight;
     std::unique_ptr<driver::serial::Interface> mySerial;
     std::unique_ptr<driver::pwm::Interface> mySteeringServoPwm;
     std::unique_ptr<driver::servo::Interface> mySteeringServo;

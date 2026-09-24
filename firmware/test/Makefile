@@ -15,7 +15,7 @@ TEST_FILES := \
 
 SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/system/pin_manager/esp32s3.cpp \
-	$(FIRMWARE_SRC_DIR)/driver/ir_sensor/esp32s3.cpp \
+	$(FIRMWARE_SRC_DIR)/driver/distance_sensor/gp2y0a21yk.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/l298n.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/serial/stub.cpp
 

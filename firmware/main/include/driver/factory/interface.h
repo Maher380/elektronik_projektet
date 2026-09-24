@@ -8,7 +8,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace driver::ir_sensor {class Interface;}
+namespace driver::distance_sensor {class Interface;}
 namespace driver::adc { class Interface; }
 namespace driver::gpio { class Interface; }
 namespace driver::motor { class Interface; }
@@ -93,7 +93,17 @@ public:
      * @param[in] adc Reference to an initialized ADC driver instance used for reading.
      * @return A unique pointer to the created Ir-sensor interface instance.
      */
-    virtual std::unique_ptr<ir_sensor::Interface> ir_sensor(adc::Interface&) noexcept = 0;
+    virtual std::unique_ptr<distance_sensor::Interface> ir_sensor(adc::Interface&) noexcept = 0;
+
+    /**
+     * @brief Create an ultrasonic distance sensor driver instance.
+     *
+     * @param[in] trigger Reference to the GPIO output connected to the sensor trigger pin.
+     * @param[in] echo Reference to the GPIO input connected to the sensor echo pin.
+     * @return A unique pointer to the created distance sensor interface instance.
+     */
+    virtual std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(gpio::Interface& trigger,
+                                                                          gpio::Interface& echo) noexcept = 0;
 
     /**
      * @brief Create a motor driver instance.

@@ -1,16 +1,16 @@
 /**
- * @file IR sensor ESP32-S3 driver interface.
+ * @file GP2Y0A21YK IR sensor driver.
  */
 
 #pragma once 
 
-#include "driver/ir_sensor/interface.h"
+#include "driver/distance_sensor/interface.h"
 #include "driver/adc/interface.h"
 
-namespace driver::ir_sensor
+namespace driver::distance_sensor
 {
 
-class Esp32s3 final : public Interface
+class GP2Y0A21YK final : public Interface
 {
 
 public:
@@ -20,12 +20,12 @@ public:
      * 
      * @param[in] adc Reference to an ADC-driver interface.
      */
-    Esp32s3(driver::adc::Interface& adc) noexcept ;
+    GP2Y0A21YK(driver::adc::Interface& adc) noexcept ;
 
     /**
      * @brief Destructor.
      */
-    ~Esp32s3() noexcept override = default;
+    ~GP2Y0A21YK() noexcept override = default;
 
     /**
      * @brief Read the current distance from the sensor.
@@ -49,4 +49,4 @@ public:
      */
     driver::adc::Interface &myAdc;
 };
-} // namespace driver::ir_sensor
+} // namespace driver::distance_sensor
