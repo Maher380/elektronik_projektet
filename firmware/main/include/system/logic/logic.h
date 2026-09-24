@@ -30,11 +30,13 @@ enum class DriverStyle : std::uint8_t
     SlowLeft,
     SlowRight,
     GradualSweep,
+    ManualBySerial,
 };
 
 struct PlannedAction
 {
     float speed{0.0F};
+    driver::motor::Direction direction{driver::motor::Direction::Forward};
     float steeringDegrees{0.0F};
     driver::motor::StopMode stopMode{driver::motor::StopMode::Coast};
 };
@@ -78,6 +80,15 @@ private:
     void deinitializeDrivers() noexcept;
     void processWifi() noexcept;
     void processTimer() noexcept;
+
+    /**
+     * @brief Read and apply a manual motor command from serial, if one is waiting.
+     * Recognized lines: "SPEED <0-1>", "FORWARD", "BACKWARD", "BRAKE", "COAST", "STOP", "AUTO",
+     * "PWMDUTYFWD <0-100>", "PWMDUTYBWD <0-100>", "DRIVESTYLE <style>", "LOG <ON|OFF>", "HELP".
+     * Any command other than AUTO, DRIVESTYLE, LOG or HELP switches myDriverStyle to
+     * ManualBySerial so the sensor-based decideAction() stops overriding the commanded state.
+     */
+    void processSerialCommand() noexcept;
 
     /**
      * @brief Get a picture of the environment.
@@ -146,6 +157,11 @@ private:
     std::unique_ptr<driver::servo::Interface> mySteeringServo;
 
     bool myBlinkEnabled{false};
+    bool myLogEnabled{false};
+    // Set by processSerialCommand() when a motor command was issued; consumed
+    // in run() after executeAction() so the printed PWM duty reflects the
+    // value actually just written to hardware, not the previous tick's.
+    bool myMotorCommandPending{false};
     std::uint32_t myPeriodMs{500U};
 
     float myDistanceToObstacleForward{0.0F};
