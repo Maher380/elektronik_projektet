@@ -116,7 +116,7 @@ export class MosquittoTransport extends EventEmitter {
 export class DemoTransport extends EventEmitter {
   constructor() {
     super(); this.demo = true; this.label = 'SIMULATED BROKER'; this.sequence = 0; this.born = clock();
-    this.config = { schema_version: 1, revision: 0, result: 'defaults', stop_distance_cm: 30, drive_duty: 0.35, telemetry_interval_ms: 200, driver_style: 'decide_action' };
+    this.config = { schema_version: 1, revision: 0, result: 'defaults', system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250, stop_distance_cm: 30, drive_duty: 0.35, telemetry_interval_ms: 200, driver_style: 'decide_action' };
     this.state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', driver_style: 'decide_action' };
   }
   message(suffix, data, retained = false) { this.emit('message', TOPIC + '/' + suffix, structuredClone(data), retained); }
@@ -136,19 +136,25 @@ export class DemoTransport extends EventEmitter {
     const t = (now - this.born) / 1000;
     const distances = { left: 44 + 19 * Math.sin(t * 0.63), center: 53 + 19 * Math.sin(t * 0.43 + 1), right: 39 + 18 * Math.sin(t * 0.7 + 2) };
     let steering = 0, selected = distances.center;
+    const decision = Object.fromEntries(Object.entries(distances).map(([k, v]) => [k, Math.min(v, this.config.reaction_distance_cm)]));
     const style = this.config.driver_style;
-    if (style === 'decide_action') {
+    if (this.config.system_test) {
+      if (decision.left > decision.center && decision.left > decision.right) steering = -30;
+      else if (decision.right > decision.left && decision.right > decision.center) steering = 30;
+      selected = Math.max(...Object.values(decision));
+    } else if (style === 'decide_action') {
       if (!(distances.center > Math.max(distances.left, distances.right))) {
         steering = distances.left > distances.right ? -90 : 90; selected = steering < 0 ? distances.left : distances.right;
       }
     } else { steering = style === 'slow_left' ? -90 : style === 'slow_right' ? 90 : -90 + (Math.floor(t * 20) % 72 <= 36 ? Math.floor(t * 20) % 72 : 72 - Math.floor(t * 20) % 72) * 5; selected = Math.min(...Object.values(distances)); }
-    const armed = this.state.control_state === 'armed', blocked = selected < this.config.stop_distance_cm;
+    const armed = this.state.control_state === 'armed', blocked = selected <= this.config.stop_distance_cm;
     const speed = armed && !blocked ? this.config.drive_duty : 0;
     Object.assign(this.state, { motion_state: !armed ? 'stopped' : blocked ? 'inhibited' : speed > 0 ? 'moving' : 'stopped', reason: !armed ? this.state.reason : blocked ? 'obstacle' : 'none' });
     this.message('telemetry', {
       ...this.state, sequence: ++this.sequence, uptime_ms: Math.floor(now - this.born), distance_cm: distances,
       adc_raw: Object.fromEntries(Object.entries(distances).map(([k, v]) => [k, Math.round(29000 / v)])),
-      steering_deg: armed ? steering : 0,
+      system_test: this.config.system_test, decision_distance_cm: decision,
+      steering_deg: this.state.servo_test ? this.state.servo_angle_deg : armed && !blocked ? steering : 0,
       motor: { speed_command: speed, forward_duty: armed && blocked ? 1 : speed, backward_duty: armed && blocked ? 1 : 0 },
       closest: { sensor: Object.keys(distances).reduce((a, b) => distances[a] < distances[b] ? a : b), distance_cm: Math.min(...Object.values(distances)) },
     });
@@ -156,12 +162,13 @@ export class DemoTransport extends EventEmitter {
   async publish(topic, data) {
     if (topic.endsWith('/config/set')) {
       const error = data.revision <= this.config.revision ? 'stale_revision' : this.state.control_state === 'armed' && data.driver_style !== this.config.driver_style ? 'driver_style_requires_disarmed' : null;
-      if (!error) { this.config = { ...data, result: 'applied' }; this.state.driver_style = data.driver_style; }
+      if (!error) { this.config = { ...this.config, ...data, result: 'applied' }; this.state.driver_style = data.driver_style; }
       this.message('config/state', { ...this.config, revision: data.revision, result: error ? 'rejected' : 'applied', ...(error ? { error } : {}) });
     } else if (data.command === 'heartbeat') {
       if (data.session_id === this.state.session_id) this.heartbeatAt = clock();
     } else {
       const start = data.command === 'start';
+      this.state.servo_test = data.command === 'servo'; this.state.servo_angle_deg = data.angle_deg ?? 0;
       Object.assign(this.state, { last_request_id: data.request_id, session_id: start ? data.session_id : '', result: 'accepted', control_state: start ? 'armed' : 'disarmed', motion_state: 'stopped', reason: start ? 'none' : 'operator_stop' });
       this.heartbeatAt = clock(); this.message('command/state', this.state);
     }

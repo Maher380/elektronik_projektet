@@ -55,6 +55,7 @@ export function createConsole(transport, port = 8765) {
         case '/api/pulse': control.pulse(data.client); break;
         case '/api/start': await control.start(data.client); break;
         case '/api/stop': await control.stop(); break;
+        case '/api/servo': await control.servo(data.client, data.angle); break;
         case '/api/config': await control.configure(data.client, data.config); break;
         case '/api/release': await control.release(data.client); break;
         default: json(res, 404, { error: 'Not found.' }); return;

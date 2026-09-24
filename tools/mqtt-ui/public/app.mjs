@@ -27,13 +27,17 @@ async function act(action, extra = {}) {
 }
 $('start').addEventListener('click', () => void act('start'));
 $('stop').addEventListener('click', () => void act('stop'));
+$('servo-test').addEventListener('submit', event => { event.preventDefault(); void act('servo', { angle: Number($('servo-angle').value) }); });
 $('configuration').addEventListener('input', () => { dirty = true; });
 $('configuration').addEventListener('submit', async event => {
   event.preventDefault();
   const config = { driver_style: $('driver-style').value, drive_duty: Number($('drive-duty').value), stop_distance_cm: Number($('stop-distance').value), telemetry_interval_ms: Number($('telemetry-interval').value) };
+  if (state.config?.system_test) { config.reaction_distance_cm = Number($('reaction-distance').value); config.loop_interval_ms = Number($('loop-interval').value); }
   if (await act('config', { config })) dirty = false;
 });
 function loadConfig(config) {
+  $('reaction-distance').value = config.reaction_distance_cm ?? 40;
+  $('loop-interval').value = config.loop_interval_ms ?? 250;
   $('driver-style').value = config.driver_style;
   $('drive-duty').value = config.drive_duty;
   $('stop-distance').value = config.stop_distance_cm;
@@ -63,7 +67,7 @@ function render() {
   text('vehicle-state', fresh ? (displayedControl || 'unknown').toUpperCase() : 'NO LIVE DATA');
   $('vehicle-state').className = fresh && displayedControl === 'armed' ? 'armed' : '';
   text('motion-state', fresh ? `${latestState.motion_state || 'unknown'} · ${latestState.reason || 'unknown'}` : 'Waiting for fresh telemetry');
-  text('current-style', fresh ? styles[data.driver_style] || data.driver_style || '—' : '—');
+  text('current-style', fresh ? data.servo_test ? 'Manual servo' : config?.system_test ? 'Longest clearance' : styles[data.driver_style] || data.driver_style || '—' : '—');
   const seconds = Math.floor((data.uptime_ms || 0) / 1000);
   text('uptime', fresh ? `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—');
   text('sequence', fresh ? '#' + data.sequence : '—');
@@ -79,11 +83,12 @@ function render() {
     text(key + '-value', number(value)); text(key + '-adc', 'ADC ' + (fresh ? number(data.adc_raw?.[key], 0) : '—'));
     const badge = $(key + '-badge');
     const outside = value !== null && (value < 10 || value > 80);
-    const near = value !== null && config && value < config.stop_distance_cm;
-    badge.textContent = !fresh ? 'NO LIVE DATA' : value === null ? 'INVALID' : outside ? 'OUT OF RANGE' : near ? 'BELOW LIMIT' : 'IN RANGE';
+    const near = value !== null && config && (config.system_test ? value <= config.stop_distance_cm : value < config.stop_distance_cm);
+    const capped = config?.system_test && value !== null && value > config.reaction_distance_cm;
+    badge.textContent = !fresh ? 'NO LIVE DATA' : value === null ? (config?.system_test ? 'INVALID → CAP' : 'INVALID') : capped ? 'CAPPED FOR DECISION' : outside ? 'OUT OF RANGE' : near ? 'BELOW LIMIT' : 'IN RANGE';
     badge.title = 'Sharp GP2Y0A21: nominal measuring range 10–80 cm. Below limit compares this sensor with the configured stop distance; the car may choose another direction.';
     badge.classList.toggle('alert', value === null || outside || near);
-    text(key + '-range', 'AUTO SCALE · CM');
+    text(key + '-range', config?.system_test ? `DECISION ${number(data.decision_distance_cm?.[key])} CM` : 'AUTO SCALE · CM');
   }
   text('steering-value', fresh ? number(valueOf(data, 'steering')) : '—');
   text('speed-value', fresh ? number(valueOf(data, 'speed'), 2) : '—');
@@ -95,9 +100,13 @@ function render() {
   $('start').disabled = !ready || armed || !!state.owner || pending > 0;
   $('stop').disabled = !(serverFresh && state.broker.connected);
   $('apply').disabled = !ready || pending > 0 || (!!state.owner && !own);
-  $('driver-style').disabled = !ready || armed || pending > 0;
-  for (const id of ['drive-duty', 'stop-distance', 'telemetry-interval']) $(id).disabled = !ready || pending > 0 || (!!state.owner && !own);
-  text('config-status', config ? `${dirty ? 'UNSENT CHANGES · ' : ''}Confirmed: ${styles[config.driver_style]} · duty ${number(config.drive_duty, 2)} · stop ${number(config.stop_distance_cm, 0)} cm · ${config.telemetry_interval_ms} ms` : 'Waiting for configuration from car');
+  $('driver-style').disabled = !!config?.system_test || !ready || armed || pending > 0;
+  $('driver-style').closest('label').hidden = !!config?.system_test;
+  $('stop-distance').min = config?.system_test ? 1 : 30; $('stop-distance').max = config?.system_test ? 100 : 70;
+  for (const id of ['reaction-field', 'loop-field', 'servo-test']) $(id).hidden = !config?.system_test;
+  $('set-servo').disabled = !ready || pending > 0 || (!!state.owner && !own);
+  for (const id of ['drive-duty', 'stop-distance', 'telemetry-interval', 'reaction-distance', 'loop-interval', 'servo-angle']) $(id).disabled = !ready || pending > 0 || (!!state.owner && !own);
+  text('config-status', config ? `${dirty ? 'UNSENT CHANGES · ' : ''}Confirmed: ${config.system_test ? 'Longest clearance' : styles[config.driver_style]} · duty ${number(config.drive_duty, 2)} · stop ${number(config.stop_distance_cm, 0)} cm${config.system_test ? ` · reaction ${config.reaction_distance_cm} cm · loop ${config.loop_interval_ms} ms` : ''} · telemetry ${config.telemetry_interval_ms} ms` : 'Waiting for configuration from car');
   if (performance.now() > feedbackUntil) {
     text('feedback', !serverFresh ? 'Local console disconnected. Reconnecting; control will not restart automatically.' : state.notice);
     $('feedback').className = 'feedback';
