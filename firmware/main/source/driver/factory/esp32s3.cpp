@@ -1,7 +1,7 @@
 #include "driver/factory/esp32s3.h"
 
 #include "driver/adc/esp32s3.h"
-#include "driver/ir_sensor/esp32s3.h"
+#include "driver/ir_sensor/gp2y0a21yk.h"
 #include "driver/gpio/esp32s3.h"
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"
@@ -22,7 +22,7 @@ std::unique_ptr<adc::Interface> Esp32s3::adc(std::uint8_t pin) noexcept {
 
 std::unique_ptr < ir_sensor::Interface> Esp32s3::ir_sensor(adc::Interface& adc) noexcept
 {
-    return std::make_unique<driver::ir_sensor::Esp32s3>(adc);
+    return std::make_unique<driver::ir_sensor::GP2Y0A21YK>(adc);
 }
 
 std::unique_ptr<gpio::Interface> Esp32s3::gpioInput(std::uint8_t pin) noexcept {

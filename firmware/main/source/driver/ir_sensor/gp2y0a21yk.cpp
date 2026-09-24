@@ -1,6 +1,6 @@
 
 
-#include "driver/ir_sensor/esp32s3.h"
+#include "driver/ir_sensor/gp2y0a21yk.h"
 #include <cmath>
 #include <limits>
 
@@ -17,12 +17,12 @@ namespace driver::ir_sensor
 {
 
 
-    Esp32s3::Esp32s3(driver::adc::Interface& adc) noexcept
+    GP2Y0A21YK::GP2Y0A21YK(driver::adc::Interface& adc) noexcept
     : myAdc{adc}
     {}
 
    
-    float Esp32s3::readDistance() noexcept 
+    float GP2Y0A21YK::readDistance() noexcept 
     {
         if (!myAdc.isInitialized())
         {
@@ -43,7 +43,7 @@ namespace driver::ir_sensor
             : std::numeric_limits<float>::quiet_NaN();
     }
 
-        bool Esp32s3::isInitialized() const noexcept 
+        bool GP2Y0A21YK::isInitialized() const noexcept 
     {
         return myAdc.isInitialized();
     }
