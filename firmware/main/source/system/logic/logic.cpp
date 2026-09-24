@@ -756,6 +756,9 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
     while (!stop.load())
     {
         const std::int64_t tickStartUs{esp_timer_get_time()};
+        const auto nowMs = static_cast<std::uint32_t>(
+            xTaskGetTickCount() * portTICK_PERIOD_MS);
+        processMqttOverlay(nowMs);
 
         const auto nowMs = static_cast<std::uint32_t>(
             xTaskGetTickCount() * portTICK_PERIOD_MS);
@@ -787,6 +790,7 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         const std::int64_t remainingMs{static_cast<std::int64_t>(tickPeriod_ms) - elapsedMs};
         vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
+    myMotor->stop(myPlannedAction.stopMode);
     shutdownMqttOverlay();
 }
 
