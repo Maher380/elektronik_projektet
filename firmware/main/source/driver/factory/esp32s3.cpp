@@ -2,6 +2,7 @@
 
 #include "driver/adc/esp32s3.h"
 #include "driver/distance_sensor/gp2y0a21yk.h"
+#include "driver/distance_sensor/srf05.h"
 #include "driver/gpio/esp32s3.h"
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"
@@ -24,6 +25,13 @@ std::unique_ptr<adc::Interface> Esp32s3::adc(std::uint8_t pin) noexcept {
 std::unique_ptr < distance_sensor::Interface> Esp32s3::ir_sensor(adc::Interface& adc) noexcept
 {
     return std::make_unique<driver::distance_sensor::GP2Y0A21YK>(adc);
+}
+
+std::unique_ptr<distance_sensor::Interface> Esp32s3::ultrasonic_sensor(gpio::Interface& trigger,
+                                                                       gpio::Interface& echo) noexcept
+{
+    // Create a real SRF05 ultrasonic sensor from existing trigger (output) and echo (input) GPIOs.
+    return std::make_unique<driver::distance_sensor::SRF05>(trigger, echo);
 }
 
 std::unique_ptr<gpio::Interface> Esp32s3::gpioInput(std::uint8_t pin) noexcept {
