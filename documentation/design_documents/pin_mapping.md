@@ -24,6 +24,7 @@ These are the calls and physical pins used by the current three-sensor code on
 | `factory.pwm(6)` | `~D3` | 〰️ PWM output | MP6550 IN2, reverse | 🔵 Used |
 | `factory.gpioOutput(7)` | `~D4` | 🔌 Digital output | MP6550 nSLEEP | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo | 🔵 Used |
+| `factory.odometer(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor | 🔵 Used |
 
 Power connections do not use driver factory calls:
 
@@ -68,7 +69,7 @@ Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,
 | `13` | `A6 / ~D23` | ⚠️ ADC2_CH2 | ✅ | Analog / digital | 🟢 Available |
 | `14` | `A7 / ~D24` | ⚠️ ADC2_CH3 | ✅ | Analog / digital | 🟢 Available |
 | `17` | `~D8` | ⚠️ ADC2_CH6 | ✅ | Digital / PWM | 🟢 Available |
-| `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🟢 Available |
+| `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🔵 Odometer (A3144 Hall sensor) |
 | `21` | `~D10` | - | ✅ | Digital / PWM | 🟢 Available |
 | `38` | `~D11` | - | ✅ | SPI COPI | 🟡 Shared function |
 | `43` | `~D1 / TX0` | - | ✅ | UART transmit | 🟡 Shared function |

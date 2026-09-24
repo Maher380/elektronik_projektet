@@ -38,7 +38,7 @@ namespace
     constexpr const char *WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
     
 
-    constexpr std::uint8_t bufLen{192U};
+    constexpr std::uint16_t bufLen{224U};
     // @brief the sleep period between two ticks. 50 ms -> 20 Hz 
     constexpr int tickPeriod_ms{50U};
 
@@ -131,6 +131,7 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     : myMotorForwardsPwm{factory.pwm(mp6550MotorPwmForwardPin)}
     , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
     , myMotorSleep{factory.gpioOutput(mp6550MotorSleepPin)}
+    , myOdometerGpio{factory.gpioInputPullup(odometerPin)}
     , myIrSensorForwardAdc{factory.adc(IrSensorForwardAdcPin)}
     , myIrSensorLeftAdc{factory.adc(IrSensorLeftAdcPin)}
     , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
@@ -158,6 +159,13 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     if (mySteeringServoPwm)
     {
         mySteeringServo = factory.servo(*mySteeringServoPwm);
+    }
+    if (myOdometerGpio)
+    {
+        myOdometer = factory.odometer(*myOdometerGpio, driver::odometer::Config{
+            .pulsesPerRevolution = odometerPulsesPerRevolution,
+            .wheelDiameterM = odometerWheelDiameterM,
+        });
     }
 
     setStartState();
@@ -227,7 +235,8 @@ bool Logic::initializeDrivers() noexcept
         !myIrSensorRight ||
         !mySteeringServoPwm ||
         !mySteeringServo ||
-        !mySerial )
+        !mySerial ||
+        !myOdometer )
     {
         return false;
     }
@@ -245,6 +254,7 @@ bool Logic::initializeDrivers() noexcept
     myMotor->init();
     mySteeringServoPwm->init();
     mySteeringServo->init();
+    myOdometer->init();
     // no init function for myIrSensorLeft
     // no init function for myIrSensorRight
     // no init function for mySerial
@@ -262,6 +272,7 @@ bool Logic::initializeDrivers() noexcept
         !myIrSensorRight->isInitialized() ||
         !mySteeringServoPwm->isInitialized() ||
         !mySteeringServo->isInitialized() ||
+        !myOdometer->isInitialized() ||
         !mySerial->isInitialized())
     {
         return false;
@@ -274,6 +285,10 @@ bool Logic::initializeDrivers() noexcept
 
 void Logic::deinitializeDrivers() noexcept
 {
+    if (myOdometer && myOdometer->isInitialized())
+    {
+        myOdometer->deinit();
+    }
     if (mySteeringServo && mySteeringServo->isInitialized())
     {
         mySteeringServo->deinit();
@@ -702,18 +717,23 @@ void Logic::logState() noexcept
             ? accumulatedDistanceRight / static_cast<double>(validSamplesRight)
             : std::numeric_limits<double>::quiet_NaN();
 
+        const double odometerDistanceM{myOdometer ? static_cast<double>(myOdometer->distance()) : 0.0};
+        const double odometerSpeedMps{myOdometer ? static_cast<double>(myOdometer->speed()) : 0.0};
+
         std::snprintf(
             buf,
             sizeof(buf),
             "IR cm L: %.2f (avg %.2f), C: %.2f (avg %.2f), R: %.2f (avg %.2f), "
-            "Steering: %.1f deg, Speed: %.2f, Motor: %s, Brake mode: %s\n",
+            "Steering: %.1f deg, Speed: %.2f, Motor: %s, Brake mode: %s, "
+            "Odometer: %.2f m, %.2f m/s\n",
             static_cast<double>(myDistanceToObstacleLeft), averageLeft,
             static_cast<double>(myDistanceToObstacleForward), averageForward,
             static_cast<double>(myDistanceToObstacleRight), averageRight,
             static_cast<double>(myPlannedAction.steeringDegrees),
             static_cast<double>(myPlannedAction.speed),
             myPlannedAction.direction == driver::motor::Direction::Forward ? "Forward" : "Backward",
-            myPlannedAction.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast");
+            myPlannedAction.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast",
+            odometerDistanceM, odometerSpeedMps);
 
         if (mySerial && mySerial->isInitialized())
         {
@@ -735,10 +755,8 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 {
     while (!stop.load())
     {
-        const std::int64_t tickStartUs{esp_timer_get_time()};
         const auto nowMs = static_cast<std::uint32_t>(
             xTaskGetTickCount() * portTICK_PERIOD_MS);
-        processMqttOverlay(nowMs);
 
         processSerialCommand();
         getEnvironmentPicture();
@@ -759,10 +777,14 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         {
             logState();
         }
+        processMqttOverlay(nowMs);
+
         publishMqttTelemetry(nowMs);
 
-        const std::int64_t elapsedMs{(esp_timer_get_time() - tickStartUs) / 1000};
-        const std::int64_t remainingMs{static_cast<std::int64_t>(tickPeriod_ms) - elapsedMs};
+        const auto afterLoopMs = static_cast<std::uint32_t>(
+                        xTaskGetTickCount() * portTICK_PERIOD_MS);
+        const auto elapsedMs{(afterLoopMs - nowMs)};
+        const auto  remainingMs{static_cast<std::int32_t>(tickPeriod_ms) - elapsedMs};
         vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
     myMotor->stop(myPlannedAction.stopMode);
