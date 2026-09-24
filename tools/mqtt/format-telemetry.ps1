@@ -47,6 +47,12 @@ function Format-CnbMqttLine {
             (Format-CnbNumber (Get-CnbDisplayField $data 'adc_raw.left') 0),
             (Format-CnbNumber (Get-CnbDisplayField $data 'adc_raw.center') 0),
             (Format-CnbNumber (Get-CnbDisplayField $data 'adc_raw.right') 0)
+        if ($null -ne $data.PSObject.Properties['decision_distance_cm']) {
+            '  {0,-13} {1,10} {2,10} {3,10}' -f 'Decision cm',
+                (Format-CnbNumber (Get-CnbDisplayField $data 'decision_distance_cm.left')),
+                (Format-CnbNumber (Get-CnbDisplayField $data 'decision_distance_cm.center')),
+                (Format-CnbNumber (Get-CnbDisplayField $data 'decision_distance_cm.right'))
+        }
         '  Motor cmd: {0} | PWM forward: {1} | backward: {2} | Closest: {3} ({4} cm)' -f
             (Format-CnbNumber (Get-CnbDisplayField $data 'motor.speed_command')),
             (Format-CnbNumber (Get-CnbDisplayField $data 'motor.forward_duty')),
@@ -61,6 +67,10 @@ function Format-CnbMqttLine {
             (Get-CnbDisplayField $data 'driver_style'), (Get-CnbDisplayField $data 'stop_distance_cm'),
             (Format-CnbNumber (Get-CnbDisplayField $data 'drive_duty')),
             (Get-CnbDisplayField $data 'telemetry_interval_ms'), (Get-CnbDisplayField $data 'error')
+        if ((Get-CnbDisplayField $data 'system_test' $false) -eq $true) {
+            '  Longest clearance | reaction {0} cm | loop {1} ms' -f
+                (Get-CnbDisplayField $data 'reaction_distance_cm'), (Get-CnbDisplayField $data 'loop_interval_ms')
+        }
     }
     elseif ($topic -eq 'cnb/vagrant/command/state') {
         '[{0}] COMMAND #{1}: {2} | {3}/{4} | mode {5} | reason {6} | error {7} | session {8}' -f $time,
@@ -68,6 +78,9 @@ function Format-CnbMqttLine {
             (Get-CnbDisplayField $data 'control_state'), (Get-CnbDisplayField $data 'motion_state'),
             (Get-CnbDisplayField $data 'driver_style'), (Get-CnbDisplayField $data 'reason'),
             (Get-CnbDisplayField $data 'error'), (Get-CnbDisplayField $data 'session_id')
+        if ((Get-CnbDisplayField $data 'servo_test' $false) -eq $true) {
+            '  Manual servo: {0} deg | motor disabled' -f (Get-CnbDisplayField $data 'servo_angle_deg')
+        }
     }
     elseif ($topic -eq 'cnb/vagrant/status') {
         '[{0}] STATUS online: {1}' -f $time, (Get-CnbDisplayField $data 'online')
