@@ -755,11 +755,6 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 {
     while (!stop.load())
     {
-        const std::int64_t tickStartUs{esp_timer_get_time()};
-        const auto nowMs = static_cast<std::uint32_t>(
-            xTaskGetTickCount() * portTICK_PERIOD_MS);
-        processMqttOverlay(nowMs);
-
         const auto nowMs = static_cast<std::uint32_t>(
             xTaskGetTickCount() * portTICK_PERIOD_MS);
 
@@ -786,8 +781,10 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 
         publishMqttTelemetry(nowMs);
 
-        const std::int64_t elapsedMs{(esp_timer_get_time() - tickStartUs) / 1000};
-        const std::int64_t remainingMs{static_cast<std::int64_t>(tickPeriod_ms) - elapsedMs};
+        const auto afterLoopMs = static_cast<std::uint32_t>(
+                        xTaskGetTickCount() * portTICK_PERIOD_MS);
+        const auto elapsedMs{(afterLoopMs - nowMs)};
+        const auto  remainingMs{static_cast<std::int32_t>(tickPeriod_ms) - elapsedMs};
         vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
     myMotor->stop(myPlannedAction.stopMode);
