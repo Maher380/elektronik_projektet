@@ -1,11 +1,11 @@
 /**
- * @file IR sensor interface.
+ * @file Distance sensor interface.
  */
 
 #pragma once 
 
 
-namespace driver::ir_sensor
+namespace driver::distance_sensor
 {
 
 class Interface
@@ -33,4 +33,4 @@ public:
     virtual bool isInitialized() const noexcept = 0;
 
 };
-} // namespace driver::ir_sensor
+} // namespace driver::distance_sensor

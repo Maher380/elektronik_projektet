@@ -10,7 +10,7 @@
 #include "driver/adc/stub.h"
 #include "driver/factory/stub.h"
 #include "driver/gpio/stub.h"
-#include "driver/ir_sensor/gp2y0a21yk.h"
+#include "driver/distance_sensor/gp2y0a21yk.h"
 #include "driver/motor/l298n.h"
 #include "driver/pwm/stub.h"
 
@@ -21,7 +21,7 @@ int main()
     if (!test::runPinManagerTest(pinManager)) { return -1; }
 
     driver::adc::Stub testAdc;
-    driver::ir_sensor::GP2Y0A21YK testSensor{testAdc};
+    driver::distance_sensor::GP2Y0A21YK testSensor{testAdc};
 
     if (!std::isnan(testSensor.readDistance()))
     {

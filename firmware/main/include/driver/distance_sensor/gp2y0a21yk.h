@@ -4,10 +4,10 @@
 
 #pragma once 
 
-#include "driver/ir_sensor/interface.h"
+#include "driver/distance_sensor/interface.h"
 #include "driver/adc/interface.h"
 
-namespace driver::ir_sensor
+namespace driver::distance_sensor
 {
 
 class GP2Y0A21YK final : public Interface
@@ -49,4 +49,4 @@ public:
      */
     driver::adc::Interface &myAdc;
 };
-} // namespace driver::ir_sensor
+} // namespace driver::distance_sensor

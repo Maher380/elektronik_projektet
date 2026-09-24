@@ -47,7 +47,7 @@ public:
      * @param[in] adc Reference to the initialized ADC driver instance to use for reading.
      * @return A unique pointer to the created IR-Sensor interface instance.
      */
-    std::unique_ptr<ir_sensor::Interface> ir_sensor(driver::adc::Interface& adc) noexcept override;
+    std::unique_ptr<distance_sensor::Interface> ir_sensor(driver::adc::Interface& adc) noexcept override;
 
     /**
      * @brief Create a real ESP32-S3 GPIO input hardware instance.
