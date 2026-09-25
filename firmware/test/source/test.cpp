@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "system/pin_manager/esp32s3.h"
+#include "test/a89301_programmer.h"
 #include "test/pin_manager.h"
 
 #include "driver/adc/stub.h"
@@ -20,6 +21,7 @@ int main()
     auto& pinManager = sys::pin_manager::Esp32s3::instance();
 
     if (!test::runPinManagerTest(pinManager)) { return -1; }
+    if (!test::runA89301ProgrammerTest()) { return -1; }
 
     driver::adc::Stub testAdc;
     driver::ir_sensor::Esp32s3 testSensor{testAdc};
