@@ -17,6 +17,7 @@ idf_component_register(
         "source/driver/distance_sensor/gp2y0a21yk.cpp"
         "source/driver/distance_sensor/srf05_esp32s3.cpp"
         "source/driver/motor/a89301.cpp"
+        "source/driver/motor/a89301_programmer.cpp"
         "source/driver/motor/l298n.cpp"
         "source/driver/motor/mp6550.cpp"
         "source/driver/odometer/a3144.cpp"
