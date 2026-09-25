@@ -12,8 +12,14 @@ static_assert(CONFIG_ESP_MAIN_TASK_STACK_SIZE >= 8192,
 
 extern "C" void app_main(void)
 {
+    #if defined(DRIVER_TEST_MODE)
+    app::test_app::runDriverTest();
+    #elif defined(ODOMETER_TEST_MODE)
+    app::test_app::runOdometerTest();
+    #else
     std::atomic<bool> stop{false};
     driver::factory::Esp32s3 factory;
     app::logic::TargetLogic logic{factory};
     logic.run(stop);
+    #endif
 }
