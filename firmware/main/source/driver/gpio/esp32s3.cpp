@@ -119,6 +119,10 @@ bool Esp32s3::read() const noexcept
     // Read as low if the pin is not owned by this instance.
     if (!myInitialized) { return false; }
 
+    // Output pins are configured without input buffer, so gpio_get_level() always reads 0.
+    // Return the last commanded output state instead.
+    if (Direction::Output == myDirection) { return myState; }
+
     // Read state, cast to bool (1 => true, 0 => false).
     const uint8_t gpioLevel = gpio_get_level(static_cast<gpio_num_t>(myPin));
     const bool state = static_cast<bool>(gpioLevel);

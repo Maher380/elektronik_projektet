@@ -4,7 +4,10 @@ idf_component_register(
         "source/driver/adc/esp32s3.cpp"
         "source/driver/factory/esp32s3.cpp"
         "source/driver/gpio/esp32s3.cpp"
+        "source/driver/i2c/esp32s3.cpp"
         "source/driver/ir_sensor/esp32s3.cpp"
+        "source/driver/motor/a89301.cpp"
+        "source/driver/motor/a89301_programmer.cpp"
         "source/driver/motor/l298n.cpp"
         "source/driver/motor/mp6550.cpp"
         "source/driver/odometer/a3144.cpp"
@@ -20,6 +23,10 @@ idf_component_register(
         "source/driver/mqtt/esp32s3.cpp"
         "source/system/communication/manager.cpp"
         "source/system/runtime/control.cpp"
+        "source/test_app/a89301_config_test.cpp"
+        "source/test_app/driver_test.cpp"
+        "source/test_app/motor_test.cpp"
+        "source/test_app/odometer_test.cpp"
 
     INCLUDE_DIRS
         "include"
@@ -29,6 +36,7 @@ idf_component_register(
         esp_wifi
         esp_driver_gptimer
         esp_driver_gpio
+        esp_driver_i2c
         esp_driver_uart
         esp_driver_usb_serial_jtag
         esp_driver_mcpwm

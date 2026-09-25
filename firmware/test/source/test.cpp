@@ -5,12 +5,14 @@
 #include <memory>
 
 #include "system/pin_manager/esp32s3.h"
+#include "test/a89301_programmer.h"
 #include "test/pin_manager.h"
 
 #include "driver/adc/stub.h"
 #include "driver/factory/stub.h"
 #include "driver/gpio/stub.h"
 #include "driver/ir_sensor/esp32s3.h"
+#include "driver/motor/a89301.h"
 #include "driver/motor/l298n.h"
 #include "driver/pwm/stub.h"
 
@@ -19,6 +21,7 @@ int main()
     auto& pinManager = sys::pin_manager::Esp32s3::instance();
 
     if (!test::runPinManagerTest(pinManager)) { return -1; }
+    if (!test::runA89301ProgrammerTest()) { return -1; }
 
     driver::adc::Stub testAdc;
     driver::ir_sensor::Esp32s3 testSensor{testAdc};
@@ -114,6 +117,78 @@ int main()
     if (!testMotor.deinit() || testMotor.isInitialized())
     {
         std::printf("L298N motor deinit failed\n");
+        return -1;
+    }
+
+    driver::pwm::Stub bldcSpeedPwm;
+    driver::gpio::Stub bldcDirection;
+    driver::gpio::Stub bldcBrake;
+    driver::motor::A89301 bldcMotor{bldcSpeedPwm, bldcDirection, bldcBrake};
+
+    if (bldcMotor.setSpeed(0.5F))
+    {
+        std::printf("A89301 motor should reject speed before init\n");
+        return -1;
+    }
+
+    if (!bldcMotor.init() || (bldcSpeedPwm.duty() != 0.0F) || !bldcDirection.read() || bldcBrake.read())
+    {
+        std::printf("A89301 motor init failed\n");
+        return -1;
+    }
+
+    if (!bldcMotor.setSpeed(0.7F) || (bldcSpeedPwm.duty() != 0.7F) || bldcBrake.read())
+    {
+        std::printf("A89301 motor speed test failed\n");
+        return -1;
+    }
+
+    if (bldcMotor.setSpeed(1.5F) || (bldcSpeedPwm.duty() != 0.7F))
+    {
+        std::printf("A89301 motor should reject out-of-range speed\n");
+        return -1;
+    }
+
+    if (!bldcMotor.setDirection(driver::motor::Direction::Backward)
+        || bldcDirection.read() || (bldcSpeedPwm.duty() != 0.7F))
+    {
+        std::printf("A89301 motor direction test failed\n");
+        return -1;
+    }
+
+    if (!bldcMotor.stop(driver::motor::StopMode::Brake) || (bldcSpeedPwm.duty() != 0.0F) || !bldcBrake.read())
+    {
+        std::printf("A89301 motor brake stop failed\n");
+        return -1;
+    }
+
+    if (!bldcMotor.setSpeed(0.4F) || (bldcSpeedPwm.duty() != 0.4F) || bldcBrake.read())
+    {
+        std::printf("A89301 motor brake release failed\n");
+        return -1;
+    }
+
+    if (!bldcMotor.setSpeed(0.0F, driver::motor::StopMode::Coast)
+        || (bldcSpeedPwm.duty() != 0.0F) || bldcBrake.read())
+    {
+        std::printf("A89301 motor coast stop failed\n");
+        return -1;
+    }
+
+    if (!bldcMotor.deinit() || bldcMotor.isInitialized() || bldcSpeedPwm.isInitialized())
+    {
+        std::printf("A89301 motor deinit failed\n");
+        return -1;
+    }
+
+    driver::pwm::Stub invertedSpeedPwm;
+    driver::gpio::Stub invertedDirection;
+    driver::gpio::Stub invertedBrake;
+    driver::motor::A89301 invertedMotor{invertedSpeedPwm, invertedDirection, invertedBrake, true};
+
+    if (!invertedMotor.init() || invertedDirection.read())
+    {
+        std::printf("A89301 inverted direction test failed\n");
         return -1;
     }
 
