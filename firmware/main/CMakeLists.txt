@@ -5,6 +5,7 @@ idf_component_register(
         "source/driver/factory/esp32s3.cpp"
         "source/driver/gpio/esp32s3.cpp"
         "source/driver/ir_sensor/esp32s3.cpp"
+        "source/driver/motor/a89301.cpp"
         "source/driver/motor/l298n.cpp"
         "source/driver/motor/mp6550.cpp"
         "source/driver/odometer/a3144.cpp"
