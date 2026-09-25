@@ -143,8 +143,18 @@ std::uint16_t Esp32s3::write(const char* msg) noexcept
 
     if (myConfig.useUsbJtag)
     {
-        const int written = usb_serial_jtag_write_bytes(msg, len, pdMS_TO_TICKS(100U));
-        return (written < 0) ? 0U : static_cast<std::uint16_t>(written);
+        // The USB Serial/JTAG TX ring buffer (256 bytes by default) rejects writes larger than
+        // itself, so long messages are sent in chunks.
+        constexpr std::size_t chunkSize{128U};
+        std::size_t sent{0U};
+        while (sent < len)
+        {
+            const std::size_t chunk{((len - sent) < chunkSize) ? (len - sent) : chunkSize};
+            const int written = usb_serial_jtag_write_bytes(msg + sent, chunk, pdMS_TO_TICKS(100U));
+            if (written <= 0) { break; }
+            sent += static_cast<std::size_t>(written);
+        }
+        return static_cast<std::uint16_t>(sent);
     }
 
     const int written = uart_write_bytes(myConfig.port, msg, len);
