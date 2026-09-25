@@ -24,6 +24,7 @@ idf_component_register(
         "source/system/communication/manager.cpp"
         "source/system/runtime/control.cpp"
         "source/test_app/driver_test.cpp"
+        "source/test_app/motor_test.cpp"
         "source/test_app/odometer_test.cpp"
 
     INCLUDE_DIRS
