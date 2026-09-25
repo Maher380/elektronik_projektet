@@ -34,5 +34,13 @@ namespace app::test_app
  * @note Never returns.
  */
 [[noreturn]] void runSrf05Test() noexcept;
+ * @brief Run the A89301 motor test app.
+ *
+ * Drives the A89301 with PWM on SPD. Commands (type + Enter): 0.0 - 1.0 = speed,
+ * f = forward, b = backward, s = stop (coast), x = stop (brake), h = help.
+ *
+ * @note Never returns.
+ */
+[[noreturn]] void runMotorTest() noexcept;
 
 } // namespace app::test_app
