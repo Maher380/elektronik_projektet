@@ -4,6 +4,7 @@ idf_component_register(
         "source/driver/adc/esp32s3.cpp"
         "source/driver/factory/esp32s3.cpp"
         "source/driver/gpio/esp32s3.cpp"
+        "source/driver/i2c/esp32s3.cpp"
         "source/driver/ir_sensor/esp32s3.cpp"
         "source/driver/motor/a89301.cpp"
         "source/driver/motor/l298n.cpp"
@@ -30,6 +31,7 @@ idf_component_register(
         esp_wifi
         esp_driver_gptimer
         esp_driver_gpio
+        esp_driver_i2c
         esp_driver_uart
         esp_driver_usb_serial_jtag
         esp_driver_mcpwm
