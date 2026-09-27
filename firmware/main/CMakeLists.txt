@@ -10,6 +10,7 @@ idf_component_register(
         "source/driver/motor/a89301_programmer.cpp"
         "source/driver/motor/l298n.cpp"
         "source/driver/motor/mp6550.cpp"
+        "source/driver/mpu/mpu6050.cpp"
         "source/driver/odometer/a3144.cpp"
         "source/driver/pwm/esp32s3.cpp"
         "source/driver/servo/vagrant.cpp"
