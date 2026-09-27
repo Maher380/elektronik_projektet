@@ -10,8 +10,12 @@
 /** @attention Uncomment A89301_CONFIG_MODE to read, change and save the A89301 settings over I2C. */
 // #define A89301_CONFIG_MODE
 
+/** @attention Uncomment IMU_TEST_MODE to run a minimal MPU-6050 IMU test app. */
+// #define IMU_TEST_MODE
 
-#if defined(DRIVER_TEST_MODE) || defined(ODOMETER_TEST_MODE) || defined(MOTOR_TEST_MODE) || defined(A89301_CONFIG_MODE)
+
+#if defined(DRIVER_TEST_MODE) || defined(ODOMETER_TEST_MODE) || defined(MOTOR_TEST_MODE) || defined(A89301_CONFIG_MODE) || \
+    defined(IMU_TEST_MODE)
 
 #include "test_app/test_app.h"
 
@@ -42,6 +46,8 @@ extern "C" void app_main(void)
     app::test_app::runMotorTest();
     #elif defined(A89301_CONFIG_MODE)
     app::test_app::runA89301ConfigTest();
+    #elif defined(IMU_TEST_MODE)
+    app::test_app::runImuTest();
     #else
     std::atomic<bool> stop{false};
     driver::factory::Esp32s3 factory;

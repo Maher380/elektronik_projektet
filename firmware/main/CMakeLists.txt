@@ -26,6 +26,7 @@ idf_component_register(
         "source/system/runtime/control.cpp"
         "source/test_app/a89301_config_test.cpp"
         "source/test_app/driver_test.cpp"
+        "source/test_app/imu_test.cpp"
         "source/test_app/motor_test.cpp"
         "source/test_app/odometer_test.cpp"
 

@@ -45,4 +45,16 @@ namespace app::test_app
  */
 [[noreturn]] void runA89301ConfigTest() noexcept;
 
+/**
+ * @brief Run the MPU-6050 IMU test app.
+ *
+ * Prints a rough IMU-only position (for moving the chip by hand), tilt, heading and angular
+ * rate five times a second. Velocity resets whenever the chip is held still.
+ * Commands (type + Enter): c = calibrate gyro, z = zero position here, p = pause/resume printing,
+ * i = init, d = deinit, h = help.
+ *
+ * @note Never returns.
+ */
+[[noreturn]] void runImuTest() noexcept;
+
 } // namespace app::test_app
