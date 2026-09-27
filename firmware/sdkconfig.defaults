@@ -1,3 +1,8 @@
 # app_main runs vehicle control and bounded MQTT JSON/queue handling.
 # Validate remaining stack on hardware under reconnect and command traffic.
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
+
+# Arduino Nano ESP32 has 16 MB flash. Use it and give the app a 1.5 MB partition
+# (the default single-app partition is 1 MB and was 94% full).
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
