@@ -7,6 +7,7 @@ idf_component_register(
         "source/driver/ir_sensor/esp32s3.cpp"
         "source/driver/motor/l298n.cpp"
         "source/driver/motor/mp6550.cpp"
+        "source/driver/odometer/a3144.cpp"
         "source/driver/pwm/esp32s3.cpp"
         "source/driver/servo/vagrant.cpp"
         "source/driver/serial/esp32s3.cpp"
@@ -15,6 +16,10 @@ idf_component_register(
         "source/system/pin_manager/esp32s3.cpp"
         "source/driver/wifi/esp32s3.cpp"
         "source/system/logic/logic.cpp"
+        "source/system/logic/logic_mqtt.cpp"
+        "source/driver/mqtt/esp32s3.cpp"
+        "source/system/communication/manager.cpp"
+        "source/system/runtime/control.cpp"
 
     INCLUDE_DIRS
         "include"
@@ -28,4 +33,6 @@ idf_component_register(
         esp_driver_usb_serial_jtag
         esp_driver_mcpwm
         esp_adc
+        esp_timer
+        mqtt
         nvs_flash)

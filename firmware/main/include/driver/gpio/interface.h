@@ -7,8 +7,19 @@
 
 #include <cstdint>
 
+#include "driver/gpio/edge.h"
+
 namespace driver::gpio
 {
+/**
+ * @brief Interrupt callback type.
+ *
+ * @param[in] arg User argument passed to enableInterrupt().
+ *
+ * @attention On hardware the callback runs in interrupt context and must be ISR-safe.
+ */
+using InterruptCallback = void (*)(void* arg);
+
 /**
  * @brief Abstract interface for GPIO operations.
  */
@@ -42,6 +53,22 @@ public:
      * * @return True if the driver is initialized and ready for use, false otherwise.
      */
     virtual bool isInitialized() const noexcept = 0;
-    
+
+    /**
+     * @brief Call a function whenever the given edge occurs on the GPIO pin.
+     *
+     * @param[in] edge The edge that triggers the interrupt.
+     * @param[in] callback Function to call on each interrupt.
+     * @param[in] arg User argument passed to the callback.
+     *
+     * @return True if the interrupt was enabled, false otherwise.
+     */
+    virtual bool enableInterrupt(Edge edge, InterruptCallback callback, void* arg) noexcept = 0;
+
+    /**
+     * @brief Stop calling the interrupt callback. Does nothing if no interrupt is enabled.
+     */
+    virtual void disableInterrupt() noexcept = 0;
+
 };
 } // namespace driver::gpio

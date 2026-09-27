@@ -1,0 +1,15 @@
+user cnb-vagrant
+topic read cnb/vagrant/config/set
+topic read cnb/vagrant/command
+topic write cnb/vagrant/telemetry
+topic write cnb/vagrant/config/state
+topic write cnb/vagrant/command/state
+topic write cnb/vagrant/status
+
+user cnb-dashboard
+topic write cnb/vagrant/config/set
+topic write cnb/vagrant/command
+topic read cnb/vagrant/telemetry
+topic read cnb/vagrant/config/state
+topic read cnb/vagrant/command/state
+topic read cnb/vagrant/status

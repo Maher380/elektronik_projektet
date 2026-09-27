@@ -43,7 +43,7 @@ private:
     static constexpr float MinAngleDegrees{-90.0F};
     static constexpr float MaxAngleDegrees{90.0F};
     static constexpr std::uint32_t MinFrequencyHz{215U}; // probably 200 is the right value, but it begins to turn left below 215, likely due to mechanical error.
-    static constexpr std::uint32_t CenterFrequencyHz{300U};
+    static constexpr std::uint32_t CenterFrequencyHz{330U};
     static constexpr std::uint32_t MaxFrequencyHz{500U};
 
     pwm::Interface& myPwm;

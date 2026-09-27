@@ -9,7 +9,6 @@ extern "C" {
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "esp_wifi_default.h"
-#include "freertos/task.h"
 #include "nvs_flash.h"
 }
 
@@ -44,12 +43,9 @@ namespace driver::wifi
 Esp32s3::Esp32s3(const char* ssid, const char* password) noexcept
     : mySsid{ssid}
     , myPassword{password}
-    , myEventGroup{xEventGroupCreate()}
     , myNetif{nullptr}
     , myWifiEventHandler{nullptr}
     , myIpEventHandler{nullptr}
-    , myRetryCount{0}
-    , myLastReconnectTick{0}
     , myInitialized{false}
     , myConnected{false}
 {}
@@ -58,33 +54,17 @@ Esp32s3::Esp32s3(const char* ssid, const char* password) noexcept
 Esp32s3::~Esp32s3() noexcept
 {
     disconnect();
-
-    if (myEventGroup != nullptr)
-    {
-        vEventGroupDelete(myEventGroup);
-        myEventGroup = nullptr;
-    }
 }
 
 // -----------------------------------------------------------------------------
 bool Esp32s3::connect() noexcept
 {
-    if ((myEventGroup == nullptr) || (mySsid == nullptr)) { return false; }
-    if (myConnected) { return true; }
+    if (mySsid == nullptr) { return false; }
+    if (myConnected.load()) { return true; }
 
-    if (myInitialized)
+    if (myInitialized.load())
     {
-        myRetryCount = 0;
-        xEventGroupClearBits(myEventGroup, ConnectedBit | FailedBit);
-        esp_wifi_connect();
-
-        const EventBits_t bits = xEventGroupWaitBits(myEventGroup,
-                                                     ConnectedBit | FailedBit,
-                                                     pdFALSE,
-                                                     pdFALSE,
-                                                     pdMS_TO_TICKS(15000U));
-
-        return (bits & ConnectedBit) != 0U;
+        return esp_wifi_connect() == ESP_OK;
     }
 
     esp_err_t result = nvs_flash_init();
@@ -109,7 +89,14 @@ bool Esp32s3::connect() noexcept
         return false;
     }
 
-    myInitialized = true;
+    myInitialized.store(true);
+
+    // Credentials already come from firmware configuration; do not persist them again.
+    if (esp_wifi_set_storage(WIFI_STORAGE_RAM) != ESP_OK)
+    {
+        disconnect();
+        return false;
+    }
 
     if (esp_event_handler_instance_register(WIFI_EVENT,
                                             ESP_EVENT_ANY_ID,
@@ -148,51 +135,27 @@ bool Esp32s3::connect() noexcept
         return false;
     }
 
-    myRetryCount  = 0;
-
-    xEventGroupClearBits(myEventGroup, ConnectedBit | FailedBit);
-
     if (esp_wifi_start() != ESP_OK)
     {
         disconnect();
         return false;
     }
 
-    const EventBits_t bits = xEventGroupWaitBits(myEventGroup,
-                                                 ConnectedBit | FailedBit,
-                                                 pdFALSE,
-                                                 pdFALSE,
-                                                 pdMS_TO_TICKS(15000U));
-
-    return (bits & ConnectedBit) != 0U;
+    return true;
 }
 
 // -----------------------------------------------------------------------------
 bool Esp32s3::reconnect() noexcept
 {
-    if (myConnected) { return true; }
-    if (!myInitialized || (myEventGroup == nullptr)) { return false; }
-
-    const TickType_t now{xTaskGetTickCount()};
-    const TickType_t interval{pdMS_TO_TICKS(ReconnectIntervalMs)};
-
-    if ((myLastReconnectTick != 0U) && ((now - myLastReconnectTick) < interval))
-    {
-        return false;
-    }
-
-    myLastReconnectTick = now;
-    myRetryCount        = 0;
-
-    xEventGroupClearBits(myEventGroup, ConnectedBit | FailedBit);
-
+    if (myConnected.load()) { return true; }
+    if (!myInitialized.load()) { return false; }
     return esp_wifi_connect() == ESP_OK;
 }
 
 // -----------------------------------------------------------------------------
 void Esp32s3::disconnect() noexcept
 {
-    if (!myInitialized) { return; }
+    if (!myInitialized.load()) { return; }
 
     esp_wifi_disconnect();
     esp_wifi_stop();
@@ -221,20 +184,20 @@ void Esp32s3::disconnect() noexcept
         myNetif = nullptr;
     }
 
-    myConnected   = false;
-    myInitialized = false;
+    myConnected.store(false);
+    myInitialized.store(false);
 }
 
 // -----------------------------------------------------------------------------
 bool Esp32s3::isConnected() const noexcept
 {
-    return myConnected;
+    return myConnected.load();
 }
 
 // -----------------------------------------------------------------------------
 bool Esp32s3::isInitialized() const noexcept
 {
-    return myInitialized;
+    return myInitialized.load();
 }
 
 // -----------------------------------------------------------------------------
@@ -246,7 +209,7 @@ void Esp32s3::eventHandler(void* arg,
     (void)eventData;
 
     auto* self = static_cast<Esp32s3*>(arg);
-    if ((self == nullptr) || (self->myEventGroup == nullptr)) { return; }
+    if (self == nullptr) { return; }
 
     if ((eventBase == WIFI_EVENT) && (eventId == WIFI_EVENT_STA_START))
     {
@@ -254,23 +217,11 @@ void Esp32s3::eventHandler(void* arg,
     }
     else if ((eventBase == WIFI_EVENT) && (eventId == WIFI_EVENT_STA_DISCONNECTED))
     {
-        self->myConnected = false;
-
-        if (self->myRetryCount < MaxRetryCount)
-        {
-            ++self->myRetryCount;
-            esp_wifi_connect();
-        }
-        else
-        {
-            xEventGroupSetBits(self->myEventGroup, FailedBit);
-        }
+        self->myConnected.store(false);
     }
     else if ((eventBase == IP_EVENT) && (eventId == IP_EVENT_STA_GOT_IP))
     {
-        self->myRetryCount = 0;
-        self->myConnected  = true;
-        xEventGroupSetBits(self->myEventGroup, ConnectedBit);
+        self->myConnected.store(true);
     }
 }
 } // namespace driver::wifi

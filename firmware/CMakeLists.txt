@@ -5,7 +5,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
 
-project(elektronik_projektet)
+project(cnb_scrum16_mqtt_experiment)
 
 
 

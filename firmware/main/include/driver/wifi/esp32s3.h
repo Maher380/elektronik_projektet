@@ -6,11 +6,10 @@
 
 #include "driver/wifi/interface.h"
 
+#include <atomic>
 #include <cstdint>
 
 extern "C" {
-#include "freertos/FreeRTOS.h"
-#include "freertos/event_groups.h"
 #include "esp_event.h"
 #include "esp_netif.h"
 }
@@ -36,8 +35,8 @@ public:
     ~Esp32s3() noexcept override;
 
     /**
-     * @brief Connect to the configured WiFi network.
-     * @return True if connected and an IP address was acquired.
+     * @brief Initialize WiFi and start connecting asynchronously.
+     * @return True if the connection attempt was started.
      */
     bool connect() noexcept override;
 
@@ -78,26 +77,11 @@ private:
                              int32_t eventId,
                              void* eventData);
 
-    /** @brief WiFi connected event bit. */
-    static constexpr EventBits_t ConnectedBit{1U << 0U};
-
-    /** @brief WiFi failed event bit. */
-    static constexpr EventBits_t FailedBit{1U << 1U};
-
-    /** @brief Maximum number of connection attempts before connect fails. */
-    static constexpr int MaxRetryCount{5};
-
-    /** @brief Minimum delay between reconnect requests. */
-    static constexpr std::uint32_t ReconnectIntervalMs{5000U};
-
     /** @brief SSID used by this driver instance. */
     const char* mySsid;
 
     /** @brief Password used by this driver instance. */
     const char* myPassword;
-
-    /** @brief FreeRTOS event group used to wait for WiFi connection. */
-    EventGroupHandle_t myEventGroup;
 
     /** @brief Default WiFi station network interface. */
     esp_netif_t* myNetif;
@@ -108,16 +92,10 @@ private:
     /** @brief Registered IP event handler instance. */
     esp_event_handler_instance_t myIpEventHandler;
 
-    /** @brief Number of current connection retries. */
-    int myRetryCount;
-
-    /** @brief Last tick when a reconnect request was sent. */
-    TickType_t myLastReconnectTick;
-
     /** @brief True after ESP-IDF WiFi has been initialized. */
-    bool myInitialized;
+    std::atomic<bool> myInitialized;
 
     /** @brief True when the station is connected and has an IP address. */
-    bool myConnected;
+    std::atomic<bool> myConnected;
 };
 } // namespace driver::wifi

@@ -66,12 +66,14 @@ public:
      * @return Input voltage in Volts.
      */
     float readVoltage() const noexcept override;
+    std::int32_t lastRaw() const noexcept override { return myState ? myLastRaw : -1; }
 
     Esp32s3(const Esp32s3&)            = delete; // No copy constructor.
     Esp32s3(Esp32s3&&)                 = delete; // No move constructor.
     Esp32s3& operator=(const Esp32s3&) = delete; // No copy assignment.
     Esp32s3& operator=(Esp32s3&&)      = delete; // No move assignment.
 private:
+    mutable std::int32_t myLastRaw{-1};
     /** ADC state. */
     bool myState;
     /** Target ADC pin. */
