@@ -9,7 +9,6 @@ extern "C" {
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "esp_wifi_default.h"
-#include "nvs_flash.h"
 }
 
 namespace
@@ -40,8 +39,9 @@ bool isOkOrAlreadyDone(esp_err_t result) noexcept
 namespace driver::wifi
 {
 // -----------------------------------------------------------------------------
-Esp32s3::Esp32s3(const char* ssid, const char* password) noexcept
-    : mySsid{ssid}
+Esp32s3::Esp32s3(nvs::Interface& nvs, const char* ssid, const char* password) noexcept
+    : myNvs{nvs}
+    , mySsid{ssid}
     , myPassword{password}
     , myNetif{nullptr}
     , myWifiEventHandler{nullptr}
@@ -67,13 +67,8 @@ bool Esp32s3::connect() noexcept
         return esp_wifi_connect() == ESP_OK;
     }
 
-    esp_err_t result = nvs_flash_init();
-    if ((result == ESP_ERR_NVS_NO_FREE_PAGES) || (result == ESP_ERR_NVS_NEW_VERSION_FOUND))
-    {
-        if (nvs_flash_erase() != ESP_OK) { return false; }
-        result = nvs_flash_init();
-    }
-    if (result != ESP_OK) { return false; }
+    // The WiFi stack stores calibration data in NVS, so NVS must be ready first.
+    if (!myNvs.isInitialized() && !myNvs.init()) { return false; }
 
     if (!isOkOrAlreadyDone(esp_netif_init())) { return false; }
     if (!isOkOrAlreadyDone(esp_event_loop_create_default())) { return false; }

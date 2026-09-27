@@ -4,6 +4,7 @@
  */
 #pragma once
 
+#include "driver/nvs/interface.h"
 #include "driver/wifi/interface.h"
 
 #include <atomic>
@@ -24,10 +25,12 @@ class Esp32s3 final : public Interface
 public:
     /**
      * @brief Constructor.
+     * @param[in] nvs NVS driver, initialized on connect() if needed (the WiFi stack
+     *                needs NVS). Must outlive this driver.
      * @param[in] ssid WiFi network SSID.
      * @param[in] password WiFi network password.
      */
-    Esp32s3(const char* ssid, const char* password) noexcept;
+    Esp32s3(nvs::Interface& nvs, const char* ssid, const char* password) noexcept;
 
     /**
      * @brief Destructor.
@@ -76,6 +79,9 @@ private:
                              esp_event_base_t eventBase,
                              int32_t eventId,
                              void* eventData);
+
+    /** @brief NVS driver, initialized before the WiFi stack starts. */
+    nvs::Interface& myNvs;
 
     /** @brief SSID used by this driver instance. */
     const char* mySsid;

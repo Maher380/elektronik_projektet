@@ -15,6 +15,7 @@
 #include "driver/motor/stub.h"
 #include "driver/odometer/stub.h"
 #include "driver/mqtt/stub.h"
+#include "driver/nvs/stub.h"
 #include "driver/pwm/stub.h"
 #include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
@@ -186,6 +187,15 @@ public:
     }
 
     /**
+     * @brief Get the simulated NVS driver, which keeps values in RAM.
+     *
+     * @return Reference to the NVS stub.
+     */
+    nvs::Interface& nvs() noexcept override {
+        return myNvs;
+    }
+
+    /**
      * @brief Create a simulated WiFi stub instance.
      *
      * @param[in] ssid WiFi network SSID to simulate (unused).
@@ -203,6 +213,10 @@ public:
     Stub& operator=(const Stub&) = delete;
     Stub(Stub&&)                 = delete;
     Stub& operator=(Stub&&)      = delete;
+
+private:
+    /** The one simulated NVS driver. */
+    driver::nvs::Stub myNvs;
 };
 
 } // namespace driver::factory

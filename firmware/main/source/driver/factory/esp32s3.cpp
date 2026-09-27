@@ -94,9 +94,14 @@ std::unique_ptr<timer::Interface> Esp32s3::timer(std::uint32_t timeout_ms) noexc
     return t;
 }
 
+nvs::Interface& Esp32s3::nvs() noexcept {
+
+    return myNvs;
+}
+
 std::unique_ptr<wifi::Interface> Esp32s3::wifi(const char* ssid, const char* password) noexcept {
 
-    return std::make_unique<driver::wifi::Esp32s3>(ssid, password);
+    return std::make_unique<driver::wifi::Esp32s3>(myNvs, ssid, password);
 }
 
 } // namespace driver::factory
