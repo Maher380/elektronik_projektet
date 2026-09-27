@@ -18,6 +18,7 @@ idf_component_register(
         "source/system/logic/logic.cpp"
         "source/system/logic/logic_mqtt.cpp"
         "source/driver/mqtt/esp32s3.cpp"
+        "source/driver/nvs/esp32s3.cpp"
         "source/system/communication/manager.cpp"
         "source/system/runtime/control.cpp"
 
