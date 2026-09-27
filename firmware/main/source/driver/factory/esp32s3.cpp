@@ -5,6 +5,7 @@
 #include "driver/gpio/esp32s3.h"
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"
+#include "driver/mpu/mpu6050.h"
 #include "driver/odometer/a3144.h"
 #include "driver/mqtt/esp32s3.h"
 #include "driver/pwm/esp32s3.h"
@@ -60,6 +61,12 @@ std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& MotorFo
                                                  driver::pwm::Interface& MotorBackwardsPwm) noexcept {
     // Create a real MP6550 motor driver from existing PWM outputs.
     return std::make_unique<driver::motor::MP6550>(MotorForwardsPwm, MotorBackwardsPwm);
+}
+
+std::unique_ptr<mpu::Interface> Esp32s3::mpu(driver::i2c::Interface& i2c,
+                                             const driver::mpu::Config& config) noexcept {
+    // Create a real MPU-6050 IMU on an existing, shared I2C bus.
+    return std::make_unique<driver::mpu::Mpu6050>(i2c, config);
 }
 
 std::unique_ptr<odometer::Interface> Esp32s3::odometer(driver::gpio::Interface& gpio,

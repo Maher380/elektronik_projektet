@@ -14,6 +14,8 @@ namespace driver {
     namespace adc { class Interface; }
     namespace gpio { class Interface; }
     namespace motor { class Interface; }
+    namespace i2c { class Interface; }
+    namespace mpu { struct Config; class Interface; }
     namespace odometer { struct Config; class Interface; }
     namespace mqtt { struct Config; class Interface; }
     namespace pwm { struct Config; class Interface; }
@@ -103,6 +105,15 @@ public:
      */
     std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& MotorForwardsPwm,
                                             driver::pwm::Interface& MotorBackwardsPwm) noexcept override;
+
+    /**
+     * @brief Create a real MPU-6050 IMU driver instance.
+     *
+     * @param[in] i2c Reference to an initialized I2C bus the IMU is connected to.
+     * @param[in] config IMU configuration (address, ranges, filter).
+     * @return A unique pointer to the created IMU interface instance.
+     */
+    std::unique_ptr<mpu::Interface> mpu(i2c::Interface& i2c, const mpu::Config& config) noexcept override;
 
     /** Create a real ESP-MQTT client. */
     std::unique_ptr<mqtt::Interface> mqtt(const mqtt::Config& config) noexcept override;

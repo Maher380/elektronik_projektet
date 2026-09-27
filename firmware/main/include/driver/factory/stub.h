@@ -13,6 +13,7 @@
 #include "driver/gpio/stub.h"
 #include "driver/ir_sensor/stub.h"
 #include "driver/motor/stub.h"
+#include "driver/mpu/stub.h"
 #include "driver/odometer/stub.h"
 #include "driver/mqtt/stub.h"
 #include "driver/pwm/stub.h"
@@ -141,6 +142,21 @@ public:
         (void)motorForwardsPwm;
         (void)motorBackwardsPwm;
         return std::make_unique<driver::motor::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated IMU stub instance.
+     *
+     * @param[in] i2c Reference to the I2C bus the IMU is connected to (unused).
+     * @param[in] config IMU configuration to simulate (unused).
+     * @return A unique pointer to the created simulated IMU interface instance.
+     */
+    std::unique_ptr<mpu::Interface> mpu(driver::i2c::Interface& i2c,
+                                        const driver::mpu::Config& config) noexcept override
+    {
+        (void)i2c;
+        (void)config;
+        return std::make_unique<driver::mpu::Stub>();
     }
 
     /** Create a simulated MQTT client. */

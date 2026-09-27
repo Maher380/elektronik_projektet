@@ -12,6 +12,8 @@ namespace driver::ir_sensor {class Interface;}
 namespace driver::adc { class Interface; }
 namespace driver::gpio { class Interface; }
 namespace driver::motor { class Interface; }
+namespace driver::i2c { class Interface; }
+namespace driver::mpu { struct Config; class Interface; }
 namespace driver::odometer { struct Config; class Interface; }
 namespace driver::mqtt { struct Config; class Interface; }
 namespace driver::pwm { struct Config; class Interface; }
@@ -104,6 +106,15 @@ public:
      */
     virtual std::unique_ptr<motor::Interface> motor(driver::pwm::Interface& MotorForwardsPwm,
                                                     driver::pwm::Interface& MotorBackwardsPwm) noexcept = 0;
+
+    /**
+     * @brief Create an IMU driver instance.
+     *
+     * @param[in] i2c Reference to an initialized I2C bus the IMU is connected to.
+     * @param[in] config IMU configuration (address, ranges, filter).
+     * @return A unique pointer to the created IMU interface instance.
+     */
+    virtual std::unique_ptr<mpu::Interface> mpu(i2c::Interface& i2c, const mpu::Config& config) noexcept = 0;
 
     /**
      * @brief Create an odometer driver instance.
