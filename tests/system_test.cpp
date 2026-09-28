@@ -17,6 +17,7 @@
 #include "driver/pwm/stub.h"
 #include "driver/motor/mp6550.h"
 #include "driver/odometer/stub.h"
+#include "driver/servo/stub.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/stub.h"
 #include "driver/timer/stub.h"
@@ -84,6 +85,9 @@ struct Factory final : driver::factory::Interface {
     }
     std::unique_ptr<driver::servo::Interface> servo(driver::pwm::Interface& p) noexcept override {
         return std::make_unique<driver::servo::Vagrant>(p);
+    }
+    std::unique_ptr<driver::servo::Interface> fordServo(driver::pwm::Interface&) noexcept override {
+        return std::make_unique<driver::servo::Stub>();
     }
     std::unique_ptr<driver::distance_sensor::Interface> ir_sensor(driver::adc::Interface& a) noexcept override {
         for (unsigned pin = 0; pin < adcs.size(); ++pin) {
