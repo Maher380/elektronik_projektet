@@ -783,8 +783,10 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
 
         const auto afterLoopMs = static_cast<std::uint32_t>(
                         xTaskGetTickCount() * portTICK_PERIOD_MS);
-        const auto elapsedMs{(afterLoopMs - nowMs)};
-        const auto  remainingMs{static_cast<std::int32_t>(tickPeriod_ms) - elapsedMs};
+        // Signed so a pass longer than tickPeriod_ms gives a negative remainder
+        // instead of wrapping to a ~49 day delay.
+        const auto elapsedMs{static_cast<std::int32_t>(afterLoopMs - nowMs)};
+        const std::int32_t remainingMs{tickPeriod_ms - elapsedMs};
         vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
     myMotor->stop(myPlannedAction.stopMode);
