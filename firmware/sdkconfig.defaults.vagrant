@@ -1,0 +1,2 @@
+# Target car for Vagrant builds.
+CONFIG_CNB_CAR_VAGRANT=y

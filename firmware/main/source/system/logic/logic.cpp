@@ -16,7 +16,9 @@
 #include "driver/gpio/interface.h"
 #include "driver/ir_sensor/interface.h"
 #include "driver/motor/interface.h"
+#include "driver/odometer/interface.h"
 #include "driver/serial/interface.h"
+#include "driver/servo/interface.h"
 #include "driver/timer/interface.h"
 #include "driver/wifi/interface.h"
 #include "sdkconfig.h"
@@ -26,14 +28,8 @@
 
 namespace
 {
-    constexpr std::uint8_t AdcPin{1U};
-    constexpr std::uint8_t LedPin{6U};
     constexpr std::uint32_t DefaultPeriodMs{500U};
     constexpr std::uint32_t SerialBaudRate{115200U};
-    constexpr driver::pwm::Config SteeringPwmConfig{
-        .pin = 9U,
-        .frequencyHz = 300U,
-    };
     constexpr const char *WifiSsid{CONFIG_CNB_WIFI_SSID};
     constexpr const char *WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
     
@@ -46,9 +42,17 @@ namespace
     constexpr int logInterval_ms{1000};
     constexpr int logInterval_ticks{logInterval_ms/tickPeriod_ms};
 
-    constexpr const char* CommandHelpText{
-        "Commands: SPEED <0-1>, FORWARD, BACKWARD, BRAKE, COAST, STOP, AUTO,\n"
-        "  PWMDUTYFWD <0-100>, PWMDUTYBWD <0-100>,\n"
+    // MQTT topics use the target car's key: cnb/<car>/...
+    constexpr app::communication::Topics MqttTopics{
+        {"cnb/" CONFIG_CNB_CAR_KEY "/telemetry", "cnb/" CONFIG_CNB_CAR_KEY "/config/state",
+         "cnb/" CONFIG_CNB_CAR_KEY "/command/state", "cnb/" CONFIG_CNB_CAR_KEY "/status"},
+        {"cnb/" CONFIG_CNB_CAR_KEY "/config/set", "cnb/" CONFIG_CNB_CAR_KEY "/command"},
+    };
+
+    // The car's own command help is written between these two parts.
+    constexpr const char* CommandHelpTextStart{
+        "Commands: SPEED <0-1>, FORWARD, BACKWARD, BRAKE, COAST, STOP, AUTO,\n"};
+    constexpr const char* CommandHelpTextEnd{
         "  DRIVESTYLE <DECIDEACTION|SLOWLEFT|SLOWRIGHT|GRADUALSWEEP|MANUAL_BY_SERIAL>,\n"
         "  LOG <ON|OFF>, HELP\n"};
 
@@ -60,25 +64,6 @@ namespace
         }
     }
 
-    bool trySetPwmDutyPercent(driver::pwm::Interface* pwm, const char* argument, driver::serial::Interface& serial) noexcept
-    {
-        float percent{0.0F};
-        if (std::sscanf(argument, "%f", &percent) != 1)
-        {
-            serial.write("Usage: PWMDUTYFWD/PWMDUTYBWD <0-100>\n");
-            return false;
-        }
-
-        const float duty{std::clamp(percent, 0.0F, 100.0F) / 100.0F};
-        if ((pwm == nullptr) || !pwm->setDuty(duty))
-        {
-            serial.write("Failed to set PWM duty cycle\n");
-            return false;
-        }
-
-        return true;
-    }
-
     void printMotorSettings(driver::serial::Interface& serial, const app::logic::PlannedAction& action) noexcept
     {
         char buf[96]{'\0'};
@@ -86,18 +71,6 @@ namespace
             action.direction == driver::motor::Direction::Forward ? "Forward" : "Backward",
             static_cast<double>(action.speed),
             action.stopMode == driver::motor::StopMode::Brake ? "Brake" : "Coast");
-        serial.write(buf);
-    }
-
-    void printPwmSettings(driver::serial::Interface& serial, const char* label, const driver::pwm::Interface* pwm) noexcept
-    {
-        if (pwm == nullptr) { return; }
-
-        char buf[96]{'\0'};
-        std::snprintf(buf, sizeof(buf), "PWM %s: duty=%.1f%%, frequency=%luHz\n",
-            label,
-            static_cast<double>(pwm->duty() * 100.0F),
-            static_cast<unsigned long>(pwm->frequencyHz()));
         serial.write(buf);
     }
 
@@ -117,6 +90,13 @@ namespace app::logic
 {
 Logic::~Logic() noexcept = default;
 
+void Logic::writeHelp() noexcept
+{
+    mySerial->write(CommandHelpTextStart);
+    mySerial->write(myCar.helpText());
+    mySerial->write(CommandHelpTextEnd);
+}
+
 void Logic::setDriverStyle(const DriverStyle style) noexcept
 {
     myDriverStyle = style;
@@ -127,47 +107,11 @@ void Logic::setDriverStyle(const DriverStyle style) noexcept
     }
 }
 
-Logic::Logic(driver::factory::Interface& factory) noexcept
-    : myMotorForwardsPwm{factory.pwm(mp6550MotorPwmForwardPin)}
-    , myMotorBackwardsPwm{factory.pwm(mp6550MotorPwmBackwardPin)}
-    , myMotorSleep{factory.gpioOutput(mp6550MotorSleepPin)}
-    , myOdometerGpio{factory.gpioInputPullup(odometerPin)}
-    , myIrSensorForwardAdc{factory.adc(IrSensorForwardAdcPin)}
-    , myIrSensorLeftAdc{factory.adc(IrSensorLeftAdcPin)}
-    , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
+Logic::Logic(driver::factory::Interface& factory, car::Interface& car) noexcept
+    : myCar{car}
     , mySerial({factory.serial(SerialBaudRate)})
-    , mySteeringServoPwm{factory.pwm(SteeringPwmConfig)}
     , myCommunication{factory, MqttTopics}
 {
-    if (myMotorForwardsPwm && myMotorBackwardsPwm)
-    {
-        myMotor = factory.motor(*myMotorForwardsPwm, *myMotorBackwardsPwm);
-    }
-
-    if (myIrSensorForwardAdc)
-    {
-        myIrSensorForward = factory.ir_sensor(*myIrSensorForwardAdc);
-    }
-    if (myIrSensorLeftAdc)
-    {
-        myIrSensorLeft = factory.ir_sensor(*myIrSensorLeftAdc);
-    }
-    if (myIrSensorRightAdc)
-    {
-        myIrSensorRight = factory.ir_sensor(*myIrSensorRightAdc);
-    }
-    if (mySteeringServoPwm)
-    {
-        mySteeringServo = factory.servo(*mySteeringServoPwm);
-    }
-    if (myOdometerGpio)
-    {
-        myOdometer = factory.odometer(*myOdometerGpio, driver::odometer::Config{
-            .pulsesPerRevolution = odometerPulsesPerRevolution,
-            .wheelDiameterM = odometerWheelDiameterM,
-        });
-    }
-
     setStartState();
     if (!initializeDrivers())
     {
@@ -208,7 +152,7 @@ bool Logic::initializeDrivers() noexcept
     if (mySerial &&mySerial->connect())
     {
         mySerial->write("CnB serial ready\n");
-        mySerial->write(CommandHelpText);
+        writeHelp();
     }
     else
     {
@@ -222,105 +166,12 @@ bool Logic::initializeDrivers() noexcept
 //         myWifi->connect();
 //     }
 // #endif
-    // Verify that all required driver objects were created.
-    if (!myMotorForwardsPwm || 
-        !myMotorBackwardsPwm || 
-        !myMotorSleep ||
-        !myIrSensorForwardAdc || 
-        !myIrSensorLeftAdc || 
-        !myIrSensorRightAdc || 
-        !myMotor || 
-        !myIrSensorForward ||
-        !myIrSensorLeft || 
-        !myIrSensorRight ||
-        !mySteeringServoPwm ||
-        !mySteeringServo ||
-        !mySerial ||
-        !myOdometer )
-    {
-        return false;
-    }
-
-    // Initialize drivers that expose an explicit init operation.
-    // The GPIO output is initialized by its constructor.
-    // IR sensors become ready when their ADC dependencies are initialized.
-    // Serial is prepared through connect() above.
-    myMotorForwardsPwm->init();
-    myMotorBackwardsPwm->init();
-    // no init function for myMotorSleep
-    myIrSensorForwardAdc->init();
-    myIrSensorLeftAdc->init();
-    myIrSensorRightAdc->init();
-    myMotor->init();
-    mySteeringServoPwm->init();
-    mySteeringServo->init();
-    myOdometer->init();
-    // no init function for myIrSensorLeft
-    // no init function for myIrSensorRight
-    // no init function for mySerial
-
-    // Verify that all required drivers are initialized and ready.
-    if (!myMotorForwardsPwm->isInitialized() ||
-        !myMotorBackwardsPwm->isInitialized() ||
-        !myMotorSleep->isInitialized() ||
-        !myIrSensorForwardAdc->isInitialized() ||
-        !myIrSensorLeftAdc->isInitialized() ||
-        !myIrSensorRightAdc->isInitialized() ||
-        !myMotor->isInitialized() ||
-        !myIrSensorForward->isInitialized() ||
-        !myIrSensorLeft->isInitialized() ||
-        !myIrSensorRight->isInitialized() ||
-        !mySteeringServoPwm->isInitialized() ||
-        !mySteeringServo->isInitialized() ||
-        !myOdometer->isInitialized() ||
-        !mySerial->isInitialized())
-    {
-        return false;
-    }
-
-    myMotorSleep->write(true); // nSLEEP_HB HIGH keeps MP6550 awake.
-
-    return true;
+    return myCar.init();
 }
 
 void Logic::deinitializeDrivers() noexcept
 {
-    if (myOdometer && myOdometer->isInitialized())
-    {
-        myOdometer->deinit();
-    }
-    if (mySteeringServo && mySteeringServo->isInitialized())
-    {
-        mySteeringServo->deinit();
-    }
-    if (myMotor && myMotor->isInitialized())
-    {
-        myMotor->deinit();
-    }
-    if (myIrSensorForwardAdc && myIrSensorForwardAdc->isInitialized())
-    {
-        myIrSensorForwardAdc->deinit();
-    }
-    if (myIrSensorLeftAdc && myIrSensorLeftAdc->isInitialized())
-    {
-        myIrSensorLeftAdc->deinit();
-    }
-    if (myIrSensorRightAdc && myIrSensorRightAdc->isInitialized())
-    {
-        myIrSensorRightAdc->deinit();
-    }
-    if (myMotorForwardsPwm && myMotorForwardsPwm->isInitialized())
-    {
-        myMotorForwardsPwm->deinit();
-    }
-    if (myMotorBackwardsPwm && myMotorBackwardsPwm->isInitialized())
-    {
-        myMotorBackwardsPwm->deinit();
-    }
-    if (mySteeringServoPwm && mySteeringServoPwm->isInitialized())
-    {
-        mySteeringServoPwm->deinit();
-    }
+    myCar.deinit();
     if (mySerial && mySerial->isInitialized())
     {
         mySerial->disconnect();
@@ -348,14 +199,12 @@ void Logic::processTimer() noexcept
 
 void Logic::getEnvironmentPicture() noexcept
 {
-    //Check if all sensors are functional
-    if (myIrSensorForward && myIrSensorForward->isInitialized() &&
-        myIrSensorLeft    && myIrSensorLeft->isInitialized()    &&
-        myIrSensorRight   && myIrSensorRight->isInitialized()   )
+    navigation::Distances distances{};
+    if (myCar.readObstacleDistances(distances))
     {
-        myDistanceToObstacleForward = myIrSensorForward->readDistance();
-        myDistanceToObstacleLeft    = myIrSensorLeft->readDistance();
-        myDistanceToObstacleRight   = myIrSensorRight->readDistance();
+        myDistanceToObstacleForward = distances[navigation::Forward];
+        myDistanceToObstacleLeft    = distances[navigation::Left];
+        myDistanceToObstacleRight   = distances[navigation::Right];
         return;
     }
 
@@ -429,8 +278,6 @@ void Logic::processSerialCommand() noexcept
     }
 
     bool isMotorCommand{false};
-    bool isPwmFwdCommand{false};
-    bool isPwmBwdCommand{false};
 
     float speed{0.0F};
     if ((std::strcmp(command, "SPEED") == 0) && (parsed == 2) && (std::sscanf(argument, "%f", &speed) == 1))
@@ -467,14 +314,6 @@ void Logic::processSerialCommand() noexcept
     {
         setDriverStyle(DriverStyle::DecideAction);
     }
-    else if ((std::strcmp(command, "PWMDUTYFWD") == 0) && (parsed == 2))
-    {
-        isPwmFwdCommand = trySetPwmDutyPercent(myMotorForwardsPwm.get(), argument, *mySerial);
-    }
-    else if ((std::strcmp(command, "PWMDUTYBWD") == 0) && (parsed == 2))
-    {
-        isPwmBwdCommand = trySetPwmDutyPercent(myMotorBackwardsPwm.get(), argument, *mySerial);
-    }
     else if (isDriveStyle && (parsed == 2))
     {
         DriverStyle style{};
@@ -506,25 +345,17 @@ void Logic::processSerialCommand() noexcept
     }
     else if (isHelp)
     {
-        mySerial->write(CommandHelpText);
+        writeHelp();
     }
-    else
+    else if (!myCar.handleSerialCommand(command, argument, parsed == 2, *mySerial))
     {
         mySerial->write("Unknown command. ");
-        mySerial->write(CommandHelpText);
+        writeHelp();
     }
 
     if (isMotorCommand)
     {
         myMotorCommandPending = true;
-    }
-    if (isPwmFwdCommand)
-    {
-        printPwmSettings(*mySerial, "FWD", myMotorForwardsPwm.get());
-    }
-    if (isPwmBwdCommand)
-    {
-        printPwmSettings(*mySerial, "BWD", myMotorBackwardsPwm.get());
     }
 }
 
@@ -650,24 +481,26 @@ void Logic::decideSlowRightAction() noexcept
 
 void Logic::executeAction() noexcept
 {
-    if (!myMotor || !myMotor->isInitialized())
+    auto* const motor = myCar.motor();
+    if (!motor || !motor->isInitialized())
     {
         return;
     }
 
-    if (mySteeringServo && mySteeringServo->isInitialized())
+    auto* const steering = myCar.steering();
+    if (steering && steering->isInitialized())
     {
-        mySteeringServo->setDirection(myPlannedAction.steeringDegrees);
+        steering->setDirection(myPlannedAction.steeringDegrees);
     }
 
     if (myPlannedAction.speed > 0.0F)
     {
-        myMotor->setDirection(myPlannedAction.direction);
-        myMotor->setSpeed(myPlannedAction.speed, myPlannedAction.stopMode);
+        motor->setDirection(myPlannedAction.direction);
+        motor->setSpeed(myPlannedAction.speed, myPlannedAction.stopMode);
     }
     else
     {
-        myMotor->stop(myPlannedAction.stopMode);
+        motor->stop(myPlannedAction.stopMode);
     }
 }
 
@@ -717,8 +550,9 @@ void Logic::logState() noexcept
             ? accumulatedDistanceRight / static_cast<double>(validSamplesRight)
             : std::numeric_limits<double>::quiet_NaN();
 
-        const double odometerDistanceM{myOdometer ? static_cast<double>(myOdometer->distance()) : 0.0};
-        const double odometerSpeedMps{myOdometer ? static_cast<double>(myOdometer->speed()) : 0.0};
+        const auto* const odometer = myCar.odometer();
+        const double odometerDistanceM{odometer ? static_cast<double>(odometer->distance()) : 0.0};
+        const double odometerSpeedMps{odometer ? static_cast<double>(odometer->speed()) : 0.0};
 
         std::snprintf(
             buf,
@@ -769,8 +603,7 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         if (myMotorCommandPending)
         {
             printMotorSettings(*mySerial, myPlannedAction);
-            printPwmSettings(*mySerial, "FWD", myMotorForwardsPwm.get());
-            printPwmSettings(*mySerial, "BWD", myMotorBackwardsPwm.get());
+            myCar.printMotorStatus(*mySerial);
             myMotorCommandPending = false;
         }
         if (myLogEnabled)
@@ -789,7 +622,10 @@ void Logic::run(const std::atomic<bool>& stop) noexcept
         const std::int32_t remainingMs{tickPeriod_ms - elapsedMs};
         vTaskDelay(pdMS_TO_TICKS(remainingMs > 0 ? remainingMs : 0));
     }
-    myMotor->stop(myPlannedAction.stopMode);
+    if (auto* const motor = myCar.motor())
+    {
+        motor->stop(myPlannedAction.stopMode);
+    }
     shutdownMqttOverlay();
 }
 

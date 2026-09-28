@@ -1,0 +1,2 @@
+# Target car for Ford builds.
+CONFIG_CNB_CAR_FORD=y

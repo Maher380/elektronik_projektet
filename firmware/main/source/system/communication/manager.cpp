@@ -32,7 +32,8 @@ constexpr std::array<std::uint32_t, 5U> NetworkRetryDelaysMs{
 
 #if CONFIG_CNB_ENABLE_MQTT
 constexpr const char* MqttBrokerUri{CONFIG_CNB_MQTT_BROKER_URI};
-constexpr const char* MqttClientId{CONFIG_CNB_MQTT_CLIENT_ID};
+// The car name is derived from the target car.
+constexpr const char* MqttClientId{"cnb-" CONFIG_CNB_CAR_KEY};
 constexpr const char* MqttUsername{CONFIG_CNB_MQTT_USERNAME};
 constexpr const char* MqttPassword{CONFIG_CNB_MQTT_PASSWORD};
 constexpr const char* MqttOnlinePayload{"{\"schema_version\":1,\"online\":true}"};

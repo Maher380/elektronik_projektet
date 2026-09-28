@@ -30,6 +30,7 @@
 #else
 
 #include "driver/factory/esp32s3.h"
+#include "system/car/target.h"
 #include "system/logic/logic.h"
 #include <atomic>
 #include "sdkconfig.h"
@@ -186,7 +187,8 @@ extern "C" void app_main(void)
     #else
     std::atomic<bool> stop{false};
     driver::factory::Esp32s3 factory;
-    app::logic::Logic logic(factory);
+    app::car::Target car(factory);
+    app::logic::Logic logic(factory, car);
     logic.run(stop);
     #endif
 

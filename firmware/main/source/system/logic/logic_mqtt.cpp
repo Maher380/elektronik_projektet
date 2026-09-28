@@ -1,6 +1,7 @@
 /** MQTT integration for the driving methods retained in logic.cpp. */
 #include "system/logic/logic.h"
 #include "driver/serial/interface.h"
+#include "driver/servo/interface.h"
 
 namespace app::logic
 {
@@ -43,10 +44,8 @@ void Logic::processMqttOverlay(std::uint32_t nowMs) noexcept
 
 void Logic::disableMqttOutput() noexcept
 {
-    // Remove motor power and put the driver to sleep whenever control is lost.
-    if (myMotorSleep) { myMotorSleep->write(false); }
-    if (myMotorForwardsPwm) { myMotorForwardsPwm->setDuty(0.0F); }
-    if (myMotorBackwardsPwm) { myMotorBackwardsPwm->setDuty(0.0F); }
+    // Remove motor power whenever control is lost.
+    myCar.disableMotorOutput();
     myMqttAppliedSpeed = 0.0F;
 }
 
@@ -62,7 +61,7 @@ bool Logic::authorizeMqttAction(std::uint32_t nowMs) noexcept
         myPlannedAction.stopMode == driver::motor::StopMode::Brake);
     if (authorized)
     {
-        myMotorSleep->write(true);
+        myCar.enableMotorOutput();
         myMqttAppliedSpeed = myPlannedAction.speed;
     }
     else
@@ -84,13 +83,10 @@ void Logic::publishMqttTelemetry(std::uint32_t nowMs) noexcept
     app::communication::TelemetrySnapshot snapshot{};
     snapshot.distancesCm = {myDistanceToObstacleLeft, myDistanceToObstacleForward,
                             myDistanceToObstacleRight};
-    snapshot.adcRaw = {myIrSensorLeftAdc ? myIrSensorLeftAdc->lastRaw() : -1,
-                       myIrSensorForwardAdc ? myIrSensorForwardAdc->lastRaw() : -1,
-                       myIrSensorRightAdc ? myIrSensorRightAdc->lastRaw() : -1};
     snapshot.speedCommand = myMqttAppliedSpeed;
-    snapshot.steeringDegrees = mySteeringServo ? mySteeringServo->getDirection() : 0.0F;
-    snapshot.forwardDuty = myMotorForwardsPwm ? myMotorForwardsPwm->duty() : 0.0F;
-    snapshot.backwardDuty = myMotorBackwardsPwm ? myMotorBackwardsPwm->duty() : 0.0F;
+    const auto* const steering = myCar.steering();
+    snapshot.steeringDegrees = steering ? steering->getDirection() : 0.0F;
+    myCar.fillPartTelemetry(snapshot);
     myCommunication.publishTelemetry(nowMs, snapshot, myRuntimeControl);
 }
 

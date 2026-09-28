@@ -6,14 +6,10 @@
 #pragma once
 
 #include "driver/factory/interface.h"
-#include "driver/adc/interface.h"
-#include "driver/gpio/interface.h"
-#include "driver/ir_sensor/interface.h"
 #include "driver/motor/interface.h"
-#include "driver/odometer/interface.h"
-#include "driver/pwm/interface.h"
-#include "driver/servo/interface.h"
+#include "driver/serial/interface.h"
 
+#include "system/car/interface.h"
 #include "system/communication/manager.h"
 #include "system/runtime/control.h"
 
@@ -45,13 +41,13 @@ struct PlannedAction
 /**
  * @brief Main system logic for the autonomous car starter application.
  *
- * The logic layer owns driver interfaces and stays independent from ESP-IDF
- * implementation details.
+ * The logic layer uses the car's parts and stays independent from ESP-IDF
+ * implementation details and from which car it runs on.
  */
 class Logic final {
 public:
 
-    explicit Logic(driver::factory::Interface& factory) noexcept;
+    Logic(driver::factory::Interface& factory, car::Interface& car) noexcept;
     ~Logic() noexcept;
 
     void run(const std::atomic<bool>& stop) noexcept;
@@ -64,11 +60,6 @@ public:
 
 private:
     // MQTT-only integration; original SCRUM-16 members and methods follow.
-    static constexpr app::communication::Topics MqttTopics{
-        {"cnb/vagrant/telemetry", "cnb/vagrant/config/state",
-         "cnb/vagrant/command/state", "cnb/vagrant/status"},
-        {"cnb/vagrant/config/set", "cnb/vagrant/command"},
-    };
     void initializeMqttOverlay() noexcept;
     void processMqttOverlay(std::uint32_t nowMs) noexcept;
     bool authorizeMqttAction(std::uint32_t nowMs) noexcept;
@@ -76,6 +67,7 @@ private:
     void disableMqttOutput() noexcept;
     void shutdownMqttOverlay() noexcept;
 
+    void writeHelp() noexcept;
     void setStartState() noexcept;
     bool initializeDrivers() noexcept;
     void deinitializeDrivers() noexcept;
@@ -126,43 +118,8 @@ private:
     void logState() noexcept;
 
 
-    static constexpr std::uint8_t IrSensorForwardAdcPin{2U};    // A1
-    static constexpr std::uint8_t IrSensorLeftAdcPin{1U};       // A0
-    static constexpr std::uint8_t IrSensorRightAdcPin{4U};      // A3
-
-
-    // l298 Motor
-    static constexpr std::uint8_t l298MotorPwm{2};      //
-    static constexpr std::uint8_t l298MotorGpio1{3};    //
-    static constexpr std::uint8_t l298MotorGpio2{4};    //
-
-    // M6550
-    static constexpr std::uint8_t mp6550MotorPwmForwardPin{5U};   // D2 / GPIO5
-    static constexpr std::uint8_t mp6550MotorPwmBackwardPin{6U};  // D3 / GPIO6
-    static constexpr std::uint8_t mp6550MotorSleepPin{7U};        // D4 / GPIO7
-    static constexpr std::uint8_t steeringServoPwmPin{9U};        // D6 /
-
-    // Odometer (A3144 Hall-effect sensor)
-    static constexpr std::uint8_t odometerPin{18U};                       // D9 / GPIO18 (ADC2_CH7)
-    static constexpr std::uint8_t odometerPulsesPerRevolution{2U};        // 2 magnets per wheel
-    static constexpr float odometerWheelDiameterM{0.031F};                // 31 mm wheel
-
-
-    std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
-    std::unique_ptr<driver::pwm::Interface> myMotorBackwardsPwm;
-    std::unique_ptr<driver::gpio::Interface> myMotorSleep;
-    std::unique_ptr<driver::gpio::Interface> myOdometerGpio;
-    std::unique_ptr<driver::adc::Interface> myIrSensorForwardAdc;
-    std::unique_ptr<driver::adc::Interface> myIrSensorLeftAdc;
-    std::unique_ptr<driver::adc::Interface> myIrSensorRightAdc;
-    std::unique_ptr<driver::motor::Interface> myMotor;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorForward;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorLeft;
-    std::unique_ptr<driver::ir_sensor::Interface> myIrSensorRight;
+    car::Interface& myCar;
     std::unique_ptr<driver::serial::Interface> mySerial;
-    std::unique_ptr<driver::pwm::Interface> mySteeringServoPwm;
-    std::unique_ptr<driver::servo::Interface> mySteeringServo;
-    std::unique_ptr<driver::odometer::Interface> myOdometer;
 
     bool myBlinkEnabled{false};
     bool myLogEnabled{false};
