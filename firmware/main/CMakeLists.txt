@@ -19,6 +19,7 @@ idf_component_register(
         "source/driver/motor/mp6550.cpp"
         "source/driver/odometer/a3144.cpp"
         "source/driver/pwm/esp32s3.cpp"
+        "source/driver/servo/ford.cpp"
         "source/driver/servo/vagrant.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"
