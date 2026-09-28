@@ -95,6 +95,14 @@ public:
     std::unique_ptr<servo::Interface> vagrantServo(pwm::Interface& pwm) noexcept override;
 
     /**
+     * @brief Create a real Ford servo driver backed by a PWM output.
+     *
+     * @param[in] pwm PWM output driver used to control the servo signal.
+     * @return A unique pointer to the created servo interface instance.
+     */
+    std::unique_ptr<servo::Interface> fordServo(pwm::Interface& pwm) noexcept override;
+
+    /**
      * @brief Create a real MP6550 motor driver instance.
      *
      * @param[in] MotorForwardsPwm PWM output driver used for IN1.

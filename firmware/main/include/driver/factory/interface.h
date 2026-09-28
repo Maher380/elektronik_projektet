@@ -88,6 +88,14 @@ public:
     virtual std::unique_ptr<servo::Interface> vagrantServo(pwm::Interface& pwm) noexcept = 0;
 
     /**
+     * @brief Create a Ford servo driver instance backed by a PWM output.
+     *
+     * @param[in] pwm PWM output driver used to control the servo signal.
+     * @return A unique pointer to the created servo interface instance.
+     */
+    virtual std::unique_ptr<servo::Interface> fordServo(pwm::Interface& pwm) noexcept = 0;
+
+    /**
      * @brief Create an Ir sensor driver instance.
      *
      * @param[in] adc Reference to an initialized ADC driver instance used for reading.
