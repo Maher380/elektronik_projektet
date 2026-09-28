@@ -27,6 +27,7 @@ idf_component_register(
         "source/driver/mqtt/esp32s3.cpp"
         "source/system/communication/manager.cpp"
         "source/system/runtime/control.cpp"
+        "source/system/car/id.cpp"
         ${car_source}
 
     INCLUDE_DIRS

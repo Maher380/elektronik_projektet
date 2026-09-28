@@ -12,8 +12,8 @@ label; it is not written in the C++ call.
 
 ## Pins Used By CnB
 
-These are the calls and physical pins used by the current three-sensor code on
-`SCRUM-56-fix-adc-support-for-multiple-ir-sensors`.
+These are the pins used by Vagrant, set in `system/car/vagrant.h`. GPIO21 is the
+car ID pin and is reserved on every car.
 
 | Driver call | Pin on Arduino | Driver function | Connected hardware | Status |
 | --- | --- | --- | --- | --- |
@@ -25,6 +25,7 @@ These are the calls and physical pins used by the current three-sensor code on
 | `factory.gpioOutput(7)` | `~D4` | 🔌 Digital output | MP6550 nSLEEP | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo | 🔵 Used |
 | `factory.odometer(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor | 🔵 Used |
+| `factory.gpioInputPullup(21)` | `~D10` | 🔌 Digital input | Car ID pin: open on Vagrant, GND on Ford | 🔵 Used |
 
 Power connections do not use driver factory calls:
 
@@ -70,7 +71,7 @@ Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,
 | `14` | `A7 / ~D24` | ⚠️ ADC2_CH3 | ✅ | Analog / digital | 🟢 Available |
 | `17` | `~D8` | ⚠️ ADC2_CH6 | ✅ | Digital / PWM | 🟢 Available |
 | `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🔵 Odometer (A3144 Hall sensor) |
-| `21` | `~D10` | - | ✅ | Digital / PWM | 🟢 Available |
+| `21` | `~D10` | - | ✅ | Digital / PWM | 🔵 Car ID pin, reserved on every car |
 | `38` | `~D11` | - | ✅ | SPI COPI | 🟡 Shared function |
 | `43` | `~D1 / TX0` | - | ✅ | UART transmit | 🟡 Shared function |
 | `44` | `~D0 / RX0` | - | ✅ | UART receive | 🟡 Shared function |

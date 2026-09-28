@@ -21,6 +21,9 @@ namespace app::car
 
 /**
  * @brief The Vagrant car.
+ *
+ * If the car ID pin says the firmware is not running on Vagrant, no drivers are
+ * created and the car has no parts.
  */
 class Vagrant final : public Interface
 {
@@ -34,6 +37,7 @@ public:
     driver::servo::Interface* steering() noexcept override;
     driver::odometer::Interface* odometer() noexcept override;
     bool readObstacleDistances(navigation::Distances& distances) noexcept override;
+    const char* problem() const noexcept override;
     void enableMotorOutput() noexcept override;
     void disableMotorOutput() noexcept override;
     bool handleSerialCommand(const char* command, const char* argument, bool hasArgument,
@@ -62,6 +66,7 @@ private:
     static constexpr std::uint8_t odometerPulsesPerRevolution{2U};        // 2 magnets per wheel
     static constexpr float odometerWheelDiameterM{0.031F};                // 31 mm wheel
 
+    const bool myIsOnCar;
     std::unique_ptr<driver::pwm::Interface> myMotorForwardsPwm;
     std::unique_ptr<driver::pwm::Interface> myMotorBackwardsPwm;
     std::unique_ptr<driver::gpio::Interface> myMotorSleep;

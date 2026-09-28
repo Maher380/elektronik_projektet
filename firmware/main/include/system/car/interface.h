@@ -56,6 +56,13 @@ public:
      */
     virtual bool readObstacleDistances(navigation::Distances& distances) noexcept = 0;
 
+    /**
+     * @brief Get the reason this car cannot drive, if any.
+     *
+     * @return A message ending in a newline, or nullptr if there is no problem.
+     */
+    virtual const char* problem() const noexcept { return nullptr; }
+
     /** Power the motor output before an authorized action. */
     virtual void enableMotorOutput() noexcept {}
 

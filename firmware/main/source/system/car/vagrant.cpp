@@ -15,6 +15,7 @@
 #include "driver/pwm/interface.h"
 #include "driver/serial/interface.h"
 #include "driver/servo/interface.h"
+#include "system/car/id.h"
 #include "system/communication/manager.h"
 
 namespace
@@ -55,7 +56,10 @@ namespace app::car
 {
 
 Vagrant::Vagrant(driver::factory::Interface& factory) noexcept
+    : myIsOnCar{isRunningOn(factory, Id::Vagrant)}
 {
+    if (!myIsOnCar) { return; }
+
     myMotorForwardsPwm = factory.pwm(mp6550MotorPwmForwardPin);
     myMotorBackwardsPwm = factory.pwm(mp6550MotorPwmBackwardPin);
     myMotorSleep = factory.gpioOutput(mp6550MotorSleepPin);
@@ -101,6 +105,9 @@ Vagrant::~Vagrant() noexcept = default;
 
 bool Vagrant::init() noexcept
 {
+    // Nothing to initialize when the firmware runs on another car.
+    if (!myIsOnCar) { return true; }
+
     // Verify that all required driver objects were created.
     if (!myMotorForwardsPwm ||
         !myMotorBackwardsPwm ||
@@ -213,6 +220,12 @@ bool Vagrant::readObstacleDistances(navigation::Distances& distances) noexcept
         return true;
     }
     return false;
+}
+
+const char* Vagrant::problem() const noexcept
+{
+    return myIsOnCar ? nullptr
+                     : "Car ID pin (D10) says this is not Vagrant. Motor and steering are disabled.\n";
 }
 
 void Vagrant::enableMotorOutput() noexcept

@@ -127,6 +127,10 @@ Logic::Logic(driver::factory::Interface& factory, car::Interface& car) noexcept
             vTaskDelay(pdMS_TO_TICKS(1000U));
         }
     }
+    if (myCar.problem() != nullptr)
+    {
+        mySerial->write(myCar.problem());
+    }
     // MQTT overlay: boot disarmed after SCRUM-16 driver initialization.
     initializeMqttOverlay();
 }

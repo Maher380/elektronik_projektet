@@ -1,12 +1,13 @@
 #include "system/car/ford.h"
 
+#include "system/car/id.h"
+
 namespace app::car
 {
 
 Ford::Ford(driver::factory::Interface& factory) noexcept
-{
-    (void)factory;
-}
+    : myIsOnCar{isRunningOn(factory, Id::Ford)}
+{}
 
 bool Ford::init() noexcept { return true; }
 
@@ -22,6 +23,12 @@ bool Ford::readObstacleDistances(navigation::Distances& distances) noexcept
 {
     (void)distances;
     return false;
+}
+
+const char* Ford::problem() const noexcept
+{
+    return myIsOnCar ? nullptr
+                     : "Car ID pin (D10) says this is not Ford. Motor and steering are disabled.\n";
 }
 
 } // namespace app::car

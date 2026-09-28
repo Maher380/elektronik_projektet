@@ -30,9 +30,12 @@
 #else
 
 #include "driver/factory/esp32s3.h"
+#include "esp_log.h"
+#include "system/car/id.h"
 #include "system/car/target.h"
 #include "system/logic/logic.h"
 #include <atomic>
+#include <cstring>
 #include "sdkconfig.h"
 
 #if CONFIG_CNB_ENABLE_MQTT
@@ -187,6 +190,21 @@ extern "C" void app_main(void)
     #else
     std::atomic<bool> stop{false};
     driver::factory::Esp32s3 factory;
+
+    // Log which car the firmware is built for and which car D10 says it runs on.
+    app::car::Id hardwareCar{};
+    const char* hardwareCarName = app::car::readHardwareCar(factory, hardwareCar)
+        ? app::car::toString(hardwareCar) : "unknown (D10 could not be read)";
+    if (std::strcmp(hardwareCarName, CONFIG_CNB_CAR_KEY) == 0)
+    {
+        ESP_LOGI("car", "Firmware car: %s, hardware car (D10): %s", CONFIG_CNB_CAR_KEY, hardwareCarName);
+    }
+    else
+    {
+        ESP_LOGW("car", "Firmware car: %s, hardware car (D10): %s. Mismatch, the car will not drive.",
+                 CONFIG_CNB_CAR_KEY, hardwareCarName);
+    }
+
     app::car::Target car(factory);
     app::logic::Logic logic(factory, car);
     logic.run(stop);

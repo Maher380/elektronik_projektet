@@ -15,7 +15,7 @@ namespace app::car
 /**
  * @brief The Ford car.
  *
- * Parts are added as Ford's hardware is decided.
+ * Only checks the car ID pin for now. Parts are added as Ford's hardware is decided.
  */
 class Ford final : public Interface
 {
@@ -29,6 +29,10 @@ public:
     driver::servo::Interface* steering() noexcept override;
     driver::odometer::Interface* odometer() noexcept override;
     bool readObstacleDistances(navigation::Distances& distances) noexcept override;
+    const char* problem() const noexcept override;
+
+private:
+    const bool myIsOnCar;
 };
 
 } // namespace app::car
