@@ -52,6 +52,18 @@ idf.py build
 idf.py -p <PORT> flash monitor
 ```
 
+A plain `idf.py build` builds for Vagrant. To build for a specific car, give
+it its own build directory and sdkconfig, here for Ford:
+
+```bash
+cd firmware
+idf.py -B build-ford -D SDKCONFIG=build-ford/sdkconfig -D "SDKCONFIG_DEFAULTS=sdkconfig.defaults;sdkconfig.defaults.ford" build
+```
+
+The target car sets the car's pins and parts, its MQTT client ID
+(`cnb-<car>`) and topics (`cnb/<car>/...`). GPIO21 (D10) is the car ID pin:
+open on Vagrant, tied to GND on Ford. A build on the wrong car does not drive.
+
 Serial output is enabled over USB for later sensor testing. The application
 prints `CnB serial ready` after the serial driver starts.
 

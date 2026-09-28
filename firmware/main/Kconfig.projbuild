@@ -1,3 +1,27 @@
+menu "Autonomous car target"
+
+    choice CNB_TARGET_CAR
+        prompt "Target car"
+        default CNB_CAR_VAGRANT
+        help
+            The car this firmware is built for. It selects the car's pins and
+            parts, and its car name on the network.
+
+        config CNB_CAR_VAGRANT
+            bool "Vagrant"
+
+        config CNB_CAR_FORD
+            bool "Ford"
+
+    endchoice
+
+    config CNB_CAR_KEY
+        string
+        default "vagrant" if CNB_CAR_VAGRANT
+        default "ford" if CNB_CAR_FORD
+
+endmenu
+
 menu "Autonomous car network configuration"
 
     config CNB_ENABLE_WIFI
@@ -34,15 +58,10 @@ menu "Autonomous car network configuration"
             help
                 LAN URI of the Mosquitto broker. Do not use localhost.
 
-        config CNB_MQTT_CLIENT_ID
-            string "MQTT client ID"
-            default "cnb-vagrant"
-            help
-                Unique MQTT client identity for this car.
-
         config CNB_MQTT_USERNAME
             string "MQTT username"
-            default "cnb-vagrant"
+            default "cnb-vagrant" if CNB_CAR_VAGRANT
+            default "cnb-ford" if CNB_CAR_FORD
             help
                 Mosquitto username allowed by the car ACL.
 

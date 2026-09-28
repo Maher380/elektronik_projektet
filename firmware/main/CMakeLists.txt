@@ -1,3 +1,10 @@
+# Only the target car's class is compiled in.
+if(CONFIG_CNB_CAR_FORD)
+    set(car_source "source/system/car/ford.cpp")
+else()
+    set(car_source "source/system/car/vagrant.cpp")
+endif()
+
 idf_component_register(
     SRCS
         "source/main.cpp"
@@ -9,6 +16,7 @@ idf_component_register(
         "source/driver/motor/mp6550.cpp"
         "source/driver/odometer/a3144.cpp"
         "source/driver/pwm/esp32s3.cpp"
+        "source/driver/servo/ford.cpp"
         "source/driver/servo/vagrant.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"
@@ -20,6 +28,8 @@ idf_component_register(
         "source/driver/mqtt/esp32s3.cpp"
         "source/system/communication/manager.cpp"
         "source/system/runtime/control.cpp"
+        "source/system/car/id.cpp"
+        ${car_source}
 
     INCLUDE_DIRS
         "include"
