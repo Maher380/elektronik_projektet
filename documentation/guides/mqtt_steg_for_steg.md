@@ -111,7 +111,6 @@ Under **Autonomous car network configuration**, fyll i:
 | WiFi SSID / password | WiFi-namn och WiFi-lösenord |
 | Enable MQTT telemetry and runtime control | Aktiverat |
 | MQTT broker URI | `mqtt://DATORNS_IPV4:1883` |
-| MQTT client ID | `cnb-vagrant` |
 | MQTT username | `cnb-vagrant` |
 | MQTT password | Lösenordet du skapade för bilen |
 
