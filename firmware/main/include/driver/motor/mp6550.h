@@ -69,7 +69,7 @@ public:
      *
      * @param[in] speed Speed in range 0.0f - 1.0f, where 1.0f is full output.
      * @param[in] mode Stop behavior to apply.
-     * @return True if the speed was accepted, false otherwise.
+     * @return True if both PWM outputs accepted the finite speed in [0, 1].
      */
     bool setSpeed(float speed, StopMode mode = StopMode::Coast) noexcept override;
 
@@ -77,7 +77,7 @@ public:
      * @brief Stop the motor.
      *
      * @param[in] mode Stop behavior to apply.
-     * @return True if the stop command was accepted, false otherwise.
+     * @return True if both PWM outputs accepted the requested stop state.
      */
     bool stop(StopMode mode = StopMode::Coast) noexcept override;
 

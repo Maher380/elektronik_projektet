@@ -17,7 +17,7 @@ namespace driver::servo
 /**
  * @brief Servo implementation controlled by PWM frequency.
  *
- * The Vagrant controller uses 215 Hz for maximum right, 300 Hz for forward,
+ * The Vagrant controller uses 215 Hz for maximum right, 330 Hz for forward,
  * and 500 Hz for maximum left.
  */
 class Vagrant final : public Interface

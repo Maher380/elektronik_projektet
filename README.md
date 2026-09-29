@@ -119,6 +119,14 @@ Each pull request should include:
 - how it was tested
 - the related Jira task, if one exists
 
+## Vagrant system logic
+
+The Vagrant logic runs the integrated IR/motor/servo loop. `main.cpp` starts
+the target logic selected under Target car in `idf.py menuconfig`. Ford and the
+third car are placeholders that leave the motor disabled until implemented.
+See [system test setup and MQTT extensions](documentation/guides/main_system_test.md)
+for wiring, behavior, configuration and host tests.
+
 ## Attribution
 
 This project includes code derived from
