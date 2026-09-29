@@ -1,8 +1,9 @@
-# Systemtest i main.cpp
+# Vagrants systemlogik
 
-Denna gren kör den lokalt provade testloopen direkt i `firmware/main/source/main.cpp`.
+Den lokalt provade loopen ligger i `firmware/main/source/system/logic/vagrantLogic.cpp`.
+`firmware/main/source/main.cpp` startar den billogik som valts i menuconfig.
 Drivrutiner hämtas via factory. `Control::authorizeAction()` kontrollerar MQTT-start,
-anslutning och heartbeat; vägval och motor-/servokommandon bestäms i `main.cpp`.
+anslutning och heartbeat; vägval och motor-/servokommandon bestäms i Vagrants logik.
 
 Bygg, flasha och starta MQTT enligt [MQTT-guiden](mqtt_steg_for_steg.md).
 Checka ut hela grenen: testet kräver även runtime- och kommunikationsfilerna.
@@ -61,7 +62,7 @@ fungerar som tidigare. Kör endast en operatör åt gången.
 
 Dessa värden fungerade bäst vid den senaste körningen, men är **inte standardvärden**:
 duty **0,44**, stopp **45 cm**, reaktion **52 cm**, loop **20 ms**, telemetri **200 ms**.
-De finns också som kommentar överst i `main.cpp`.
+De finns också som kommentar överst i `vagrantLogic.cpp`.
 
 Från projektroten, med broker och bil anslutna:
 
@@ -74,8 +75,8 @@ Det andra kommandot är ett separat servotest som stoppar motorn. Kontrollera al
 kvittensen i `command/state`. Det första kommandot sparar inställningarna retained
 hos brokern; firmwarestandarderna ändras inte.
 
-Odometerdrivrutinerna från senaste `main` finns kvar, men denna gren kör systemloopen
-i `main.cpp` i stället för `Logic::run()` och odometerns separata testläge.
+Odometerdrivrutinerna från senaste `main` finns kvar. Vagrant kör systemloopen
+i `VagrantLogic::run()` i stället för den äldre `Logic::run()` och odometerns separata testläge.
 
 ## Automatiskt test på datorn
 
@@ -86,6 +87,6 @@ projektroten (ersätt sökvägarna):
 python tests/run_system_test.py --zig <sökväg-till-zig> --cjson-dir <cJSON-mapp>
 ```
 
-Testet kör den riktiga loopen från `main.cpp` med simulerade sensorer, MQTT och PWM.
+Testet kör den riktiga Vagrant-loopen med simulerade sensorer, MQTT och PWM.
 Det kontrollerar 24 vägvalsfall, väggkorrigering, broms/återstart, servotest, inställningar, telemetri och
 heartbeat-timeout. Det ersätter inte provning på bilen.

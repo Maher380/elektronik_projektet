@@ -141,8 +141,7 @@ struct Factory final : driver::factory::Interface {
 };
 
 
-#define CNB_SYSTEM_TEST_HOST
-#include "../firmware/main/source/main.cpp"
+#include "../firmware/main/source/system/logic/vagrantLogic.cpp"
 
 struct FaultPwm final : driver::pwm::Interface {
     driver::pwm::Stub backing;
@@ -194,7 +193,7 @@ int main() {
         check(decision.angle == row.angle && decision.blocked == row.blocked,
               "route and proportional wall correction");
     }
-    // Test the real navigation block in main.cpp, rather than a copied helper.
+    // Test the real Vagrant navigation block, rather than a copied helper.
     {
         Factory navigation; std::atomic<bool> done{false}; host::ticks = 0;
         unsigned tick = 0, rowIndex = 0;
@@ -212,7 +211,7 @@ int main() {
             }
             ++tick;
         };
-        runSystemTest(navigation, done); host::afterTick = {};
+        app::logic::VagrantLogic{navigation}.run(done); host::afterTick = {};
         check(rowIndex == std::size(cases), "all navigation cases exercised");
     }
     Control runtime{true};
@@ -280,7 +279,7 @@ int main() {
         }
         ++ticks;
     };
-    runSystemTest(f, stop);
+    app::logic::VagrantLogic{f}.run(stop);
     host::afterTick = {};
     check(ticks == 318 && telemetryCount > 0, "complete main loop exercised");
     std::puts("PASS: 24 decision cases including wall correction, configuration bounds, real main loop with MQTT start/servo/replay/stop, braking/recovery, telemetry and heartbeat expiry");

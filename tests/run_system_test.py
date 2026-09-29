@@ -1,4 +1,4 @@
-"""Build and execute main.cpp system-loop integration tests with fake I/O."""
+"""Build and execute the Vagrant control-loop integration tests with fake I/O."""
 from pathlib import Path
 import argparse
 import os

@@ -1,3 +1,22 @@
+menu "Target car"
+
+    choice CNB_TARGET_CAR
+        prompt "Car to build"
+        default CNB_CAR_VAGRANT
+
+        config CNB_CAR_VAGRANT
+            bool "Vagrant"
+
+        config CNB_CAR_FORD
+            bool "Ford (logic placeholder)"
+
+        config CNB_CAR_THIRD
+            bool "Third car (logic placeholder)"
+
+    endchoice
+
+endmenu
+
 menu "Autonomous car network configuration"
 
     config CNB_ENABLE_WIFI

@@ -1,6 +1,15 @@
+if(CONFIG_CNB_CAR_FORD)
+    set(car_logic_source "source/system/logic/fordLogic.cpp")
+elseif(CONFIG_CNB_CAR_THIRD)
+    set(car_logic_source "source/system/logic/thirdLogic.cpp")
+else()
+    set(car_logic_source "source/system/logic/vagrantLogic.cpp")
+endif()
+
 idf_component_register(
     SRCS
         "source/main.cpp"
+        ${car_logic_source}
         "source/driver/adc/esp32s3.cpp"
         "source/driver/factory/esp32s3.cpp"
         "source/driver/gpio/esp32s3.cpp"
@@ -15,8 +24,6 @@ idf_component_register(
         "source/driver/timer/esp32s3.cpp"
         "source/system/pin_manager/esp32s3.cpp"
         "source/driver/wifi/esp32s3.cpp"
-        "source/system/logic/logic.cpp"
-        "source/system/logic/logic_mqtt.cpp"
         "source/driver/mqtt/esp32s3.cpp"
         "source/system/communication/manager.cpp"
         "source/system/runtime/control.cpp"
