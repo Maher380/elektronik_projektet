@@ -11,7 +11,7 @@
 #include <cstdint>
 #include <cstdio>
 
-#include "driver/distance_sensor/srf05.h"
+#include "driver/distance_sensor/srf05_esp32s3.h"
 #include "driver/gpio/esp32s3.h"
 #include "driver/serial/esp32s3.h"
 #include "esp_timer.h"

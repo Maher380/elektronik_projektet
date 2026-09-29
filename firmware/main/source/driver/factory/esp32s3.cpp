@@ -2,7 +2,7 @@
 
 #include "driver/adc/esp32s3.h"
 #include "driver/distance_sensor/gp2y0a21yk.h"
-#include "driver/distance_sensor/srf05.h"
+#include "driver/distance_sensor/srf05_esp32s3.h"
 #include "driver/gpio/esp32s3.h"
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"

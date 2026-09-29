@@ -1,6 +1,7 @@
 /**
- * @file srf05.h
+ * @file srf05_esp32s3.h
  * @brief SRF05 ultrasonic distance sensor driver.
+ * @todo This implementation is currently esp32s3 dependant, it should be refactored to use the GPIO driver instead to become generic
  */
 
 #pragma once

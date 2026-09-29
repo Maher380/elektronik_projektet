@@ -4,8 +4,11 @@
 #include "esp_rom_sys.h"
 #include "esp_timer.h"
 
-#include "driver/distance_sensor/srf05.h"
+#include "driver/distance_sensor/srf05_esp32s3.h"
 #include "driver/gpio/edge.h"
+/** 
+ * @todo This implementation is currently esp32s3 dependant, it should be refactored to use the GPIO driver instead to become generic
+ */
 
 namespace driver::distance_sensor
 {
