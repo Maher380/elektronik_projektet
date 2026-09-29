@@ -34,7 +34,7 @@ Power connections do not use driver factory calls:
 | --- | --- |
 | `VIN` | Approximately 7.2 V battery supply after the power switch |
 | `GND` | Common ground for Arduino, MP6550, regulator, and sensors |
-| External regulated 5 V rail | IR sensor and SRF05 power; the demo used an L7805CV |
+| External regulated 5 V rail | IR sensor and/or SRF05 power; the demo used an L7805CV |
 
 ## Code Value To Board Pin
 
