@@ -9,7 +9,7 @@
 #include <memory>
 #include <vector>
 #include "driver/factory/interface.h"
-#include "driver/ir_sensor/interface.h"
+#include "driver/distance_sensor/interface.h"
 #include "driver/adc/stub.h"
 #include "driver/gpio/stub.h"
 #include "driver/mqtt/stub.h"
