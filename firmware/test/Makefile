@@ -11,7 +11,8 @@ CXX_FLAGS := -Wall -Wextra -Werror -std=c++17 -I$(FIRMWARE_INC_DIR) -I$(TEST_INC
 
 TEST_FILES := \
 	$(TEST_SRC_DIR)/test.cpp \
-	$(TEST_SRC_DIR)/test/pin_manager.cpp
+	$(TEST_SRC_DIR)/test/pin_manager.cpp \
+	$(TEST_SRC_DIR)/test/nvs.cpp
 
 SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/system/pin_manager/esp32s3.cpp \

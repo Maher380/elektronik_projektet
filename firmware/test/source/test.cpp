@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "system/pin_manager/esp32s3.h"
+#include "test/nvs.h"
 #include "test/pin_manager.h"
 
 #include "driver/adc/stub.h"
@@ -12,6 +13,7 @@
 #include "driver/gpio/stub.h"
 #include "driver/distance_sensor/gp2y0a21yk.h"
 #include "driver/motor/l298n.h"
+#include "driver/nvs/stub.h"
 #include "driver/pwm/stub.h"
 
 int main()
@@ -19,6 +21,9 @@ int main()
     auto& pinManager = sys::pin_manager::Esp32s3::instance();
 
     if (!test::runPinManagerTest(pinManager)) { return -1; }
+
+    driver::nvs::Stub testNvs;
+    if (!test::runNvsTest(testNvs)) { return -1; }
 
     driver::adc::Stub testAdc;
     driver::distance_sensor::GP2Y0A21YK testSensor{testAdc};
