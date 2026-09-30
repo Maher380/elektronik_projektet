@@ -61,7 +61,7 @@ std::unique_ptr<pwm::Interface> Esp32s3::pwm(const driver::pwm::Config& config) 
     return std::make_unique<driver::pwm::Esp32s3>(config);
 }
 
-std::unique_ptr<servo::Interface> Esp32s3::servo(driver::pwm::Interface& pwm) noexcept {
+std::unique_ptr<servo::Interface> Esp32s3::vagrantServo(driver::pwm::Interface& pwm) noexcept {
     return std::make_unique<driver::servo::Vagrant>(pwm);
 }
 

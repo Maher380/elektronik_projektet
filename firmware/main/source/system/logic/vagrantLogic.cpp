@@ -101,7 +101,7 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
     { ESP_LOGE("SYSTEM", "Driver allocation failed"); return; }
     // Wrappers use the PWM/ADC drivers above; declaration order keeps them alive.
     auto motor = factory.motor(*forwardPwm, *backwardPwm);
-    auto servo = factory.servo(*servoPwm);
+    auto servo = factory.vagrantServo(*servoPwm);
     auto left = factory.ir_sensor(*leftAdc);
     auto center = factory.ir_sensor(*centerAdc);
     auto right = factory.ir_sensor(*rightAdc);

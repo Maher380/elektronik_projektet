@@ -158,7 +158,7 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     }
     if (mySteeringServoPwm)
     {
-        mySteeringServo = factory.servo(*mySteeringServoPwm);
+        mySteeringServo = factory.vagrantServo(*mySteeringServoPwm);
     }
     if (myOdometerGpio)
     {

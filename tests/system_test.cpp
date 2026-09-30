@@ -83,7 +83,7 @@ struct Factory final : driver::factory::Interface {
         auto value = std::make_unique<driver::pwm::Stub>(config);
         pwms[config.pin] = value.get(); return value;
     }
-    std::unique_ptr<driver::servo::Interface> servo(driver::pwm::Interface& p) noexcept override {
+    std::unique_ptr<driver::servo::Interface> vagrantServo(driver::pwm::Interface& p) noexcept override {
         return std::make_unique<driver::servo::Vagrant>(p);
     }
     std::unique_ptr<driver::servo::Interface> fordServo(driver::pwm::Interface&) noexcept override {
