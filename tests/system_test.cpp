@@ -10,6 +10,7 @@
 #include <vector>
 #include "driver/factory/interface.h"
 #include "driver/distance_sensor/interface.h"
+#include "driver/distance_sensor/stub.h"
 #include "driver/adc/stub.h"
 #include "driver/gpio/stub.h"
 #include "driver/mqtt/stub.h"
@@ -92,6 +93,10 @@ struct Factory final : driver::factory::Interface {
             }
         }
         std::abort();
+    }
+    std::unique_ptr<driver::distance_sensor::Interface> ultrasonic_sensor(driver::gpio::Interface&,
+                                                                          driver::gpio::Interface&) noexcept override {
+        return std::make_unique<driver::distance_sensor::Stub>();
     }
     std::unique_ptr<driver::motor::Interface> motor(driver::pwm::Interface& f, driver::pwm::Interface& b) noexcept override {
         return std::make_unique<driver::motor::MP6550>(f, b);
