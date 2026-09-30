@@ -11,7 +11,7 @@
 
 #include "driver/adc/stub.h"
 #include "driver/gpio/stub.h"
-#include "driver/ir_sensor/stub.h"
+#include "driver/distance_sensor/stub.h"
 #include "driver/motor/stub.h"
 #include "driver/odometer/stub.h"
 #include "driver/mqtt/stub.h"
@@ -123,9 +123,21 @@ public:
      * @param[in] adc Reference to the initialized ADC driver instance to use for reading.
      * @return A unique pointer ti the vreated simulated IR-Senor interface instance.
      */
-    std::unique_ptr<ir_sensor::Interface> ir_sensor(adc::Interface&) noexcept override
+    std::unique_ptr<distance_sensor::Interface> ir_sensor(adc::Interface&) noexcept override
     {
-        return std::make_unique<driver::ir_sensor::Stub>();
+        return std::make_unique<driver::distance_sensor::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated ultrasonic distance sensor stub instance.
+     *
+     * @param[in] trigger Reference to the GPIO output connected to the sensor trigger pin.
+     * @param[in] echo Reference to the GPIO input connected to the sensor echo pin.
+     * @return A unique pointer to the created simulated distance sensor interface instance.
+     */
+    std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(gpio::Interface&, gpio::Interface&) noexcept override
+    {
+        return std::make_unique<driver::distance_sensor::Stub>();
     }
 
     /**

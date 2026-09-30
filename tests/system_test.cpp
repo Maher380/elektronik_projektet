@@ -9,7 +9,8 @@
 #include <memory>
 #include <vector>
 #include "driver/factory/interface.h"
-#include "driver/ir_sensor/interface.h"
+#include "driver/distance_sensor/interface.h"
+#include "driver/distance_sensor/stub.h"
 #include "driver/adc/stub.h"
 #include "driver/gpio/stub.h"
 #include "driver/mqtt/stub.h"
@@ -32,7 +33,7 @@ void check(bool ok, const char* message) {
     if (!ok) { std::fprintf(stderr, "FAIL: %s\n", message); std::abort(); }
 }
 
-struct Sensor final : driver::ir_sensor::Interface {
+struct Sensor final : driver::distance_sensor::Interface {
     driver::adc::Interface& adc;
     std::vector<int>& reads;
     int pin;
@@ -84,7 +85,7 @@ struct Factory final : driver::factory::Interface {
     std::unique_ptr<driver::servo::Interface> servo(driver::pwm::Interface& p) noexcept override {
         return std::make_unique<driver::servo::Vagrant>(p);
     }
-    std::unique_ptr<driver::ir_sensor::Interface> ir_sensor(driver::adc::Interface& a) noexcept override {
+    std::unique_ptr<driver::distance_sensor::Interface> ir_sensor(driver::adc::Interface& a) noexcept override {
         for (unsigned pin = 0; pin < adcs.size(); ++pin) {
             if (adcs[pin] == &a) {
                 auto value = std::make_unique<Sensor>(a, reads, static_cast<int>(pin));
@@ -92,6 +93,10 @@ struct Factory final : driver::factory::Interface {
             }
         }
         std::abort();
+    }
+    std::unique_ptr<driver::distance_sensor::Interface> ultrasonic_sensor(driver::gpio::Interface&,
+                                                                          driver::gpio::Interface&) noexcept override {
+        return std::make_unique<driver::distance_sensor::Stub>();
     }
     std::unique_ptr<driver::motor::Interface> motor(driver::pwm::Interface& f, driver::pwm::Interface& b) noexcept override {
         return std::make_unique<driver::motor::MP6550>(f, b);

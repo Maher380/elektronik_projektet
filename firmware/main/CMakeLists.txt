@@ -13,7 +13,8 @@ idf_component_register(
         "source/driver/adc/esp32s3.cpp"
         "source/driver/factory/esp32s3.cpp"
         "source/driver/gpio/esp32s3.cpp"
-        "source/driver/ir_sensor/esp32s3.cpp"
+        "source/driver/distance_sensor/gp2y0a21yk.cpp"
+        "source/driver/distance_sensor/srf05_esp32s3.cpp"
         "source/driver/motor/l298n.cpp"
         "source/driver/motor/mp6550.cpp"
         "source/driver/odometer/a3144.cpp"
@@ -27,6 +28,9 @@ idf_component_register(
         "source/driver/mqtt/esp32s3.cpp"
         "source/system/communication/manager.cpp"
         "source/system/runtime/control.cpp"
+        "source/test_app/driver_test.cpp"
+        "source/test_app/odometer_test.cpp"
+        "source/test_app/srf05_test.cpp"
 
     INCLUDE_DIRS
         "include"

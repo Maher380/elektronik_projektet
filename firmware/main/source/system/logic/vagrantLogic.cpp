@@ -8,7 +8,7 @@
 #include "driver/factory/interface.h"
 #include "driver/adc/interface.h"
 #include "driver/gpio/interface.h"
-#include "driver/ir_sensor/interface.h"
+#include "driver/distance_sensor/interface.h"
 #include "driver/motor/interface.h"
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
