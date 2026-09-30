@@ -9,6 +9,8 @@ sdkconfig.old
 dependencies.lock
 managed_components/
 firmware/.cache/
+# ESP-IDF monitor log files (Ctrl+T, Ctrl+L), written to the directory the monitor was started in.
+log.*.txt
 tools/mqtt/.env
 tools/mqtt/.revision
 tools/mqtt/logs/
