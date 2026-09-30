@@ -96,12 +96,23 @@ public:
     }
 
     /**
-     * @brief Create a simulated servo driver instance.
+     * @brief Create a simulated Vagrant servo driver instance.
      *
      * @param[in] pwm PWM output driver used by the simulated servo (unused).
      * @return A unique pointer to the created simulated servo interface instance.
      */
-    std::unique_ptr<servo::Interface> servo(pwm::Interface& pwm) noexcept override {
+    std::unique_ptr<servo::Interface> vagrantServo(pwm::Interface& pwm) noexcept override {
+        (void)pwm;
+        return std::make_unique<driver::servo::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated Ford servo driver instance.
+     *
+     * @param[in] pwm PWM output driver used by the simulated servo (unused).
+     * @return A unique pointer to the created simulated servo interface instance.
+     */
+    std::unique_ptr<servo::Interface> fordServo(pwm::Interface& pwm) noexcept override {
         (void)pwm;
         return std::make_unique<driver::servo::Stub>();
     }
