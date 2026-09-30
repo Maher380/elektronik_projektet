@@ -10,7 +10,7 @@ number printed on the board.
 The `~` symbol marks a PWM-capable Arduino pin. The symbol is only a visual
 label; it is not written in the C++ call.
 
-## Pins Used By CnB
+## Pins Used By CnB - Vagrant
 
 These are the calls and physical pins used by the current three-sensor code on
 `SCRUM-56-fix-adc-support-for-multiple-ir-sensors`.
@@ -35,6 +35,12 @@ Power connections do not use driver factory calls:
 | `VIN` | Approximately 7.2 V battery supply after the power switch |
 | `GND` | Common ground for Arduino, MP6550, regulator, and sensors |
 | External regulated 5 V rail | IR sensor and/or SRF05 power; the demo used an L7805CV |
+
+## Pins Used By CnB - Ford
+
+| Driver call | Pin on Arduino | Driver function | Connected hardware | Status |
+| --- | --- | --- | --- | --- |
+| `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo (pulse width) | 🔵 Used |
 
 ## Code Value To Board Pin
 
