@@ -32,7 +32,7 @@ void check(bool ok, const char* message) {
     if (!ok) { std::fprintf(stderr, "FAIL: %s\n", message); std::abort(); }
 }
 
-struct Sensor final : driver::ir_sensor::Interface {
+struct Sensor final : driver::distance_sensor::Interface {
     driver::adc::Interface& adc;
     std::vector<int>& reads;
     int pin;
@@ -84,7 +84,7 @@ struct Factory final : driver::factory::Interface {
     std::unique_ptr<driver::servo::Interface> servo(driver::pwm::Interface& p) noexcept override {
         return std::make_unique<driver::servo::Vagrant>(p);
     }
-    std::unique_ptr<driver::ir_sensor::Interface> ir_sensor(driver::adc::Interface& a) noexcept override {
+    std::unique_ptr<driver::distance_sensor::Interface> ir_sensor(driver::adc::Interface& a) noexcept override {
         for (unsigned pin = 0; pin < adcs.size(); ++pin) {
             if (adcs[pin] == &a) {
                 auto value = std::make_unique<Sensor>(a, reads, static_cast<int>(pin));
