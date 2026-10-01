@@ -4,6 +4,7 @@
 #include "driver/distance_sensor/gp2y0a21yk.h"
 #include "driver/distance_sensor/srf05_esp32s3.h"
 #include "driver/gpio/esp32s3.h"
+#include "driver/motor/a89301.h"
 #include "driver/motor/l298n.h"
 #include "driver/motor/mp6550.h"
 #include "driver/odometer/a3144.h"
@@ -67,6 +68,13 @@ std::unique_ptr<servo::Interface> Esp32s3::vagrantServo(driver::pwm::Interface& 
 
 std::unique_ptr<servo::Interface> Esp32s3::fordServo(driver::pwm::Interface& pwm) noexcept {
     return std::make_unique<driver::servo::Ford>(pwm);
+}
+
+std::unique_ptr<motor::Interface> Esp32s3::fordMotor(driver::pwm::Interface& speedPwm,
+                                                     driver::gpio::Interface& direction,
+                                                     driver::gpio::Interface& brake,
+                                                     bool invertDirection) noexcept {
+    return std::make_unique<driver::motor::A89301>(speedPwm, direction, brake, invertDirection);
 }
 
 std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& MotorForwardsPwm,

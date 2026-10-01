@@ -113,6 +113,20 @@ public:
     std::unique_ptr<servo::Interface> fordServo(pwm::Interface& pwm) noexcept override;
 
     /**
+     * @brief Create a real A89301 BLDC motor driver instance.
+     *
+     * @param[in] speedPwm PWM output driver connected to SPD.
+     * @param[in] direction GPIO output driver connected to DIR.
+     * @param[in] brake GPIO output driver connected to BRAKE.
+     * @param[in] invertDirection True to drive DIR low for forward.
+     * @return A unique pointer to the created motor interface instance.
+     */
+    std::unique_ptr<motor::Interface> fordMotor(pwm::Interface& speedPwm,
+                                                gpio::Interface& direction,
+                                                gpio::Interface& brake,
+                                                bool invertDirection) noexcept override;
+
+    /**
      * @brief Create a real MP6550 motor driver instance.
      *
      * @param[in] MotorForwardsPwm PWM output driver used for IN1.

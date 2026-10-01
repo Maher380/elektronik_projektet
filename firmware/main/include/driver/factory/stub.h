@@ -118,6 +118,22 @@ public:
     }
 
     /**
+     * @brief Create a simulated motor stub in place of the Ford A89301 driver.
+     *
+     * @return A unique pointer to the created simulated motor interface instance.
+     */
+    std::unique_ptr<motor::Interface> fordMotor(pwm::Interface& speedPwm,
+                                                gpio::Interface& direction,
+                                                gpio::Interface& brake,
+                                                bool invertDirection) noexcept override {
+        (void)speedPwm;
+        (void)direction;
+        (void)brake;
+        (void)invertDirection;
+        return std::make_unique<driver::motor::Stub>();
+    }
+
+    /**
      * @brief Create a simulated ADC stub instance.
      *
      * @param[in] pin The hardware pin number to simulate (unused).
