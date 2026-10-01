@@ -33,6 +33,21 @@ flash.
 
 Open **http://127.0.0.1:8765**. Without a car: add `-Demo`.
 
+### Drive from a phone on cnb-net
+
+The page is only reachable from the laptop until you turn on LAN access:
+
+1. On the laptop, open **http://127.0.0.1:8765** and click the **LAN OFF** chip
+   at the top. It turns into **LAN ON · 192.168.137.1:8765** (your address may differ).
+   The chip is only shown, and only works, on 127.0.0.1.
+2. The first time, Windows asks whether Node.js may accept connections. Allow it
+   for the network type cnb-net uses (the hotspot is often *Public*).
+3. On the phone (connected to cnb-net), open the address the chip shows.
+
+Anyone on the network can then open the page and drive the car. Click the chip
+again to turn LAN access off; phones lose the page at once. LAN access is always
+off when the console starts.
+
 ## Drive with the arrow keys
 
 Instead of dragging the sliders you can use the **arrow keys** or the

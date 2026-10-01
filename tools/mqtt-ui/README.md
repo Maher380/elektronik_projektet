@@ -16,6 +16,11 @@ cd 'C:\projekt\elektronik_projektet'
 
 Byt sökvägen mot din egen projektrot. Öppna **http://127.0.0.1:8765** och kontrollera **LIVE MQTT**, **BROKER CONNECTED** och **CAR RECEIVING**.
 
+**Andra enheter (t.ex. en telefon på cnb-net):** klicka på **LAN OFF** överst på sidan
+på http://127.0.0.1:8765. Den visar då adressen att öppna på telefonen. Knappen syns och
+fungerar bara på 127.0.0.1, och LAN-åtkomsten är alltid avstängd när servern startar.
+Tillåt Node.js i Windows-brandväggen första gången. Alla på nätet kan då styra bilen.
+
 Ändra inställningar med **Apply settings** och invänta kvittens. **Start car** aktiverar körning; **Stop car** avarmerar. Kör inte `run-car.ps1` samtidigt som panelen styr bilen.
 
 Med systemtest-firmware visas även **Reaction distance**, **Loop interval** och

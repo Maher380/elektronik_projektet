@@ -3,7 +3,8 @@
 // @todo Add tests for the speed hold after start, for the arrow-key steps
 // and for stopping the stream when control ends.
 const $ = id => document.getElementById(id);
-const client = crypto.randomUUID();
+// crypto.randomUUID() only exists on https and localhost; getRandomValues also works over plain http on the LAN.
+const client = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
 const motorLabels = { braked: 'BRAKED', no_drive: 'NO DRIVE', braking: 'BRAKING', driving_forward: 'DRIVING FWD', driving_reverse: 'DRIVING REV' };
 let state = null, csrf = null, stream = null, connected = false, received = 0, pending = 0, feedbackUntil = 0;
 // After every start the car gets speed 0 until the operator moves the speed slider.

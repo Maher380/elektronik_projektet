@@ -1,6 +1,7 @@
 import { Chart, valueOf } from './charts.mjs';
 const $ = id => document.getElementById(id);
-const client = crypto.randomUUID();
+// crypto.randomUUID() only exists on https and localhost; getRandomValues also works over plain http on the LAN.
+const client = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
 const charts = ['left', 'center', 'right', 'steering', 'speed'].map(key => new Chart(key));
 const styles = { decide_action: 'DecideAction', slow_left: 'SlowLeft', slow_right: 'SlowRight', gradual_sweep: 'GradualSweep' };
 let state = null, csrf = null, stream = null, connected = false, received = 0, dirty = false, pending = 0, configLoaded = false;

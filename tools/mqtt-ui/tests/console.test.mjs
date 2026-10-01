@@ -177,3 +177,22 @@ test('HTTP is loopback-only, serves only allowlisted files and requires origin +
   assert.equal((await fetch(url + '/api/stop', options)).status, 200);
   assert.equal(app.control.owner, null);
 });
+test('LAN access is off by default and can only be toggled from 127.0.0.1', async t => {
+  const transport = new DemoTransport(), app = createConsole(transport, 0, 'ford', { addresses: () => ['127.0.0.2'] }), url = await app.listen(); t.after(() => app.close());
+  const port = new URL(url).port, lan = `http://127.0.0.2:${port}`;
+  assert.deepEqual(await (await fetch(url + '/api/lan')).json(), { enabled: false, urls: [], local: true });
+  await assert.rejects(fetch(lan + '/api/bootstrap'));
+  const { csrf } = await (await fetch(url + '/api/bootstrap')).json();
+  const toggle = (base, enabled) => fetch(base + '/api/lan', { method: 'POST', headers: { Origin: base, 'Content-Type': 'application/json', 'X-Cnb-Token': csrf }, body: JSON.stringify({ client: 'a'.repeat(32), enabled }) });
+  const on = await toggle(url, true);
+  assert.equal(on.status, 200); assert.deepEqual((await on.json()).urls, [lan]);
+  assert.equal((await fetch(lan + '/')).status, 200);
+  assert.equal((await (await fetch(lan + '/api/lan')).json()).local, false);
+  assert.equal((await toggle(lan, false)).status, 403);
+  const spoofed = await new Promise(resolve => {
+    http.get(lan + '/api/lan', { headers: { Host: `127.0.0.1:${port}` } }, response => { response.resume(); resolve(response.statusCode); });
+  });
+  assert.equal(spoofed, 403);
+  assert.equal((await toggle(url, false)).status, 200);
+  await assert.rejects(fetch(lan + '/api/bootstrap'));
+});
