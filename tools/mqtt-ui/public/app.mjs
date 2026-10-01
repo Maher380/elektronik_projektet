@@ -113,10 +113,12 @@ function render() {
   $('driver-style').disabled = !!config?.system_test || !ready || armed || pending > 0;
   $('driver-style').closest('label').hidden = !!config?.system_test;
   $('stop-distance').min = config?.system_test ? 1 : 30; $('stop-distance').max = config?.system_test ? 100 : 70;
-  for (const id of ['reaction-field', 'loop-field', 'servo-test', 'motor-test']) $(id).hidden = !config?.system_test;
+  for (const id of ['reaction-field', 'loop-field', 'servo-test']) $(id).hidden = !config?.system_test;
+  $('motor-test').hidden = config?.system_test === false;
   $('set-servo').disabled = !ready || pending > 0 || (!!state.owner && !own);
   $('run-motor').disabled = !motorTestSupported || !ready || pending > 0 || (!!state.owner && !own);
-  $('run-motor').title = motorTestSupported ? '' : 'Starta om web-UI-servern och ladda om sidan.';
+  $('run-motor').title = !motorTestSupported ? 'Starta om web-UI-servern och ladda om sidan.'
+    : !ready ? 'Väntar på bilens systemtest-firmware och färsk telemetri.' : '';
   for (const id of ['drive-duty', 'stop-distance', 'telemetry-interval', 'reaction-distance', 'loop-interval', 'servo-angle', 'motor-direction', 'motor-duty', 'motor-duration']) $(id).disabled = !ready || pending > 0 || (!!state.owner && !own);
   text('config-status', config ? `${dirty ? 'UNSENT CHANGES · ' : ''}Confirmed: ${config.system_test ? 'Longest clearance' : styles[config.driver_style]} · duty ${number(config.drive_duty, 2)} · stop ${number(config.stop_distance_cm, 0)} cm${config.system_test ? ` · reaction ${config.reaction_distance_cm} cm · loop ${config.loop_interval_ms} ms` : ''} · telemetry ${config.telemetry_interval_ms} ms` : 'Waiting for configuration from car');
   if (performance.now() > feedbackUntil) {
