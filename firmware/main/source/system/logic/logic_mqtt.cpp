@@ -14,6 +14,8 @@ DriverStyle legacyStyle(app::navigation::DriverStyle style) noexcept
         case app::navigation::DriverStyle::SlowRight: return DriverStyle::SlowRight;
         case app::navigation::DriverStyle::GradualSweep: return DriverStyle::GradualSweep;
         case app::navigation::DriverStyle::DecideAction: return DriverStyle::DecideAction;
+        // Ford only; Control never selects it for this legacy logic.
+        case app::navigation::DriverStyle::ManualByRemote: return DriverStyle::DecideAction;
     }
     return DriverStyle::DecideAction;
 }

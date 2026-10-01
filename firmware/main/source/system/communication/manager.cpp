@@ -25,17 +25,11 @@ namespace
 constexpr int SchemaVersion{1};
 
 #if CONFIG_CNB_ENABLE_WIFI
-constexpr const char* WifiSsid{CONFIG_CNB_WIFI_SSID};
-constexpr const char* WifiPassword{CONFIG_CNB_WIFI_PASSWORD};
 constexpr std::array<std::uint32_t, 5U> NetworkRetryDelaysMs{
     1000U, 2000U, 5000U, 10000U, 30000U};
 #endif
 
 #if CONFIG_CNB_ENABLE_MQTT
-constexpr const char* MqttBrokerUri{CONFIG_CNB_MQTT_BROKER_URI};
-constexpr const char* MqttClientId{CONFIG_CNB_MQTT_CLIENT_ID};
-constexpr const char* MqttUsername{CONFIG_CNB_MQTT_USERNAME};
-constexpr const char* MqttPassword{CONFIG_CNB_MQTT_PASSWORD};
 constexpr const char* MqttOnlinePayload{"{\"schema_version\":1,\"online\":true}"};
 constexpr const char* MqttOfflinePayload{"{\"schema_version\":1,\"online\":false}"};
 constexpr std::size_t MaxMqttMessagesPerTick{8U};
@@ -70,6 +64,7 @@ struct WireTelemetrySnapshot
     float steeringDegrees{0.0F};
     float forwardDuty{0.0F};
     float backwardDuty{0.0F};
+    const char* motorState{nullptr};
     runtime::ControlState controlState{runtime::ControlState::Disarmed};
     runtime::MotionState motionState{runtime::MotionState::Stopped};
     runtime::StateReason reason{runtime::StateReason::Boot};
@@ -90,6 +85,7 @@ const char* toString(navigation::DriverStyle style) noexcept
         case navigation::DriverStyle::SlowLeft: return "slow_left";
         case navigation::DriverStyle::SlowRight: return "slow_right";
         case navigation::DriverStyle::GradualSweep: return "gradual_sweep";
+        case navigation::DriverStyle::ManualByRemote: return "manual_by_remote";
     }
     return "invalid";
 }
@@ -97,9 +93,10 @@ const char* toString(navigation::DriverStyle style) noexcept
 bool readDriverStyle(const cJSON* item, navigation::DriverStyle& style, ParseError& error) noexcept
 {
     if (!cJSON_IsString(item)) { error = ParseError::InvalidType; return false; }
+    // Control decides which of these styles the car can actually run.
     constexpr navigation::DriverStyle styles[]{navigation::DriverStyle::DecideAction,
         navigation::DriverStyle::SlowLeft, navigation::DriverStyle::SlowRight,
-        navigation::DriverStyle::GradualSweep};
+        navigation::DriverStyle::GradualSweep, navigation::DriverStyle::ManualByRemote};
     for (const auto candidate : styles)
     {
         if (std::strcmp(item->valuestring, toString(candidate)) == 0) { style = candidate; return true; }
@@ -361,15 +358,20 @@ bool parseCommand(const char* payload,
 
     const bool servo = std::strcmp(commandItem->valuestring, "servo") == 0;
     const bool heartbeat = std::strcmp(commandItem->valuestring, "heartbeat") == 0;
+    const bool drive = std::strcmp(commandItem->valuestring, "drive") == 0;
     constexpr const char* HeartbeatFields[]{"schema_version", "session_id", "command"};
     constexpr const char* ControlFields[]{
         "schema_version", "request_id", "session_id", "command"};
 
     constexpr const char* ServoFields[]{
         "schema_version", "request_id", "session_id", "command", "angle_deg"};
-    const char* const* fields = heartbeat ? HeartbeatFields : servo ? ServoFields : ControlFields;
+    // Streamed several times a second without acknowledgement, like a heartbeat.
+    constexpr const char* DriveFields[]{
+        "schema_version", "session_id", "command", "steering_command", "speed_command"};
+    const char* const* fields = heartbeat ? HeartbeatFields : drive ? DriveFields
+        : servo ? ServoFields : ControlFields;
     const std::size_t fieldCount = heartbeat ? std::size(HeartbeatFields)
-                                             : servo ? std::size(ServoFields) : std::size(ControlFields);
+        : drive ? std::size(DriveFields) : servo ? std::size(ServoFields) : std::size(ControlFields);
     bool valid = validateFields(root, fields, fieldCount, error) && readSchema(root, error)
         && copySession(root, command.sessionId);
 
@@ -384,6 +386,18 @@ bool parseCommand(const char* payload,
     {
         command.type = runtime::CommandType::Heartbeat;
         command.hasRequestId = false;
+    }
+    else if (drive)
+    {
+        command.type = runtime::CommandType::Drive;
+        command.hasRequestId = false;
+        if (!readFloat(root, "steering_command", command.steeringCommand)
+            || !readFloat(root, "speed_command", command.speedCommand))
+        {
+            error = ParseError::InvalidType;
+            cJSON_Delete(root);
+            return false;
+        }
     }
     else
     {
@@ -574,6 +588,8 @@ bool writeTelemetry(char* destination,
         && (cJSON_AddNumberToObject(motor, "speed_command", snapshot.speedCommand) != nullptr)
         && (cJSON_AddNumberToObject(motor, "forward_duty", snapshot.forwardDuty) != nullptr)
         && (cJSON_AddNumberToObject(motor, "backward_duty", snapshot.backwardDuty) != nullptr)
+        && ((snapshot.motorState == nullptr)
+            || (cJSON_AddStringToObject(motor, "state", snapshot.motorState) != nullptr))
         && (cJSON_AddStringToObject(root,
                                     "control_state",
                                     toString(snapshot.controlState))
@@ -676,6 +692,7 @@ const char* toString(runtime::StateReason reason) noexcept
         case runtime::StateReason::HeartbeatTimeout: return "heartbeat_timeout";
         case runtime::StateReason::MqttDisconnected: return "mqtt_disconnected";
         case runtime::StateReason::MessageOverflow: return "message_overflow";
+        case runtime::StateReason::DriveTimeout: return "drive_timeout";
         case runtime::StateReason::None: return "none";
     }
     return "none";
@@ -683,18 +700,37 @@ const char* toString(runtime::StateReason reason) noexcept
 
 } // namespace
 
-Manager::Manager(driver::factory::Interface& factory, const Topics& topics) noexcept
+NetworkSettings kconfigNetworkSettings() noexcept
+{
+    NetworkSettings settings{};
+#if CONFIG_CNB_ENABLE_WIFI
+    settings.wifiSsid = CONFIG_CNB_WIFI_SSID;
+    settings.wifiPassword = CONFIG_CNB_WIFI_PASSWORD;
+#endif
+#if CONFIG_CNB_ENABLE_MQTT
+    settings.mqttBrokerUri = CONFIG_CNB_MQTT_BROKER_URI;
+    settings.mqttClientId = CONFIG_CNB_MQTT_CLIENT_ID;
+    settings.mqttUsername = CONFIG_CNB_MQTT_USERNAME;
+    settings.mqttPassword = CONFIG_CNB_MQTT_PASSWORD;
+#endif
+    return settings;
+}
+
+Manager::Manager(driver::factory::Interface& factory, const Topics& topics,
+                 const NetworkSettings& network) noexcept
     : myTopics{topics}
 {
     (void)factory;
+    (void)network;
 
 #if CONFIG_CNB_ENABLE_WIFI
-    myWifi = factory.wifi(WifiSsid, WifiPassword);
+    myWifi = factory.wifi(network.wifiSsid, network.wifiPassword);
 #endif
 
 #if CONFIG_CNB_ENABLE_MQTT
     const driver::mqtt::Config config{
-        MqttBrokerUri, MqttClientId, MqttUsername, MqttPassword,
+        network.mqttBrokerUri, network.mqttClientId,
+        network.mqttUsername, network.mqttPassword,
         static_cast<std::uint16_t>(CONFIG_CNB_MQTT_KEEPALIVE_SEC),
         myTopics.publish.status,
         myTopics.publish.status != nullptr ? MqttOfflinePayload : nullptr,
@@ -858,6 +894,7 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.steeringDegrees = snapshot.steeringDegrees;
     wireSnapshot.forwardDuty = snapshot.forwardDuty;
     wireSnapshot.backwardDuty = snapshot.backwardDuty;
+    wireSnapshot.motorState = snapshot.motorState;
     wireSnapshot.controlState = control.controlState();
     wireSnapshot.motionState = control.motionState();
     wireSnapshot.reason = control.stateReason();
@@ -965,7 +1002,10 @@ void Manager::processMqttMessage(const driver::mqtt::Message& message,
     }
 
     const auto result = control.handleCommand(command, nowMs);
-    if ((command.type != runtime::CommandType::Heartbeat) || !result.accepted)
+    // Accepted heartbeats and drive commands are streamed, so only their rejections are reported.
+    const bool streamed = (command.type == runtime::CommandType::Heartbeat)
+        || (command.type == runtime::CommandType::Drive);
+    if (!streamed || !result.accepted)
     {
         setCommandReport(command.hasRequestId ? command.requestId : 0U,
                          result.accepted ? "accepted" : "rejected",

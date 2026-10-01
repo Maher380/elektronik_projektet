@@ -64,6 +64,8 @@ enum class CommandType : std::uint8_t
     Stop,
     Heartbeat,
     Servo,
+    /** ManualByRemote steering and speed commands; also renews the heartbeat. */
+    Drive,
 };
 
 /** Parsed transient command. */
@@ -74,7 +76,20 @@ struct Command
     bool hasRequestId{false};
     /** Requested servo angle for the transient Servo command only. */
     float servoAngleDegrees{0.0F};
+    /** Drive only: −90 full left, 0 straight ahead, +90 full right. */
+    float steeringCommand{0.0F};
+    /** Drive only: −100 full reverse, 0 no drive, +100 full forward. */
+    float speedCommand{0.0F};
     std::array<char, SessionIdSize> sessionId{};
+};
+
+/** The operator's latest drive commands that a ManualByRemote car should follow now. */
+struct RemoteDrive
+{
+    /** Steering command to apply; 0 while disarmed. */
+    float steeringCommand{0.0F};
+    /** Speed command to apply; 0 (no drive) while disarmed or after a drive timeout. */
+    float speedCommand{0.0F};
 };
 
 /** Reason why a parsed command was rejected. */
@@ -122,6 +137,8 @@ enum class StateReason : std::uint8_t
     MqttDisconnected,
     MessageOverflow,
     ActuatorFault,
+    /** ManualByRemote: drive commands stopped arriving; no drive, still armed. */
+    DriveTimeout,
     None,
 };
 
@@ -134,10 +151,15 @@ enum class StateReason : std::uint8_t
 class Control final
 {
 public:
-    /** Enable the main.cpp system test protocol; legacy Logic stays compatible. */
-    explicit Control(bool systemTest = false) noexcept : mySystemTest{systemTest} {}
+    /**
+     * @param systemTest Enable the main.cpp system test protocol; legacy Logic stays compatible.
+     * @param manualByRemote Ford: the only drive style is ManualByRemote, driven by Drive commands.
+     */
+    explicit Control(bool systemTest = false, bool manualByRemote = false) noexcept;
     /** Whether the active application implements the main.cpp system test. */
     bool isSystemTest() const noexcept { return mySystemTest; }
+    /** Whether the car is driven live by an operator (ManualByRemote). */
+    bool isManualByRemote() const noexcept { return myManualByRemote; }
     /** True while a manual servo command owns steering with the motor disabled. */
     bool isServoTest() const noexcept { return myServoTest; }
     /** Angle requested by the most recently accepted manual servo command. */
@@ -167,6 +189,16 @@ public:
     bool authorizeAction(std::uint32_t nowMs, bool validEnvironment,
                                float plannedDuty, bool brakeRequested) noexcept;
 
+    /**
+     * @brief ManualByRemote: check the operator lease and return the commands to follow now.
+     *
+     * Disarms on a lost MQTT connection or heartbeat timeout. While armed, no drive
+     * command for driveTimeoutMs gives no drive but keeps the car armed; the next
+     * drive command resumes driving.
+     * @todo Add host tests for the lease, drive timeout and session rules.
+     */
+    RemoteDrive remoteDrive(std::uint32_t nowMs, std::uint32_t driveTimeoutMs) noexcept;
+
     const Configuration& configuration() const noexcept;
     std::uint32_t configurationRevision() const noexcept;
     bool hasConfigurationRevision() const noexcept;
@@ -180,9 +212,15 @@ private:
     static bool sameConfiguration(const Configuration& lhs,
                                   const Configuration& rhs) noexcept;
     bool isActiveSession(const std::array<char, SessionIdSize>& sessionId) const noexcept;
+    bool supportsDriverStyle(navigation::DriverStyle style) const noexcept;
     void disarm(StateReason reason) noexcept;
 
     const bool mySystemTest;
+    const bool myManualByRemote;
+    /** Latest accepted Drive command; cleared on start and disarm. */
+    RemoteDrive myDrive{};
+    bool myHasDrive{false};
+    std::uint32_t myLastDriveMs{0U};
     bool myServoTest{false};
     float myServoAngleDegrees{0.0F};
     Configuration myConfiguration{};

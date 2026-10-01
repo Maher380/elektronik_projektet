@@ -111,7 +111,8 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
         || !motor->setDirection(driver::motor::Direction::Forward))
     { ESP_LOGE("SYSTEM", "Initialization failed; motor remains asleep"); return; }
     app::runtime::Control control{true}; // Enable system-test MQTT config and servo commands.
-    app::communication::Manager communication{factory, Topics}; // Wi-Fi/MQTT lifecycle.
+    app::communication::Manager communication{
+        factory, Topics, app::communication::kconfigNetworkSettings()}; // Wi-Fi/MQTT lifecycle.
     app::communication::TelemetrySnapshot snapshot{}; // Latest measurements and outputs.
     Decision decision{}; // Last navigation decision, held between sensor samples.
     bool sampled{false}; // Force an initial sample before planning motion.

@@ -11,18 +11,33 @@ bool isFiniteInRange(float value, float minimum, float maximum) noexcept
 {
     return std::isfinite(value) && (value >= minimum) && (value <= maximum);
 }
-bool isValidDriverStyle(navigation::DriverStyle style) noexcept
+} // namespace
+
+Control::Control(bool systemTest, bool manualByRemote) noexcept
+    : mySystemTest{systemTest}, myManualByRemote{manualByRemote}
 {
+    if (myManualByRemote)
+    {
+        // The operator watches the echoed commands, so telemetry must feel live.
+        myConfiguration.driverStyle = navigation::DriverStyle::ManualByRemote;
+        myConfiguration.telemetryIntervalMs = 200U;
+    }
+}
+
+bool Control::supportsDriverStyle(navigation::DriverStyle style) const noexcept
+{
+    // ManualByRemote cars have no obstacle distances for the autonomous styles.
+    if (myManualByRemote) { return style == navigation::DriverStyle::ManualByRemote; }
     switch (style)
     {
-        case navigation::DriverStyle::DecideAction:
+        case navigation::DriverStyle::DecideAction: return true;
         case navigation::DriverStyle::SlowLeft:
         case navigation::DriverStyle::SlowRight:
-        case navigation::DriverStyle::GradualSweep: return true;
+        case navigation::DriverStyle::GradualSweep: return !mySystemTest;
+        case navigation::DriverStyle::ManualByRemote: return false;
     }
     return false;
 }
-} // namespace
 
 ConfigurationResult Control::applyConfiguration(
     const ConfigurationRequest& request) noexcept
@@ -58,7 +73,7 @@ ConfigurationResult Control::applyConfiguration(
         return ConfigurationResult::LoopIntervalOutOfRange;
     }
     if (!request.hasDriverStyle) { candidate.driverStyle = myConfiguration.driverStyle; }
-    if ((mySystemTest && candidate.driverStyle != navigation::DriverStyle::DecideAction) || !isValidDriverStyle(candidate.driverStyle)) { return ConfigurationResult::InvalidDriverStyle; }
+    if (!supportsDriverStyle(candidate.driverStyle)) { return ConfigurationResult::InvalidDriverStyle; }
     // Reject the entire update: neither values nor revision may advance.
     if (candidate.driverStyle != myConfiguration.driverStyle && myControlState != ControlState::Disarmed)
     {
@@ -86,7 +101,7 @@ ConfigurationResult Control::applyConfiguration(
 
 bool Control::setDriverStyle(navigation::DriverStyle style) noexcept
 {
-    if ((mySystemTest && style != navigation::DriverStyle::DecideAction) || !isValidDriverStyle(style)) { return false; }
+    if (!supportsDriverStyle(style)) { return false; }
     if (style != myConfiguration.driverStyle && myControlState != ControlState::Disarmed) { return false; }
     myConfiguration.driverStyle = style;
     return true;
@@ -138,6 +153,9 @@ CommandResult Control::handleCommand(const Command& command,
             myLastControlRequestId = command.requestId;
             myLastStartRequestId = command.requestId;
             myServoTest = false;
+            // A new session never inherits the previous session's drive commands.
+            myDrive = {};
+            myHasDrive = false;
             myActiveSession = command.sessionId;
             myLastHeartbeatMs = nowMs;
             myControlState = ControlState::Armed;
@@ -180,6 +198,28 @@ CommandResult Control::handleCommand(const Command& command,
                 return {false, CommandError::SessionMismatch};
             }
 
+            myLastHeartbeatMs = nowMs;
+            return {true, CommandError::None};
+
+        case CommandType::Drive:
+            if (!myManualByRemote || myActuatorFault
+                || !isFiniteInRange(command.steeringCommand, -90.0F, 90.0F)
+                || !isFiniteInRange(command.speedCommand, -100.0F, 100.0F))
+            {
+                return {false, CommandError::InvalidRequest};
+            }
+            if (myControlState == ControlState::Armed
+                && (nowMs - myLastHeartbeatMs) >= HeartbeatTimeoutMs)
+            {
+                disarm(StateReason::HeartbeatTimeout);
+            }
+            if (myControlState != ControlState::Armed) { return {false, CommandError::NotArmed}; }
+            if (!isActiveSession(command.sessionId)) { return {false, CommandError::SessionMismatch}; }
+
+            // Each accepted drive command also counts as an operator heartbeat.
+            myDrive = {command.steeringCommand, command.speedCommand};
+            myHasDrive = true;
+            myLastDriveMs = nowMs;
             myLastHeartbeatMs = nowMs;
             return {true, CommandError::None};
     }
@@ -258,6 +298,44 @@ void Control::disarm(StateReason reason) noexcept
     myStateReason = myActuatorFault ? StateReason::ActuatorFault : reason;
     myActiveSession.fill('\0');
     myLastHeartbeatMs = 0U;
+    myDrive = {};
+    myHasDrive = false;
+}
+
+RemoteDrive Control::remoteDrive(std::uint32_t nowMs, std::uint32_t driveTimeoutMs) noexcept
+{
+    if (!myManualByRemote || myControlState != ControlState::Armed)
+    {
+        myMotionState = MotionState::Stopped;
+        return {};
+    }
+    if (!myMqttConnected)
+    {
+        disarm(StateReason::MqttDisconnected);
+        return {};
+    }
+    if ((nowMs - myLastHeartbeatMs) >= HeartbeatTimeoutMs)
+    {
+        disarm(StateReason::HeartbeatTimeout);
+        return {};
+    }
+    if (!myHasDrive)
+    {
+        // Armed, but the operator has not sent a drive command in this session yet.
+        myMotionState = MotionState::Stopped;
+        myStateReason = StateReason::None;
+        return {};
+    }
+    if ((nowMs - myLastDriveMs) >= driveTimeoutMs)
+    {
+        // Keep steering where it was and let the car roll; resume on the next command.
+        myMotionState = MotionState::Inhibited;
+        myStateReason = StateReason::DriveTimeout;
+        return {myDrive.steeringCommand, 0.0F};
+    }
+    myMotionState = myDrive.speedCommand != 0.0F ? MotionState::Moving : MotionState::Stopped;
+    myStateReason = StateReason::None;
+    return myDrive;
 }
 
 bool Control::authorizeAction(std::uint32_t nowMs, bool validEnvironment,

@@ -137,7 +137,7 @@ Logic::Logic(driver::factory::Interface& factory) noexcept
     , myIrSensorRightAdc{factory.adc(IrSensorRightAdcPin)}
     , mySerial({factory.serial(SerialBaudRate)})
     , mySteeringServoPwm{factory.pwm(SteeringPwmConfig)}
-    , myCommunication{factory, MqttTopics}
+    , myCommunication{factory, MqttTopics, app::communication::kconfigNetworkSettings()}
 {
     if (myMotorForwardsPwm && myMotorBackwardsPwm)
     {

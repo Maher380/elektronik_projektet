@@ -42,16 +42,33 @@ struct Topics
     SubscribeTopics subscribe{};
 };
 
+/** Car network and broker login selected by the application. Pointers must outlive the manager. */
+struct NetworkSettings
+{
+    const char* wifiSsid{nullptr};
+    const char* wifiPassword{nullptr};
+    const char* mqttBrokerUri{nullptr};
+    const char* mqttClientId{nullptr};
+    const char* mqttUsername{nullptr};
+    const char* mqttPassword{nullptr};
+};
+
+/** Network settings from idf.py menuconfig; null where Wi-Fi or MQTT is disabled. */
+NetworkSettings kconfigNetworkSettings() noexcept;
+
 /** Vehicle data required for one MQTT telemetry sample. */
 struct TelemetrySnapshot
 {
     std::array<float, runtime::IrSensorCount> distancesCm{};
     /** Exact distances used by main.cpp after applying the reaction cap. */
     std::array<float, runtime::IrSensorCount> decisionDistancesCm{};
+    /** Vagrant: motor duty 0–1. Ford: applied speed command −100 to +100. */
     float speedCommand{0.0F};
     float steeringDegrees{0.0F};
     float forwardDuty{0.0F};
     float backwardDuty{0.0F};
+    /** Ford: what the motor is doing, e.g. "driving_forward"; nullptr leaves it out. */
+    const char* motorState{nullptr};
     /** Raw counts used for these distances; -1 means unavailable. */
     std::array<std::int32_t, runtime::IrSensorCount> adcRaw{-1, -1, -1};
 };
@@ -65,7 +82,8 @@ struct TelemetrySnapshot
 class Manager final
 {
 public:
-    Manager(driver::factory::Interface& factory, const Topics& topics) noexcept;
+    Manager(driver::factory::Interface& factory, const Topics& topics,
+            const NetworkSettings& network) noexcept;
     ~Manager() noexcept;
     /** Inject asynchronous drivers for host tests or another platform. */
     Manager(std::unique_ptr<driver::wifi::Interface> wifi,

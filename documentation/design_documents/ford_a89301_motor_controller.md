@@ -37,7 +37,7 @@ with gains `PID_P` and `PID_I`. These parameters must fit the motor.
 | SPD/SCL | A5 / GPIO12 | I2C SCL. **Add 4.7 kΩ pull-up to 3.3 V** (the board has none on SCL) |
 | FG/SDA | A4 / GPIO11 | I2C SDA. The board has a pull-up to IOREF |
 | DIR | D4 / GPIO7 | High = forward in the test apps |
-| BRAKE | D2 / GPIO5 | High = brake. **Recommended: 10 kΩ pull-up to 3.3 V**, see Safety |
+| BRAKE | D2 / GPIO5 | High = brake. **Fit a 10–12 kΩ pull-up to 2V8**, see Safety |
 | FLT | not connected | Open drain, pulled up to IOREF |
 | – | D9 / GPIO18 | A3144 wheel odometer, 1 magnet per revolution |
 | – | A0 / GPIO1 | TMP36 on the motor can (ADC1) |
@@ -142,6 +142,34 @@ matched the odometer where the odometer was reliable.
 
 ## Safety
 
+- **Pull resistors for driving (PWM wiring):** fit these before the car drives.
+
+  ```text
+                                   2V8 (A89301 board) ─┐
+                                                      [R1] 10–12 kΩ
+                                                       │
+     D2 / GPIO5  ──────────────────────────────────────┴── BRAKE   (high = brake)
+     D4 / GPIO7  ───────────────────────────────────────── DIR
+     D5 / GPIO8  ──────────────────────────────────────┬── SPD/SCL (20 kHz PWM)
+                                                       │   (no pull-up to 3V3 here)
+                                                      [R2] 10–12 kΩ
+                                                       │
+                                   GND ────────────────┴── GND (header)
+     D6 / GPIO9  ──────────────────────────────────────┬── steering servo signal
+                                                      [R3] 10–12 kΩ (optional)
+                                   GND ────────────────┘
+  ```
+
+  - **R1** keeps the brake on whenever the motor board has battery power and the
+    ESP32 does not drive BRAKE (reset, flashing, crash, Nano unpowered). 2V8 is
+    the A89301's own 2.8 V output, made for pull-ups (max 10 mA).
+  - **R2** makes a floating SPD read as 0 % speed.
+  - **Remove the 4.7 kΩ SCL pull-up** from the I2C wiring when SPD moves to D5:
+    it turns a floating SPD into full speed.
+  - **R3** only stops the servo twitching during flashing.
+  - Do not connect 2V8 or VM (battery voltage) to the Nano.
+  - **Check** with the Nano unplugged and the battery on: BRAKE ≈ 2.8 V,
+    SPD ≈ 0 V. Then flash once on the stand; the wheels must not move.
 - **BRAKE pull-up:** the board pulls BRAKE low (brake off) by default. While
   the ESP32 is reset or flashed its pins float, and in the I2C wiring SPD/SCL
   is pulled high, which the chip reads as a large speed demand. **The wheels
@@ -162,8 +190,8 @@ matched the odometer where the odometer was reliable.
 - **Speed plateau** above demand 0.40 in step tests is not explained. It does
   not matter at SLAM speeds.
 - **Slower than 0.5 m/s** needs closed loop speed control or other gearing.
-- **Speed control in the final car:** PWM on SPD (D5) or I2C. I2C keeps
-  speed, current and state readback available.
+- **Speed control in the final car:** PWM on SPD (D5) for now (ManualByRemote
+  uses it). I2C readback of speed, current and state is a later step.
 
 ## Tools
 

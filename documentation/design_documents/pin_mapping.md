@@ -40,6 +40,9 @@ Power connections do not use driver factory calls:
 
 | Driver call | Pin on Arduino | Driver function | Connected hardware | Status |
 | --- | --- | --- | --- | --- |
+| `factory.gpioOutput(5)` | `~D2` | ⚡ Digital output | A89301 BRAKE (high = brake) | 🔵 Used |
+| `factory.gpioOutput(7)` | `~D4` | ⚡ Digital output | A89301 DIR | 🔵 Used |
+| `factory.pwm(8)` | `~D5` | 〰️ PWM output, 20 kHz | A89301 SPD/SCL (speed) | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo (pulse width) | 🔵 Used |
 
 ## Code Value To Board Pin
