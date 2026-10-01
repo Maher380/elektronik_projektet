@@ -9,6 +9,7 @@
 #include "driver/odometer/a3144.h"
 #include "driver/mqtt/esp32s3.h"
 #include "driver/pwm/esp32s3.h"
+#include "driver/servo/ford.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/esp32s3.h"
 #include "driver/timer/esp32s3.h"
@@ -60,8 +61,12 @@ std::unique_ptr<pwm::Interface> Esp32s3::pwm(const driver::pwm::Config& config) 
     return std::make_unique<driver::pwm::Esp32s3>(config);
 }
 
-std::unique_ptr<servo::Interface> Esp32s3::servo(driver::pwm::Interface& pwm) noexcept {
+std::unique_ptr<servo::Interface> Esp32s3::vagrantServo(driver::pwm::Interface& pwm) noexcept {
     return std::make_unique<driver::servo::Vagrant>(pwm);
+}
+
+std::unique_ptr<servo::Interface> Esp32s3::fordServo(driver::pwm::Interface& pwm) noexcept {
+    return std::make_unique<driver::servo::Ford>(pwm);
 }
 
 std::unique_ptr<motor::Interface> Esp32s3::motor(driver::pwm::Interface& MotorForwardsPwm,
