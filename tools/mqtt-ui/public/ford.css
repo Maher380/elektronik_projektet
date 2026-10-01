@@ -1,0 +1,33 @@
+/* Ford ManualByRemote page; builds on style.css. */
+.drive-panel{display:grid;grid-template-columns:2fr 1fr 1fr;gap:16px;margin:22px 0 14px}
+.drive-card,.drive-actions{background:linear-gradient(110deg,#1a2735dd,#121e29ee);border:1px solid var(--line);border-radius:10px;padding:20px 22px}
+.drive-card .card-top{display:flex;justify-content:space-between;align-items:center}
+.drive-card h3{font-size:11px;letter-spacing:1.4px;color:var(--muted);font-weight:600}
+.zero{border:1px solid #3a5263;background:#15222b;color:#cfe0ec;border-radius:6px;padding:4px 12px;font-size:12px}
+.readout{display:flex;gap:26px;margin:16px 0 18px;font-size:10px;letter-spacing:1px;color:var(--muted)}
+.readout strong{display:block;font-size:30px;color:#e1eaf3;margin-top:4px;letter-spacing:0}
+.readout span:last-child strong{color:var(--cyan)}
+.readout strong.differs{color:var(--orange)}
+input[type=range]{accent-color:var(--cyan);cursor:pointer}
+.steering-card input{width:100%;height:34px}
+.speed-row{display:flex;gap:16px;align-items:stretch;justify-content:center}
+.speed-card input{writing-mode:vertical-lr;direction:rtl;height:220px;width:34px}
+.scale{display:flex;justify-content:space-between;font-size:9px;letter-spacing:1px;color:var(--muted);margin-top:6px}
+.scale.vertical{flex-direction:column;margin:0}
+.hold{display:block;margin-top:12px;color:var(--orange);font-size:11px}
+.drive-actions{display:flex;flex-direction:column;gap:14px;justify-content:center}
+.drive-actions p{color:var(--muted);font-size:11px;line-height:1.5}
+.drive-actions .button.start{width:100%}
+.panic{width:100%;min-height:130px;border:2px solid #ff8a80;border-radius:12px;background:#c62828;color:#fff;font-size:24px;font-weight:800;letter-spacing:2px;box-shadow:0 0 0 4px #c6282833}
+.panic:hover{filter:brightness(1.15)}
+.panic:active{transform:translateY(1px)}
+.status-strip strong.alert{color:var(--orange)}
+.speed-card,.drive-actions{grid-row:span 2}
+.pad-card{display:flex;gap:22px;align-items:center;flex-wrap:wrap}
+.pad-card .card-top{flex-basis:100%}
+.pad-card p{flex:1;min-width:160px;color:var(--muted);font-size:11px;line-height:1.5}
+.pad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,52px);gap:6px;touch-action:manipulation;user-select:none}
+.pad button{border:1px solid #3a5263;background:#15222b;color:#cfe0ec;border-radius:8px;font-size:18px}
+.pad button:active{background:#1f4a5a;border-color:var(--cyan);color:var(--cyan)}
+.pad-up{grid-area:1/2}.pad-left{grid-area:2/1}.pad-down{grid-area:2/2}.pad-right{grid-area:2/3}
+@media(max-width:980px){.drive-panel{grid-template-columns:1fr 1fr}.steering-card,.pad-card{grid-column:1/-1}.speed-card,.drive-actions{grid-row:auto}}

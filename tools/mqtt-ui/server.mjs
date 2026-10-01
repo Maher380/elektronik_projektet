@@ -3,19 +3,25 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { ConsoleControl } from './core.mjs';
-import { MosquittoTransport, DemoTransport, readSettings } from './transport.mjs';
+import { CARS, ConsoleControl, topicFor } from './core.mjs';
+import { MosquittoTransport, DemoTransport, FordDemoTransport, readSettings } from './transport.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
-const assets = new Map([
-  ['/', ['index.html', 'text/html; charset=utf-8']],
-  ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
-  ['/charts.mjs', ['charts.mjs', 'text/javascript; charset=utf-8']],
-  ['/style.css', ['style.css', 'text/css; charset=utf-8']],
-]);
+const shared = [['/style.css', ['style.css', 'text/css; charset=utf-8']]];
+const pages = {
+  vagrant: new Map([...shared,
+    ['/', ['index.html', 'text/html; charset=utf-8']],
+    ['/app.mjs', ['app.mjs', 'text/javascript; charset=utf-8']],
+    ['/charts.mjs', ['charts.mjs', 'text/javascript; charset=utf-8']]]),
+  ford: new Map([...shared,
+    ['/', ['ford.html', 'text/html; charset=utf-8']],
+    ['/ford.mjs', ['ford.mjs', 'text/javascript; charset=utf-8']],
+    ['/ford.css', ['ford.css', 'text/css; charset=utf-8']]]),
+};
 
-export function createConsole(transport, port = 8765) {
-  const control = new ConsoleControl(transport);
+export function createConsole(transport, port = 8765, car = 'vagrant') {
+  const control = new ConsoleControl(transport, { car });
+  const assets = pages[car];
   const csrf = randomBytes(24).toString('hex');
   const streams = new Set();
   let origin;
@@ -51,6 +57,8 @@ export function createConsole(transport, port = 8765) {
       for await (const chunk of req) { body += chunk; if (body.length > 4096) { json(res, 413, { error: 'Request too large.' }); return; } }
       const data = JSON.parse(body);
       if (!data || typeof data.client !== 'string' || !/^[a-f0-9-]{16,40}$/.test(data.client)) throw Error('Invalid browser session.');
+      // Streamed every 100 ms, so it answers without the full state snapshot.
+      if (route === '/api/drive') { json(res, 200, { ok: await control.drive(data.client, data.steering, data.speed) }); return; }
       switch (route) {
         case '/api/pulse': control.pulse(data.client); break;
         case '/api/start': await control.start(data.client); break;
@@ -95,15 +103,19 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   const demo = args.includes('--demo');
   const portIndex = args.indexOf('--port');
   const port = portIndex >= 0 ? Number(args[portIndex + 1]) : 8765;
-  if (!Number.isInteger(port) || port < 1024 || port > 65535 || args.some((a, i) => a !== '--demo' && a !== '--port' && !(portIndex >= 0 && i === portIndex + 1))) {
-    console.error('Usage: node server.mjs [--demo] [--port 8765]'); process.exit(1);
+  const carIndex = args.indexOf('--car');
+  const car = carIndex >= 0 ? args[carIndex + 1] : 'vagrant';
+  const valueIndex = i => (portIndex >= 0 && i === portIndex + 1) || (carIndex >= 0 && i === carIndex + 1);
+  if (!Number.isInteger(port) || port < 1024 || port > 65535 || !CARS.includes(car) || args.some((a, i) => !['--demo', '--port', '--car'].includes(a) && !valueIndex(i))) {
+    console.error('Usage: node server.mjs [--demo] [--port 8765] [--car vagrant|ford]'); process.exit(1);
   }
   let app;
   try {
-    const transport = demo ? new DemoTransport() : new MosquittoTransport(readSettings(path.join(directory, '../mqtt/.env')));
-    app = createConsole(transport, port);
+    const transport = demo ? (car === 'ford' ? new FordDemoTransport() : new DemoTransport())
+      : new MosquittoTransport(readSettings(path.join(directory, '../mqtt/.env')), topicFor(car));
+    app = createConsole(transport, port, car);
     const url = await app.listen();
-    console.log(`CnB RC Control: ${url}\n${demo ? 'DEMO: simulated data, no MQTT connection.' : 'LIVE: waiting for car telemetry. Opening the page does not start the car.'}\nKeep this terminal open. Press Ctrl+C to close.`);
+    console.log(`CnB RC Control (${car}): ${url}\n${demo ? 'DEMO: simulated data, no MQTT connection.' : 'LIVE: waiting for car telemetry. Opening the page does not start the car.'}\nKeep this terminal open. Press Ctrl+C to close.`);
   } catch (error) {
     console.error(error.code === 'EADDRINUSE' ? 'Port already in use. Close the other console or use --port 8766.' : 'Could not start console. Check Node.js, port and tools/mqtt/.env.');
     process.exit(1);

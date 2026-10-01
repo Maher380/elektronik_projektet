@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="color-scheme" content="dark"><title>CnB · Ford Drive</title>
+  <link rel="icon" href="data:,"><link rel="stylesheet" href="/style.css"><link rel="stylesheet" href="/ford.css">
+  <script type="module" src="/ford.mjs"></script>
+</head>
+<body>
+<main>
+  <header class="masthead">
+    <div class="brand"><div class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></div><div><h1>CnB <span>/</span> FORD DRIVE</h1><p>MANUAL BY REMOTE · MQTT</p></div></div>
+    <div class="connection"><span id="mode-chip" class="chip neutral">CONNECTING</span><span id="broker-chip" class="chip neutral"><b class="dot"></b> BROKER <strong>WAITING</strong></span><span id="car-chip" class="chip neutral"><b class="dot"></b> CAR <strong>WAITING</strong></span></div>
+  </header>
+  <div id="demo-banner" class="demo-banner" hidden>DEMO ENVIRONMENT <span>Simulated Ford. Controls only affect this preview.</span></div>
+  <section class="status-strip" aria-label="Vehicle status">
+    <div><span class="eyebrow">VEHICLE STATE</span><strong id="vehicle-state">WAITING</strong><small id="motion-state">No telemetry received</small></div>
+    <div><span class="eyebrow">MOTOR</span><strong id="motor-state">—</strong><small id="duty">Duty —</small></div>
+    <div><span class="eyebrow">DRIVE STYLE</span><strong id="current-style">—</strong><small>Operator drives live</small></div>
+    <div><span class="eyebrow">UPTIME</span><strong id="uptime" class="mono">—</strong><small>Since car boot</small></div>
+    <div><span class="eyebrow">ACTIVE SESSION</span><strong id="session" class="mono session">—</strong><small id="ownership">Monitoring only</small></div>
+    <div><span class="eyebrow">HEARTBEAT</span><strong id="heartbeat">INACTIVE</strong><small id="heartbeat-detail">Sent only while controlling</small></div>
+  </section>
+  <section class="drive-panel" aria-label="Drive controls">
+    <article class="drive-card steering-card">
+      <div class="card-top"><h3>STEERING COMMAND</h3><button type="button" class="zero" id="steering-zero">0</button></div>
+      <div class="readout"><span>SLIDER <strong id="steering-slider-value" class="mono">0</strong></span><span>CAR <strong id="steering-car-value" class="mono">—</strong></span></div>
+      <input id="steering" type="range" min="-90" max="90" step="1" value="0" aria-label="Steering command, −90 full left to +90 full right">
+      <div class="scale"><span>−90 LEFT</span><span>0</span><span>RIGHT +90</span></div>
+    </article>
+    <article class="drive-card speed-card">
+      <div class="card-top"><h3>SPEED COMMAND</h3><button type="button" class="zero" id="speed-zero">0</button></div>
+      <div class="readout"><span>SLIDER <strong id="speed-slider-value" class="mono">0</strong></span><span>CAR <strong id="speed-car-value" class="mono">—</strong></span></div>
+      <div class="speed-row">
+        <input id="speed" type="range" min="-100" max="100" step="1" value="0" aria-label="Speed command, −100 full reverse to +100 full forward">
+        <div class="scale vertical"><span>+100 FWD</span><span>0</span><span>REV −100</span></div>
+      </div>
+      <small id="speed-hold" class="hold" hidden>Move the speed slider to drive. The car gets 0 until you do.</small>
+    </article>
+    <aside class="drive-actions">
+      <button id="start" class="button start" disabled><span aria-hidden="true">▶</span> Start</button>
+      <button id="panic" class="panic" type="button">PANIC STOP</button>
+      <p>Panic stop brakes, disarms, ends the session from any tab and centres this tab's sliders. Double-click a slider or press 0 to centre it.</p>
+    </aside>
+    <article class="drive-card pad-card">
+      <div class="card-top"><h3>ARROW KEYS</h3></div>
+      <div class="pad" aria-label="Drive pad">
+        <button type="button" class="pad-up" data-pad="up" aria-label="Forward">▲</button>
+        <button type="button" class="pad-left" data-pad="left" aria-label="Left">◀</button>
+        <button type="button" class="pad-down" data-pad="down" aria-label="Reverse">▼</button>
+        <button type="button" class="pad-right" data-pad="right" aria-label="Right">▶</button>
+      </div>
+      <p>↑ ↓ change the speed by 1, ← → change the steering by 10°. Hold a key to repeat. The 0 key sets the speed to 0.</p>
+    </article>
+  </section>
+  <div class="control-notes"><span>Keep this tab visible while driving · leaving it stops the car</span></div>
+  <div id="feedback" class="feedback" role="status" aria-live="polite">Connecting to the local console…</div>
+  <footer><span><b class="tiny-dot"></b><strong id="stream-state">CONNECTING</strong><span class="footer-separator">/</span><span class="mono">cnb/ford/telemetry</span></span><span id="received-age">No samples yet</span><span class="footer-brand">FORD <b>MANUAL BY REMOTE</b></span></footer>
+</main>
+</body>
+</html>

@@ -28,8 +28,8 @@ export function executable(name) {
 // The installed Mosquitto clients handle MQTT, TCP, QoS and authentication.
 // No shell interpolation, no credentials served to the browser, no raw errors logged.
 export class MosquittoTransport extends EventEmitter {
-  constructor(settings) {
-    super(); this.settings = settings; this.demo = false;
+  constructor(settings, topic = TOPIC) {
+    super(); this.settings = settings; this.demo = false; this.topic = topic; this.streams = new Map();
     this.label = `${settings.host}:${settings.port}`; this.closed = false;
     this.children = new Set(); this.retry = null; this.connected = false;
   }
@@ -49,7 +49,7 @@ export class MosquittoTransport extends EventEmitter {
       void this.probe();
       this.probeTimer = setInterval(() => void this.probe(), 4000);
     }
-    const subscriptions = ['telemetry', 'status', 'config/state', 'command/state'].flatMap(t => ['-t', `${TOPIC}/${t}`]);
+    const subscriptions = ['telemetry', 'status', 'config/state', 'command/state'].flatMap(t => ['-t', `${this.topic}/${t}`]);
     const child = this.child('mosquitto_sub', [...subscriptions, '-q', '1', '-k', '5', '-F', '%j', '-d']);
     const line = text => {
       if (!text.startsWith('{')) return;
@@ -81,7 +81,7 @@ export class MosquittoTransport extends EventEmitter {
     this.probing = true;
     // Debug stdout is buffered on Windows until a message arrives. -E exits on
     // SUBACK and flushes it, so broker status also works when the car is offline.
-    const subscriptions = ['telemetry', 'status', 'config/state', 'command/state'].flatMap(t => ['-t', `${TOPIC}/${t}`]);
+    const subscriptions = ['telemetry', 'status', 'config/state', 'command/state'].flatMap(t => ['-t', `${this.topic}/${t}`]);
     const child = this.child('mosquitto_sub', [...subscriptions, '-q', '1', '-E', '-d']);
     let output = '';
     child.stdout.on('data', data => { if (output.length < 32768) output += data; });
@@ -108,6 +108,21 @@ export class MosquittoTransport extends EventEmitter {
       child.once('close', code => { clearTimeout(timer); code === 0 ? resolve() : reject(Error('MQTT publish failed. Check broker and credentials.')); });
       child.stdin.end(JSON.stringify(payload));
     });
+  }
+  // One long-lived mosquitto_pub per topic for high-rate QoS 0 messages: -l publishes
+  // each stdin line, so a drive command does not start a new process.
+  stream(topic, payload) {
+    if (this.closed) return Promise.reject(Error('MQTT bridge is closed.'));
+    let child = this.streams.get(topic);
+    if (!child || child.exitCode !== null || child.killed) {
+      child = this.child('mosquitto_pub', ['-t', topic, '-q', '0', '-l']);
+      child.stdout.resume(); child.stderr.resume();
+      child.stdin.on('error', () => {});
+      child.once('error', () => this.streams.delete(topic));
+      child.once('close', () => { if (this.streams.get(topic) === child) this.streams.delete(topic); });
+      this.streams.set(topic, child);
+    }
+    return new Promise((resolve, reject) => child.stdin.write(JSON.stringify(payload) + '\n', error => error ? reject(error) : resolve()));
   }
   close() { this.closed = true; clearTimeout(this.retry); clearInterval(this.probeTimer); for (const child of this.children) child.kill(); this.setConnected(false); }
 }
@@ -173,5 +188,62 @@ export class DemoTransport extends EventEmitter {
       this.heartbeatAt = clock(); this.message('command/state', this.state);
     }
   }
+  stream(topic, data) { return this.publish(topic, data); }
+  close() { clearInterval(this.timer); this.emit('connection', false); }
+}
+
+// Simulated Ford following the firmware's ManualByRemote rules; no network or process access.
+export class FordDemoTransport extends EventEmitter {
+  constructor() {
+    super(); this.demo = true; this.label = 'SIMULATED BROKER'; this.topic = 'cnb/ford'; this.sequence = 0; this.born = clock();
+    this.config = { schema_version: 1, revision: 0, result: 'defaults', system_test: false, driver_style: 'manual_by_remote', telemetry_interval_ms: 200 };
+    this.state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', driver_style: 'manual_by_remote' };
+    this.drive = null; this.driveAt = 0; this.heartbeatAt = 0; this.driven = 1; this.brakeAt = 0;
+  }
+  message(suffix, data, retained = false) { this.emit('message', this.topic + '/' + suffix, structuredClone(data), retained); }
+  start() {
+    this.emit('connection', true); this.message('status', { schema_version: 1, online: true }, true);
+    this.message('config/state', this.config, true); this.message('command/state', this.state, true);
+    this.timer = setInterval(() => this.sample(), 50);
+  }
+  disarm(reason) {
+    Object.assign(this.state, { control_state: 'disarmed', motion_state: 'stopped', session_id: '', reason }); this.drive = null;
+    this.message('command/state', this.state);
+  }
+  sample() {
+    const now = clock(), armed = this.state.control_state === 'armed';
+    if (armed && now - this.heartbeatAt >= 3000) this.disarm('heartbeat_timeout');
+    if (this.sampleAt && now - this.sampleAt < this.config.telemetry_interval_ms) return;
+    this.sampleAt = now;
+    const timedOut = !!this.drive && now - this.driveAt >= 500;
+    const steering = this.drive?.steering ?? 0, wanted = timedOut ? 0 : this.drive?.speed ?? 0;
+    let state = 'braked', speed = 0, duty = 0;
+    if (this.state.control_state === 'armed') {
+      if (wanted === 0) { state = 'no_drive'; this.brakeAt = 0; }
+      else if (Math.sign(wanted) !== this.driven && (this.brakeAt ||= now) && now - this.brakeAt < 300) state = 'braking';
+      else { this.brakeAt = 0; this.driven = Math.sign(wanted); speed = wanted; duty = 0.08 + 0.07 * (Math.abs(wanted) - 1) / 99; state = wanted > 0 ? 'driving_forward' : 'driving_reverse'; }
+      Object.assign(this.state, { motion_state: timedOut ? 'inhibited' : speed ? 'moving' : 'stopped', reason: timedOut ? 'drive_timeout' : 'none' });
+    }
+    this.message('telemetry', {
+      schema_version: 1, sequence: ++this.sequence, uptime_ms: Math.floor(now - this.born), system_test: false, servo_test: false,
+      distance_cm: { left: null, center: null, right: null }, adc_raw: { left: null, center: null, right: null }, closest: null,
+      driver_style: 'manual_by_remote', steering_deg: steering,
+      motor: { speed_command: speed, forward_duty: speed > 0 ? duty : 0, backward_duty: speed < 0 ? duty : 0, state },
+      control_state: this.state.control_state, motion_state: this.state.motion_state, reason: this.state.reason,
+    });
+  }
+  async publish(topic, data) {
+    if (data.command === 'heartbeat' || data.command === 'drive') {
+      if (this.state.control_state !== 'armed' || data.session_id !== this.state.session_id) return;
+      this.heartbeatAt = clock();
+      if (data.command === 'drive') { this.drive = { steering: data.steering_command, speed: data.speed_command }; this.driveAt = clock(); }
+      return;
+    }
+    const start = data.command === 'start';
+    if (!start) { Object.assign(this.state, { last_request_id: data.request_id, result: 'accepted' }); this.disarm('operator_stop'); return; }
+    Object.assign(this.state, { last_request_id: data.request_id, session_id: data.session_id, result: 'accepted', control_state: 'armed', motion_state: 'stopped', reason: 'none' });
+    this.drive = null; this.heartbeatAt = clock(); this.message('command/state', this.state);
+  }
+  stream(topic, data) { return this.publish(topic, data); }
   close() { clearInterval(this.timer); this.emit('connection', false); }
 }

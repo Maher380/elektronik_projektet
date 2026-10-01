@@ -1,0 +1,84 @@
+# Ford: drive from the web page (ManualByRemote)
+
+The Ford has one drive style, **ManualByRemote**: you set the steering command
+(−90 left … +90 right) and the speed command (−100 reverse … +100 forward) with
+two sliders in the web page, and the car follows them over MQTT.
+
+Broker, `.env` and Wi-Fi are set up as in the [MQTT guide](mqtt_steg_for_steg.md).
+This guide only lists what is different for the Ford.
+
+## 1. Before the first drive
+
+- Wire the A89301 for **PWM speed** and fit the pull resistors, see
+  [the motor controller doc](../design_documents/ford_a89301_motor_controller.md#safety).
+- Broker: copy the updated `tools/mqtt/mosquitto-acl.example` to
+  `%USERPROFILE%\cnb-mqtt\acl` and add the car's account, then restart Mosquitto:
+
+  ```powershell
+  & 'C:\Program Files\mosquitto\mosquitto_passwd.exe' "$env:USERPROFILE\cnb-mqtt\passwords" cnb-ford
+  ```
+
+## 2. Build and flash
+
+In `idf.py menuconfig`, choose **Target car → Ford**. The MQTT client ID and
+username become `cnb-ford`; a Ford build with another client ID does not compile.
+Set Wi-Fi, broker URI and the `cnb-ford` password as for Vagrant, then build and
+flash.
+
+## 3. Start the page
+
+```powershell
+.\tools\mqtt-ui\start-ui.ps1 -Car ford
+```
+
+Open **http://127.0.0.1:8765**. Without a car: add `-Demo`.
+
+## Drive with the arrow keys
+
+Instead of dragging the sliders you can use the **arrow keys** or the
+▲ ◀ ▼ ▶ pad on the page (works on a touch screen too):
+
+| Press | Does |
+| --- | --- |
+| ↑ / ↓ | Speed +1 / −1 |
+| ← / → | Steering −10° (left) / +10° (right) |
+| 0 | Speed 0 (steering stays) |
+
+Holding a key repeats at the keyboard's repeat rate. The value stays where it is
+when you let go; press the **0** key, the 0 button, double-click the slider or
+panic stop to stop.
+
+## How the car behaves
+
+| Situation | Car |
+| --- | --- |
+| Boot, disarmed, panic stop, heartbeat lost (3 s), MQTT lost | Brakes and centres the steering |
+| Speed command 0 | No drive: motor coasts, still armed |
+| Speed command changes direction | Brakes 300 ms, then drives the other way |
+| No drive command for 500 ms | No drive, still armed; drives on when commands return |
+| Start | Speed stays 0 until you move the speed slider |
+
+Speed command ±1 … ±100 maps to duty 0.08 … 0.15 (about 0.8 … 1.5 m/s
+unloaded). These values are compiled into `fordLogic.cpp` until they move to NVS.
+
+## Bench checklist
+
+Run it with the car on the stand, wheels in the air, before driving on the floor.
+
+- [ ] Flash: the wheels do not move while flashing or booting.
+- [ ] Page shows BROKER CONNECTED, CAR RECEIVING and drive style ManualByRemote.
+- [ ] Start: motor state goes from BRAKED to NO DRIVE; moving the speed slider is
+      needed before the wheels turn.
+- [ ] Speed +20 / +100: wheels turn forward; the CAR value matches the slider.
+- [ ] Speed −40 from forward: motor state shows BRAKING briefly, then DRIVING REV.
+- [ ] Steering −90 / 0 / +90: wheels follow; the CAR value matches the slider.
+- [ ] Press ↑ / ↓: the speed slider and its CAR value change by 1 per press.
+- [ ] Press ← / →: the steering slider and its CAR value change by 10 per press.
+- [ ] Drive at speed +20 and press the 0 key: speed slider and CAR value go to 0.
+- [ ] Pull the laptop's Wi-Fi: DRIVE TIMEOUT (wheels coast) within about 0.5 s,
+      then disarmed (brake) within about 3 s.
+- [ ] Switch to another tab while driving: the car brakes and disarms.
+- [ ] Panic stop from a second tab: the car brakes and disarms.
+
+> @todo No automated tests yet for the ManualByRemote rules (firmware) or the
+> drive stream (console). Add them before relying on this beyond bench tests.

@@ -2,6 +2,8 @@ import { EventEmitter } from 'node:events';
 import { randomBytes } from 'node:crypto';
 
 export const TOPIC = 'cnb/vagrant';
+export const CARS = ['vagrant', 'ford'];
+export const topicFor = car => 'cnb/' + car;
 export const STYLES = ['decide_action', 'slow_left', 'slow_right', 'gradual_sweep'];
 export const clock = () => performance.timeOrigin + performance.now();
 const uint = n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff;
@@ -44,9 +46,11 @@ export class History {
 }
 
 export class ConsoleControl extends EventEmitter {
-  constructor(transport, { now = clock, ackMs = 1800 } = {}) {
+  constructor(transport, { now = clock, ackMs = 1800, car = 'vagrant' } = {}) {
     super();
+    if (!CARS.includes(car)) throw Error('Unknown car.');
     this.transport = transport; this.now = now; this.ackMs = ackMs;
+    this.car = car; this.topic = topicFor(car); this.driveBusy = false;
     this.history = new History(); this.pending = new Map(); this.highWater = 0;
     this.connected = false; this.online = false; this.receivedAt = 0;
     this.config = null; this.command = null; this.commandAt = 0; this.telemetry = null;
@@ -69,8 +73,8 @@ export class ConsoleControl extends EventEmitter {
   }
   receive(topic, data, retained) {
     if (!data || typeof data !== 'object' || data.schema_version !== 1) return;
-    const suffix = topic.slice(TOPIC.length + 1);
-    if (!topic.startsWith(TOPIC + '/')) return;
+    const suffix = topic.slice(this.topic.length + 1);
+    if (!topic.startsWith(this.topic + '/')) return;
     if (suffix === 'status' && typeof data.online === 'boolean') {
       this.online = data.online;
       if (!data.online) { this.receivedAt = 0; this.cancel('Car went offline.'); }
@@ -81,7 +85,9 @@ export class ConsoleControl extends EventEmitter {
       if (this.owner?.armed && data.control_state !== 'armed') this.cancel('Car disarmed: ' + (data.reason || 'unknown'));
     }
     if (suffix === 'config/state' && uint(data.revision)) {
-      try { validateConfig(configValues(data), data.system_test === true); }
+      // The Ford has no settings; its config/state only names its drive style.
+      if (this.car === 'ford') { if (data.driver_style !== 'manual_by_remote') return; }
+      else try { validateConfig(configValues(data), data.system_test === true); }
       catch { return; }
       this.config = data; this.highWater = Math.max(this.highWater, data.revision);
       if (!retained) this.pending.get('config:' + data.revision)?.resolve(data);
@@ -136,7 +142,7 @@ export class ConsoleControl extends EventEmitter {
     this.owner = owner;
     const request_id = this.id();
     try {
-      const state = await this.acknowledged('command', request_id, TOPIC + '/command', {
+      const state = await this.acknowledged('command', request_id, this.topic + '/command', {
         schema_version: 1, request_id, session_id: owner.session, command: 'start',
       });
       if (this.owner !== owner) throw Error('Start cancelled.');
@@ -151,7 +157,7 @@ export class ConsoleControl extends EventEmitter {
     }
   }
   sendStop(session = randomBytes(8).toString('hex')) {
-    return this.transport.publish(TOPIC + '/command', {
+    return this.transport.publish(this.topic + '/command', {
       schema_version: 1, request_id: this.id(), session_id: session, command: 'stop',
     }, 1, false);
   }
@@ -159,13 +165,14 @@ export class ConsoleControl extends EventEmitter {
     const session = this.owner?.session || randomBytes(8).toString('hex');
     this.cancel('Stop requested; waiting for the car.');
     const request_id = this.id();
-    const state = await this.acknowledged('command', request_id, TOPIC + '/command', {
+    const state = await this.acknowledged('command', request_id, this.topic + '/command', {
       schema_version: 1, request_id, session_id: session, command: 'stop',
     });
     if (state.result !== 'accepted' || state.control_state !== 'disarmed') throw Error('Stop was not confirmed by the car.');
     this.notice = 'Stop acknowledged by car.';
   }
   async servo(client, angle) {
+    if (this.car === 'ford') throw Error('Servo test is not available on the Ford.');
     if (!Number.isFinite(angle) || angle < -90 || angle > 90) throw Error('Servo angle: allowed range −90 to +90 degrees.');
     if (!this.fresh() || !this.config?.system_test) throw Error('Wait for live system-test firmware.');
     if (this.servoBusy || (this.owner && this.owner.client !== client)) throw Error('Another operation controls the car.');
@@ -173,7 +180,7 @@ export class ConsoleControl extends EventEmitter {
     this.servoBusy = true;
     try {
       const request_id = this.id();
-      const state = await this.acknowledged('command', request_id, TOPIC + '/command', {
+      const state = await this.acknowledged('command', request_id, this.topic + '/command', {
         schema_version: 1, request_id, session_id: randomBytes(8).toString('hex'), command: 'servo', angle_deg: angle,
       });
       if (state.result !== 'accepted' || state.control_state !== 'disarmed' || state.servo_test !== true || !Number.isFinite(state.servo_angle_deg) || Math.abs(state.servo_angle_deg - angle) > 0.001) throw Error('Servo test was not confirmed by the car.');
@@ -182,6 +189,7 @@ export class ConsoleControl extends EventEmitter {
     finally { this.servoBusy = false; }
   }
   async configure(client, input) {
+    if (this.car === 'ford') throw Error('The Ford has no settings to change.');
     const systemTest = this.config?.system_test === true;
     const config = validateConfig(systemTest ? { reaction_distance_cm: this.config.reaction_distance_cm,
       loop_interval_ms: this.config.loop_interval_ms, ...input } : input, systemTest);
@@ -190,9 +198,31 @@ export class ConsoleControl extends EventEmitter {
     if ((this.telemetry.control_state === 'armed' || this.command?.control_state === 'armed') && config.driver_style !== this.config.driver_style) throw Error('Stop the car before changing driver style.');
     if ([...this.pending.keys()].some(k => k.startsWith('config:'))) throw Error('Configuration acknowledgement still pending.');
     const revision = this.id();
-    const state = await this.acknowledged('config', revision, TOPIC + '/config/set', { schema_version: 1, revision, ...config }, true);
+    const state = await this.acknowledged('config', revision, this.topic + '/config/set', { schema_version: 1, revision, ...config }, true);
     if (state.result !== 'applied') throw Error('Configuration rejected: ' + (state.error || 'unknown'));
     this.notice = `Configuration #${revision} acknowledged by car.`;
+  }
+  // ManualByRemote: stream the operator's sliders. QoS 0 and unacknowledged; the car
+  // echoes what it applies in telemetry and each drive command renews its heartbeat.
+  // @todo Add tests for drive streaming, ownership and the range checks.
+  async drive(client, steering, speed) {
+    if (this.car !== 'ford') throw Error('Drive commands are for the Ford only.');
+    if (!Number.isFinite(steering) || steering < -90 || steering > 90) throw Error('Steering: allowed range −90 to +90.');
+    if (!Number.isFinite(speed) || speed < -100 || speed > 100) throw Error('Speed: allowed range −100 to +100.');
+    const owner = this.owner;
+    if (!owner?.armed || owner.client !== client) return false;
+    owner.lastSeen = this.now();
+    // Drop rather than queue: the next slider sample follows within 100 ms.
+    if (this.driveBusy) return false;
+    this.driveBusy = true;
+    try {
+      await this.transport.stream(this.topic + '/command', {
+        schema_version: 1, session_id: owner.session, command: 'drive', steering_command: steering, speed_command: speed,
+      });
+      if (this.owner === owner) this.lastHeartbeatAt = this.now();
+      return true;
+    } catch { return false; }
+    finally { this.driveBusy = false; }
   }
   async release(client) {
     if (this.owner?.client !== client) return;
@@ -207,7 +237,7 @@ export class ConsoleControl extends EventEmitter {
     if (owner.armed && !this.heartbeatBusy && this.now() - this.lastHeartbeatAt >= 900) {
       this.heartbeatBusy = true;
       try {
-        await this.transport.publish(TOPIC + '/command', { schema_version: 1, session_id: owner.session, command: 'heartbeat' }, 0, false);
+        await this.transport.publish(this.topic + '/command', { schema_version: 1, session_id: owner.session, command: 'heartbeat' }, 0, false);
         if (this.owner === owner) this.lastHeartbeatAt = this.now();
       } catch { await this.release(owner.client); }
       finally { this.heartbeatBusy = false; }

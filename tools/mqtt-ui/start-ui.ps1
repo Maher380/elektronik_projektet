@@ -1,6 +1,7 @@
 param(
     [switch]$Demo,
-    [ValidateRange(1024, 65535)][int]$Port = 8765
+    [ValidateRange(1024, 65535)][int]$Port = 8765,
+    [ValidateSet('vagrant', 'ford')][string]$Car = 'vagrant'
 )
 $ErrorActionPreference = 'Stop'
 $nodeCommand = Get-Command node -ErrorAction SilentlyContinue
@@ -15,7 +16,7 @@ if (-not $nodePath) {
 if (-not $nodePath) { throw 'Install Node.js 20 or newer, then open a new PowerShell window.' }
 $nodeVersion = & $nodePath --version
 if ([int]($nodeVersion.TrimStart('v').Split('.')[0]) -lt 20) { throw 'Node.js 20 or newer is required.' }
-$serverArguments = @((Join-Path $PSScriptRoot 'server.mjs'), '--port', [string]$Port)
+$serverArguments = @((Join-Path $PSScriptRoot 'server.mjs'), '--port', [string]$Port, '--car', $Car)
 if ($Demo) { $serverArguments += '--demo' }
 & $nodePath @serverArguments
 if ($LASTEXITCODE -ne 0) { throw 'MQTT console exited with an error. See message above.' }

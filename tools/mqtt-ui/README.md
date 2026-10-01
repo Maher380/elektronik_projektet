@@ -2,6 +2,8 @@
 
 Webbpanelen visar tio sekunders historik för tre IR-sensorer, begärd styrvinkel och motorpådrag. Här kan du starta/stoppa bilen och ändra körläge, duty, stoppavstånd och telemetriintervall.
 
+**Ford:** kör `.\tools\mqtt-ui\start-ui.ps1 -Car ford`, se [Ford-guiden](../../documentation/guides/ford_manual_by_remote.md).
+
 **Första gången:** följ [guiden från installation till körning](../../documentation/guides/mqtt_steg_for_steg.md).
 För den integrerade körloopen, se även [systemtest och provade inställningar](../../documentation/guides/main_system_test.md).
 

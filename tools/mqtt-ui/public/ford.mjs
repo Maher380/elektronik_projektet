@@ -1,0 +1,142 @@
+// Ford ManualByRemote page: two sliders, also driven by the arrow keys and the on-screen pad,
+// streamed to the car while this tab is in control.
+// @todo Add tests for the speed hold after start, for the arrow-key steps
+// and for stopping the stream when control ends.
+const $ = id => document.getElementById(id);
+const client = crypto.randomUUID();
+const motorLabels = { braked: 'BRAKED', no_drive: 'NO DRIVE', braking: 'BRAKING', driving_forward: 'DRIVING FWD', driving_reverse: 'DRIVING REV' };
+let state = null, csrf = null, stream = null, connected = false, received = 0, pending = 0, feedbackUntil = 0;
+// After every start the car gets speed 0 until the operator moves the speed slider.
+let speedHeld = true;
+const text = (id, value) => { $(id).textContent = value; };
+const signed = n => typeof n === 'number' && Number.isFinite(n) ? (n > 0 ? '+' : '') + Math.round(n) : '—';
+const timestamp = () => state ? state.now + performance.now() - received : Date.now();
+function message(value, type = '', duration = 7000) {
+  text('feedback', value); $('feedback').className = 'feedback ' + type; feedbackUntil = performance.now() + duration;
+}
+function accept(next) { state = next; received = performance.now(); connected = true; }
+async function post(action, extra = {}, keepalive = false) {
+  const response = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Cnb-Token': csrf }, body: JSON.stringify({ client, ...extra }), keepalive });
+  const result = await response.json();
+  if (!response.ok) throw Error(result.error || 'Request failed.');
+  if (result.state) accept(result.state);
+  return result;
+}
+async function act(action) {
+  pending++; message('Waiting for acknowledgement from the car…', '', 6000);
+  try { await post(action); message(state.notice, 'success'); return true; }
+  catch (error) { message(error.message, 'error', 12000); return false; }
+  finally { pending--; }
+}
+const controlling = () => state?.owner?.client === client && state.owner.armed && !document.hidden;
+function sendDrive() {
+  if (!controlling()) return;
+  const speed = speedHeld ? 0 : Number($('speed').value);
+  void post('drive', { steering: Number($('steering').value), speed }).catch(() => { connected = false; });
+}
+function centre(id) { $(id).value = 0; $(id).dispatchEvent(new Event('input')); }
+// Hold before the request: the drive stream can begin before the start reply arrives.
+$('start').addEventListener('click', () => { speedHeld = true; void act('start'); });
+// Arrow keys and the on-screen pad step a slider per press: speed by 1, steering by 10 degrees.
+// Holding a key repeats at the keyboard's rate. The value stays where it is when the key is released.
+const pad = { up: ['speed', 1], down: ['speed', -1], left: ['steering', -10], right: ['steering', 10] };
+const arrows = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
+function step(name) {
+  const [id, change] = pad[name];
+  // The range input clamps to its min/max.
+  $(id).value = Number($(id).value) + change;
+  $(id).dispatchEvent(new Event('input'));
+}
+// The 0 key (main row or numpad) sets the speed to 0; steering stays where it is.
+document.addEventListener('keydown', event => {
+  if (event.altKey || event.ctrlKey || event.metaKey) return;
+  if (event.key === '0') { event.preventDefault(); centre('speed'); return; }
+  const name = arrows[event.key];
+  if (!name) return;
+  // Without this a focused slider would also move itself, giving two steps per press.
+  event.preventDefault(); step(name);
+});
+for (const button of document.querySelectorAll('[data-pad]')) button.addEventListener('click', () => step(button.dataset.pad));
+// Panic stop zeroes both sliders first, so they are at rest even if the stop request fails.
+$('panic').addEventListener('click', () => {
+  $('steering').value = 0; $('speed').value = 0; speedHeld = true;
+  void act('stop');
+});
+// Sliders only change the values; the 100 ms stream below sends them. Sending on every
+// input event floods the car's 8-message receive queue and it disarms (message_overflow).
+$('speed').addEventListener('input', () => { speedHeld = false; });
+for (const id of ['steering', 'speed']) {
+  $(id).addEventListener('dblclick', () => centre(id));
+  $(id + '-zero').addEventListener('click', () => centre(id));
+}
+function chip(id, label, good, warning = false) {
+  const item = $(id); item.className = 'chip ' + (good ? 'good' : warning ? 'warn' : 'neutral'); item.querySelector('strong').textContent = label;
+}
+function render() {
+  text('steering-slider-value', signed(Number($('steering').value)));
+  text('speed-slider-value', signed(Number($('speed').value)));
+  if (!state) return;
+  const now = timestamp(), serverFresh = connected && performance.now() - received < 1800;
+  const interval = state.config?.telemetry_interval_ms || 200;
+  const fresh = serverFresh && state.car.fresh && now - state.car.receivedAt <= Math.max(2500, interval * 2.5);
+  const data = state.telemetry || {}, command = state.command || {};
+  const own = state.owner?.client === client;
+  const armed = fresh && (command.control_state === 'armed' || data.control_state === 'armed');
+  const latest = state.commandAt > state.car.receivedAt ? command : data;
+  $('demo-banner').hidden = !state.demo; text('mode-chip', state.demo ? 'DEMO' : 'LIVE MQTT'); $('mode-chip').className = 'chip ' + (state.demo ? 'warn' : 'neutral');
+  chip('broker-chip', serverFresh && state.broker.connected ? 'CONNECTED' : 'OFFLINE', serverFresh && state.broker.connected);
+  $('broker-chip').title = state.broker.label;
+  chip('car-chip', fresh ? 'RECEIVING' : state.car.online ? 'STALE' : 'OFFLINE', fresh, !fresh);
+  text('vehicle-state', fresh ? (latest.control_state || 'unknown').toUpperCase() : 'NO LIVE DATA');
+  $('vehicle-state').className = fresh && latest.control_state === 'armed' ? 'armed' : '';
+  const timedOut = fresh && latest.reason === 'drive_timeout';
+  text('motion-state', !fresh ? 'Waiting for fresh telemetry' : timedOut ? 'DRIVE TIMEOUT · no drive, still armed' : `${latest.motion_state || 'unknown'} · ${latest.reason || 'unknown'}`);
+  text('motor-state', fresh ? motorLabels[data.motor?.state] || '—' : '—');
+  $('motor-state').classList.toggle('alert', fresh && (data.motor?.state === 'braking' || timedOut));
+  const duty = fresh ? Math.max(data.motor?.forward_duty || 0, data.motor?.backward_duty || 0) : null;
+  text('duty', duty === null ? 'Duty —' : `Duty ${duty.toFixed(3)}`);
+  text('current-style', fresh ? data.driver_style === 'manual_by_remote' ? 'ManualByRemote' : data.driver_style || '—' : '—');
+  const seconds = Math.floor((data.uptime_ms || 0) / 1000);
+  text('uptime', fresh ? `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—');
+  text('session', fresh ? command.session_id || '—' : '—');
+  text('ownership', own ? 'This tab drives the car' : armed ? 'Another controller' : 'Monitoring only');
+  text('heartbeat', own && state.owner.armed && serverFresh ? 'ACTIVE' : 'INACTIVE');
+  text('heartbeat-detail', own && state.lastHeartbeatAt ? `Last sent ${Math.max(0, (now - state.lastHeartbeatAt) / 1000).toFixed(1)}s ago` : 'Sent only while controlling');
+  // Echo: what the car applies, beside what the sliders ask for.
+  const carSteering = fresh ? data.steering_deg : null, carSpeed = fresh ? data.motor?.speed_command : null;
+  text('steering-car-value', signed(carSteering));
+  text('speed-car-value', signed(carSpeed));
+  $('steering-car-value').classList.toggle('differs', own && armed && carSteering !== null && Math.round(carSteering) !== Number($('steering').value));
+  const askedSpeed = speedHeld ? 0 : Number($('speed').value);
+  $('speed-car-value').classList.toggle('differs', own && armed && carSpeed !== null && Math.round(carSpeed) !== askedSpeed);
+  $('speed-hold').hidden = !(own && state.owner.armed && speedHeld && Number($('speed').value) !== 0);
+  const ready = fresh && !!state.config && !!state.command;
+  $('start').disabled = !ready || armed || !!state.owner || pending > 0;
+  if (performance.now() > feedbackUntil) {
+    text('feedback', !serverFresh ? 'Local console disconnected. Reconnecting; control will not restart automatically.' : state.notice);
+    $('feedback').className = 'feedback';
+  }
+  text('stream-state', fresh ? state.demo ? 'SIMULATED DATA' : 'LIVE TELEMETRY' : 'WAITING FOR DATA');
+  text('received-age', state.car.receivedAt ? `Last sample ${Math.max(0, (now - state.car.receivedAt) / 1000).toFixed(1)}s ago` : 'No samples yet');
+}
+function release() {
+  if (state?.owner?.client === client && csrf) void post('release', {}, true).catch(() => {});
+}
+document.addEventListener('visibilitychange', () => { if (document.hidden) release(); });
+window.addEventListener('pagehide', release);
+setInterval(() => {
+  if (state?.owner?.client === client && !document.hidden) void post('pulse').catch(() => { connected = false; });
+}, 450);
+// Stream the sliders even when they do not move: silence means the car stops driving.
+setInterval(sendDrive, 100);
+setInterval(render, 100);
+async function connect() {
+  try {
+    const response = await fetch('/api/bootstrap'); if (!response.ok) throw Error('Local console unavailable.');
+    const bootstrap = await response.json(); csrf = bootstrap.csrf; accept(bootstrap.state);
+    stream?.close(); stream = new EventSource('/api/events');
+    stream.onmessage = event => { try { accept(JSON.parse(event.data)); } catch { connected = false; } };
+    stream.onerror = () => { connected = false; stream.close(); setTimeout(connect, 1500); };
+  } catch { connected = false; message('Local console unavailable. Keep start-ui.ps1 running. Retrying…', 'error', 2000); setTimeout(connect, 2000); }
+}
+void connect();
