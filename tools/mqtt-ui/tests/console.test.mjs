@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import http from 'node:http';
-import { ConsoleControl, History, TOPIC, validateConfig } from '../core.mjs';
+import { ConsoleControl, History, SUBSCRIPTIONS, TOPIC, piValues, validateConfig } from '../core.mjs';
 import { segments, valueOf } from '../public/charts.mjs';
 import { createConsole } from '../server.mjs';
-import { DemoTransport } from '../transport.mjs';
+import { DemoTransport, FordDemoTransport } from '../transport.mjs';
 
 const config = { schema_version: 1, revision: 5, result: 'applied', stop_distance_cm: 30, drive_duty: .5, driver_style: 'decide_action', telemetry_interval_ms: 200 };
 const telemetry = { schema_version: 1, sequence: 1, uptime_ms: 1000, control_state: 'disarmed', motion_state: 'stopped', distance_cm: { left: 42, center: 60, right: 35 }, motor: { speed_command: 0 }, steering_deg: 0 };
@@ -195,4 +195,64 @@ test('LAN access is off by default and can only be toggled from 127.0.0.1', asyn
   assert.equal(spoofed, 403);
   assert.equal((await toggle(url, false)).status, 200);
   await assert.rejects(fetch(lan + '/api/bootstrap'));
+});
+
+const pi = { schema_version: 1, measured_speed_mps: { slam: 0.42 }, wheel_angle_deg: { slam: -12.3 }, slam_state: 'tracking', cpu_temp_c: 61.2 };
+function fordSetup() {
+  const transport = new Transport(); let time = 1800000000000;
+  const control = new ConsoleControl(transport, { now: () => time, ackMs: 50, car: 'ford' });
+  const receive = (suffix, data, retain = false) => transport.emit('message', `cnb/ford/${suffix}`, data, retain);
+  transport.emit('connection', true);
+  return { control, receive, advance: ms => { time += ms; } };
+}
+
+test('Ford console keeps Pi telemetry fresh for 2.5 intervals', () => {
+  const f = fordSetup();
+  f.receive('pi/status', { schema_version: 1, online: true }, true);
+  f.receive('pi/telemetry', pi);
+  let snapshot = f.control.snapshot().pi;
+  assert.equal(snapshot.fresh, true);
+  assert.deepEqual(snapshot.telemetry, { measured_speed_mps: { slam: 0.42 }, wheel_angle_deg: { slam: -12.3 }, slam_state: 'tracking', cpu_temp_c: 61.2 });
+  assert.equal(snapshot.history.length, 1);
+  f.advance(500); assert.equal(f.control.snapshot().pi.fresh, true);
+  f.advance(1); assert.equal(f.control.snapshot().pi.fresh, false);
+  f.receive('pi/status', { schema_version: 1, online: false }, true);
+  snapshot = f.control.snapshot().pi;
+  assert.equal(snapshot.online, false); assert.equal(snapshot.telemetry, null);
+});
+
+test('Ford console ignores retained, malformed and wrong-version Pi telemetry', () => {
+  const f = fordSetup();
+  f.receive('pi/status', { schema_version: 1, online: true }, true);
+  f.receive('pi/telemetry', pi, true);
+  f.receive('pi/telemetry', { ...pi, slam_state: 'flying' });
+  f.receive('pi/telemetry', { ...pi, schema_version: 2 });
+  assert.equal(f.control.snapshot().pi.telemetry, null);
+});
+
+test('Pi values keep each source and turn unknowns into null', () => {
+  const values = piValues({ ...pi, measured_speed_mps: { slam: null, odometer_left_rear: 0.5, 'Bad Key': 1 }, wheel_angle_deg: [1], cpu_temp_c: '61' });
+  assert.deepEqual(values.measured_speed_mps, { slam: null, odometer_left_rear: 0.5 });
+  assert.deepEqual(values.wheel_angle_deg, {});
+  assert.equal(values.cpu_temp_c, null);
+  assert.equal(piValues({ ...pi, slam_state: undefined }), null);
+});
+
+test('only the Ford subscribes to and reports Pi topics', () => {
+  assert.ok(SUBSCRIPTIONS.ford.includes('pi/telemetry') && SUBSCRIPTIONS.ford.includes('pi/status'));
+  assert.ok(!SUBSCRIPTIONS.vagrant.some(t => t.startsWith('pi/')));
+  const f = setup();
+  f.receive('pi/telemetry', pi);
+  assert.equal(f.control.snapshot().pi, undefined);
+});
+
+test('Ford demo simulates the Pi with the agreed payload', async () => {
+  const demo = new FordDemoTransport(), seen = [];
+  demo.on('message', (topic, data, retained) => seen.push({ topic, data, retained }));
+  demo.start(); await new Promise(resolve => setTimeout(resolve, 300)); demo.close();
+  assert.ok(seen.some(m => m.topic === 'cnb/ford/pi/status' && m.data.online === true && m.retained));
+  const sample = seen.find(m => m.topic === 'cnb/ford/pi/telemetry');
+  assert.ok(sample);
+  assert.deepEqual(Object.keys(sample.data).sort(), ['cpu_temp_c', 'measured_speed_mps', 'schema_version', 'slam_state', 'wheel_angle_deg']);
+  assert.ok(piValues(sample.data));
 });

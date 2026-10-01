@@ -2,7 +2,16 @@
 // streamed to the car while this tab is in control.
 // @todo Add tests for the speed hold after start, for the arrow-key steps
 // and for stopping the stream when control ends.
+import { FordChart, WINDOW_MS } from '/fordcharts.mjs';
 const $ = id => document.getElementById(id);
+// The Ford's real wheel angle at full lock, so a steering command (a share of full lock) can be
+// shown in degrees beside the wheel angle the Pi measures.
+// @todo Measure the Ford's full-lock wheel angle; 25 is a placeholder.
+const FULL_LOCK_DEG = 25;
+// A wheel angle further than this from the command is flagged.
+const WHEEL_DIFFERS_DEG = 5;
+const PI_INTERVAL_MS = 200;
+const slamLabels = { tracking: 'TRACKING', lost: 'TRACKING LOST', starting: 'STARTING' };
 // crypto.randomUUID() only exists on https and localhost; getRandomValues also works over plain http on the LAN.
 const client = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
 const motorLabels = { braked: 'BRAKED', no_drive: 'NO DRIVE', braking: 'BRAKING', driving_forward: 'DRIVING FWD', driving_reverse: 'DRIVING REV' };
@@ -10,6 +19,8 @@ let state = null, csrf = null, stream = null, connected = false, received = 0, p
 // After every start the car gets speed 0 until the operator moves the speed slider.
 let speedHeld = true;
 const text = (id, value) => { $(id).textContent = value; };
+const commandDeg = command => command * FULL_LOCK_DEG / 90;
+const fixed = (n, digits, unit) => typeof n === 'number' && Number.isFinite(n) ? `${n > 0 ? '+' : ''}${n.toFixed(digits)}${unit}` : '—';
 const signed = n => typeof n === 'number' && Number.isFinite(n) ? (n > 0 ? '+' : '') + Math.round(n) : '—';
 const timestamp = () => state ? state.now + performance.now() - received : Date.now();
 function message(value, type = '', duration = 7000) {
@@ -73,6 +84,50 @@ for (const id of ['steering', 'speed']) {
 function chip(id, label, good, warning = false) {
   const item = $(id); item.className = 'chip ' + (good ? 'good' : warning ? 'warn' : 'neutral'); item.querySelector('strong').textContent = label;
 }
+// 30 seconds of samples for the charts. Each snapshot carries the last 10 seconds, so new
+// samples are appended by their receive time.
+const buffer = { car: [], pi: [] };
+function remember(now) {
+  for (const [key, samples] of [['car', state.history], ['pi', state.pi?.history]]) {
+    const list = buffer[key], last = list.at(-1)?.at ?? 0;
+    for (const sample of samples || []) if (sample.at > last) list.push(sample);
+    buffer[key] = list.filter(sample => sample.at >= now - WINDOW_MS);
+  }
+}
+const steeringChart = new FordChart('steering-chart', [
+  { color: '#48d9e8', side: 'left', format: v => Math.round(v) + '°', range: () => [-FULL_LOCK_DEG * 1.4, FULL_LOCK_DEG * 1.4] },
+  { color: '#b4e36c', side: null, range: () => [-FULL_LOCK_DEG * 1.4, FULL_LOCK_DEG * 1.4] },
+]);
+const speedChart = new FordChart('speed-chart', [
+  { color: '#48d9e8', side: 'left', format: v => String(Math.round(v)), range: () => [-100, 100] },
+  { color: '#b4e36c', side: 'right', format: v => v.toFixed(1), range: values => { const top = Math.max(1, ...values.map(Math.abs)); return [-top, top]; } },
+]);
+const number = n => typeof n === 'number' && Number.isFinite(n) ? n : null;
+function drawCharts(now) {
+  const car = (pick) => buffer.car.map(s => ({ at: s.at, value: number(pick(s.data)) }));
+  const pi = (pick) => buffer.pi.map(s => ({ at: s.at, value: number(pick(s.data)) }));
+  const command = car(d => typeof d.steering_deg === 'number' ? commandDeg(d.steering_deg) : null);
+  const wheel = pi(d => d.wheel_angle_deg?.slam);
+  steeringChart.draw([command, wheel], now, `Steering, last 30 seconds: command ${fixed(command.at(-1)?.value, 1, '°')}, wheel angle ${fixed(wheel.at(-1)?.value, 1, '°')}`);
+  const speed = car(d => d.motor?.speed_command), measured = pi(d => d.measured_speed_mps?.slam);
+  speedChart.draw([speed, measured], now, `Speed, last 30 seconds: command ${signed(speed.at(-1)?.value)}, measured ${fixed(measured.at(-1)?.value, 2, ' m/s')}`);
+}
+function renderPi(now, serverFresh, carSteering) {
+  const pi = state.pi || {}, data = pi.telemetry || {};
+  const fresh = serverFresh && pi.fresh && now - pi.receivedAt <= PI_INTERVAL_MS * 2.5;
+  text('pi-state', fresh ? slamLabels[data.slam_state] || '—' : pi.online ? 'STALE' : 'OFFLINE');
+  $('pi-state').className = fresh && data.slam_state === 'tracking' ? 'armed' : fresh && data.slam_state === 'lost' ? 'alert' : '';
+  const temp = fresh ? data.cpu_temp_c : null;
+  text('pi-temp', temp === null || temp === undefined ? 'CPU —' : `CPU ${temp.toFixed(1)} °C${temp >= 80 ? ' · throttling, SLAM may lag' : ''}`);
+  $('pi-temp').className = temp >= 80 ? 'hot' : temp >= 70 ? 'warm' : '';
+  const wheel = fresh ? number(data.wheel_angle_deg?.slam) : null;
+  const measured = fresh ? number(data.measured_speed_mps?.slam) : null;
+  text('wheel-value', fixed(wheel, 1, '°'));
+  text('measured-speed', measured === null ? '—' : `${measured.toFixed(2)} m/s`);
+  const asked = carSteering === null || carSteering === undefined ? null : commandDeg(carSteering);
+  text('wheel-detail', `Command ≈ ${fixed(asked, 1, '°')} at full lock ${FULL_LOCK_DEG}°` + (fresh && wheel === null && data.slam_state === 'tracking' ? ' · wheel angle unknown while slow' : ''));
+  $('wheel-value').classList.toggle('differs', wheel !== null && asked !== null && Math.abs(wheel - asked) > WHEEL_DIFFERS_DEG);
+}
 function render() {
   text('steering-slider-value', signed(Number($('steering').value)));
   text('speed-slider-value', signed(Number($('speed').value)));
@@ -110,6 +165,8 @@ function render() {
   $('steering-car-value').classList.toggle('differs', own && armed && carSteering !== null && Math.round(carSteering) !== Number($('steering').value));
   const askedSpeed = speedHeld ? 0 : Number($('speed').value);
   $('speed-car-value').classList.toggle('differs', own && armed && carSpeed !== null && Math.round(carSpeed) !== askedSpeed);
+  renderPi(now, serverFresh, carSteering);
+  remember(now); drawCharts(now);
   $('speed-hold').hidden = !(own && state.owner.armed && speedHeld && Number($('speed').value) !== 0);
   const ready = fresh && !!state.config && !!state.command;
   $('start').disabled = !ready || armed || !!state.owner || pending > 0;

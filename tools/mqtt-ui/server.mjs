@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { CARS, ConsoleControl, topicFor } from './core.mjs';
+import { CARS, ConsoleControl, SUBSCRIPTIONS, topicFor } from './core.mjs';
 import { MosquittoTransport, DemoTransport, FordDemoTransport, readSettings } from './transport.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
@@ -17,6 +17,7 @@ const pages = {
   ford: new Map([...shared,
     ['/', ['ford.html', 'text/html; charset=utf-8']],
     ['/ford.mjs', ['ford.mjs', 'text/javascript; charset=utf-8']],
+    ['/fordcharts.mjs', ['fordcharts.mjs', 'text/javascript; charset=utf-8']],
     ['/ford.css', ['ford.css', 'text/css; charset=utf-8']]]),
 };
 
@@ -153,7 +154,7 @@ if (process.argv[1] && path.resolve(process.argv[1]) === fileURLToPath(import.me
   let app;
   try {
     const transport = demo ? (car === 'ford' ? new FordDemoTransport() : new DemoTransport())
-      : new MosquittoTransport(readSettings(path.join(directory, '../mqtt/.env')), topicFor(car));
+      : new MosquittoTransport(readSettings(path.join(directory, '../mqtt/.env')), topicFor(car), SUBSCRIPTIONS[car]);
     app = createConsole(transport, port, car);
     const url = await app.listen();
     console.log(`CnB RC Control (${car}): ${url}\n${demo ? 'DEMO: simulated data, no MQTT connection.' : 'LIVE: waiting for car telemetry. Opening the page does not start the car.'}\nKeep this terminal open. Press Ctrl+C to close.`);

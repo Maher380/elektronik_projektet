@@ -63,6 +63,21 @@ Holding a key repeats at the keyboard's repeat rate. The value stays where it is
 when you let go; press the **0** key, the 0 button, double-click the slider or
 panic stop to stop.
 
+## What the Raspberry Pi measures
+
+When the Pi publishes (see [the Pi telemetry contract](../design_documents/ford_pi_telemetry.md)),
+the page shows what the camera measured beside what the car was asked to do:
+
+| Where | Shows |
+| --- | --- |
+| Status strip, **PI · SLAM** | TRACKING / TRACKING LOST / STARTING, or STALE / OFFLINE; CPU temperature (amber ≥ 70 °C, red ≥ 80 °C) |
+| Steering card, **WHEEL · SLAM** | Wheel angle in degrees; orange when more than 5° from the command. "—" below 0.2 m/s |
+| Speed card, **MEASURED · SLAM** | Measured speed in m/s |
+| Charts | Last 30 s of command and measured, for steering and speed |
+
+The command in degrees uses the Ford's full-lock angle, a placeholder of 25° until
+it has been measured (`FULL_LOCK_DEG` in `tools/mqtt-ui/public/ford.mjs`).
+
 ## How the car behaves
 
 | Situation | Car |

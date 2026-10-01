@@ -2,7 +2,7 @@ import { EventEmitter } from 'node:events';
 import { spawn } from 'node:child_process';
 import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
-import { TOPIC, clock } from './core.mjs';
+import { PI_INTERVAL_MS, SUBSCRIPTIONS, TOPIC, clock } from './core.mjs';
 
 export function readSettings(file) {
   const values = {};
@@ -28,8 +28,8 @@ export function executable(name) {
 // The installed Mosquitto clients handle MQTT, TCP, QoS and authentication.
 // No shell interpolation, no credentials served to the browser, no raw errors logged.
 export class MosquittoTransport extends EventEmitter {
-  constructor(settings, topic = TOPIC) {
-    super(); this.settings = settings; this.demo = false; this.topic = topic; this.streams = new Map();
+  constructor(settings, topic = TOPIC, suffixes = SUBSCRIPTIONS.vagrant) {
+    super(); this.settings = settings; this.demo = false; this.topic = topic; this.suffixes = suffixes; this.streams = new Map();
     this.label = `${settings.host}:${settings.port}`; this.closed = false;
     this.children = new Set(); this.retry = null; this.connected = false;
   }
@@ -49,7 +49,7 @@ export class MosquittoTransport extends EventEmitter {
       void this.probe();
       this.probeTimer = setInterval(() => void this.probe(), 4000);
     }
-    const subscriptions = ['telemetry', 'status', 'config/state', 'command/state'].flatMap(t => ['-t', `${this.topic}/${t}`]);
+    const subscriptions = this.suffixes.flatMap(t => ['-t', `${this.topic}/${t}`]);
     const child = this.child('mosquitto_sub', [...subscriptions, '-q', '1', '-k', '5', '-F', '%j', '-d']);
     const line = text => {
       if (!text.startsWith('{')) return;
@@ -81,7 +81,7 @@ export class MosquittoTransport extends EventEmitter {
     this.probing = true;
     // Debug stdout is buffered on Windows until a message arrives. -E exits on
     // SUBACK and flushes it, so broker status also works when the car is offline.
-    const subscriptions = ['telemetry', 'status', 'config/state', 'command/state'].flatMap(t => ['-t', `${this.topic}/${t}`]);
+    const subscriptions = this.suffixes.flatMap(t => ['-t', `${this.topic}/${t}`]);
     const child = this.child('mosquitto_sub', [...subscriptions, '-q', '1', '-E', '-d']);
     let output = '';
     child.stdout.on('data', data => { if (output.length < 32768) output += data; });
@@ -199,12 +199,32 @@ export class FordDemoTransport extends EventEmitter {
     this.config = { schema_version: 1, revision: 0, result: 'defaults', system_test: false, driver_style: 'manual_by_remote', telemetry_interval_ms: 200 };
     this.state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', driver_style: 'manual_by_remote' };
     this.drive = null; this.driveAt = 0; this.heartbeatAt = 0; this.driven = 1; this.brakeAt = 0;
+    // Simulated Pi: the car's real motion as SLAM would see it.
+    this.motion = { speed: 0, wheel: 0 }; this.piAt = 0;
   }
   message(suffix, data, retained = false) { this.emit('message', this.topic + '/' + suffix, structuredClone(data), retained); }
   start() {
     this.emit('connection', true); this.message('status', { schema_version: 1, online: true }, true);
     this.message('config/state', this.config, true); this.message('command/state', this.state, true);
+    this.message('pi/status', { schema_version: 1, online: true }, true);
     this.timer = setInterval(() => this.sample(), 50);
+  }
+  // Fake Pi: wheels and speed follow the commands with lag and a little noise, the wheel
+  // angle is unknown below 0.2 m/s, tracking is lost now and then, and the CPU warms up
+  // and cools down so all temperature colours appear.
+  samplePi(now, steering, speed) {
+    const t = (now - this.born) / 1000, m = this.motion;
+    m.wheel += (steering * 25 / 90 - m.wheel) * 0.35;
+    m.speed += (speed / 100 * 2.5 - m.speed) * 0.25;
+    const state = t < 3 ? 'starting' : t % 40 > 38 ? 'lost' : 'tracking';
+    const tracking = state === 'tracking', noise = () => (Math.random() - 0.5) * 0.04;
+    const measured = tracking ? m.speed + noise() : null;
+    const wheel = tracking && Math.abs(m.speed) >= 0.2 ? m.wheel + noise() * 40 : null;
+    this.message('pi/telemetry', {
+      schema_version: 1, measured_speed_mps: { slam: measured === null ? null : Math.round(measured * 100) / 100 },
+      wheel_angle_deg: { slam: wheel === null ? null : Math.round(wheel * 10) / 10 }, slam_state: state,
+      cpu_temp_c: Math.round((70 + 16 * Math.sin(t / 25)) * 10) / 10,
+    });
   }
   disarm(reason) {
     Object.assign(this.state, { control_state: 'disarmed', motion_state: 'stopped', session_id: '', reason }); this.drive = null;
@@ -213,6 +233,11 @@ export class FordDemoTransport extends EventEmitter {
   sample() {
     const now = clock(), armed = this.state.control_state === 'armed';
     if (armed && now - this.heartbeatAt >= 3000) this.disarm('heartbeat_timeout');
+    if (now - this.piAt >= PI_INTERVAL_MS) {
+      this.piAt = now;
+      const driving = this.state.control_state === 'armed' && !(this.drive && now - this.driveAt >= 500);
+      this.samplePi(now, this.drive?.steering ?? 0, driving ? this.drive?.speed ?? 0 : 0);
+    }
     if (this.sampleAt && now - this.sampleAt < this.config.telemetry_interval_ms) return;
     this.sampleAt = now;
     const timedOut = !!this.drive && now - this.driveAt >= 500;

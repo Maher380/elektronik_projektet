@@ -7,6 +7,26 @@ export const topicFor = car => 'cnb/' + car;
 export const STYLES = ['decide_action', 'slow_left', 'slow_right', 'gradual_sweep'];
 export const clock = () => performance.timeOrigin + performance.now();
 const uint = n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff;
+// Topics below a car's tree that the console subscribes to. The Ford's Raspberry Pi
+// publishes under cnb/ford/pi (documentation/design_documents/ford_pi_telemetry.md).
+export const SUBSCRIPTIONS = {
+  vagrant: ['telemetry', 'status', 'config/state', 'command/state'],
+  ford: ['telemetry', 'status', 'config/state', 'command/state', 'pi/telemetry', 'pi/status'],
+};
+// The Pi publishes at a fixed rate; its data is stale after 2.5 intervals.
+export const PI_INTERVAL_MS = 200;
+export const SLAM_STATES = ['tracking', 'lost', 'starting'];
+const finiteOrNull = n => typeof n === 'number' && Number.isFinite(n) ? n : null;
+// Keeps only the agreed fields: a value per source (null when unknown), SLAM state and CPU temperature.
+export function piValues(data) {
+  if (!data || typeof data !== 'object' || !SLAM_STATES.includes(data.slam_state)) return null;
+  const sources = value => value && typeof value === 'object' && !Array.isArray(value)
+    ? Object.fromEntries(Object.entries(value).filter(([k]) => /^[a-z0-9_]{1,32}$/.test(k)).slice(0, 8).map(([k, v]) => [k, finiteOrNull(v)])) : {};
+  return {
+    measured_speed_mps: sources(data.measured_speed_mps), wheel_angle_deg: sources(data.wheel_angle_deg),
+    slam_state: data.slam_state, cpu_temp_c: finiteOrNull(data.cpu_temp_c),
+  };
+}
 
 export const CONFIG_KEYS = ['stop_distance_cm', 'drive_duty', 'telemetry_interval_ms', 'driver_style', 'reaction_distance_cm', 'loop_interval_ms'];
 const configValues = value => Object.fromEntries(CONFIG_KEYS.filter(k => value[k] !== undefined).map(k => [k, value[k]]));
@@ -55,11 +75,13 @@ export class ConsoleControl extends EventEmitter {
     this.connected = false; this.online = false; this.receivedAt = 0;
     this.config = null; this.command = null; this.commandAt = 0; this.telemetry = null;
     this.owner = null; this.lastHeartbeatAt = 0; this.heartbeatBusy = false;
+    this.pi = { online: false, receivedAt: 0, telemetry: null, history: [] };
     this.notice = 'Waiting for MQTT connection.';
     transport.on('connection', connected => {
       this.connected = connected;
       this.online = false; this.receivedAt = 0; this.telemetry = null;
       this.history.clear(); this.command = null; this.config = null;
+      this.pi = { online: false, receivedAt: 0, telemetry: null, history: [] };
       this.cancel('Broker connection changed. Start again after reconnection.');
       this.notice = connected ? 'Connected. Waiting for fresh car telemetry.' : 'Broker disconnected. Check Mosquitto and tools/mqtt/.env.';
     });
@@ -75,6 +97,7 @@ export class ConsoleControl extends EventEmitter {
     if (!data || typeof data !== 'object' || data.schema_version !== 1) return;
     const suffix = topic.slice(this.topic.length + 1);
     if (!topic.startsWith(this.topic + '/')) return;
+    if (this.car === 'ford' && suffix.startsWith('pi/')) { this.receivePi(suffix, data, retained); return; }
     if (suffix === 'status' && typeof data.online === 'boolean') {
       this.online = data.online;
       if (!data.online) { this.receivedAt = 0; this.cancel('Car went offline.'); }
@@ -102,6 +125,24 @@ export class ConsoleControl extends EventEmitter {
       }
     }
   }
+  // The Pi only reports; it never takes part in control, so its data cannot cancel a session.
+  receivePi(suffix, data, retained) {
+    if (suffix === 'pi/status' && typeof data.online === 'boolean') {
+      this.pi.online = data.online;
+      if (!data.online) { this.pi.receivedAt = 0; this.pi.telemetry = null; }
+    }
+    const values = suffix === 'pi/telemetry' && !retained ? piValues(data) : null;
+    if (values) {
+      const now = this.now();
+      this.pi.telemetry = values; this.pi.receivedAt = now;
+      this.pi.history.push({ at: now, data: values });
+      this.prunePi(now);
+    }
+  }
+  prunePi(now) { this.pi.history = this.pi.history.filter(p => p.at >= now - 10000).slice(-100); }
+  piFresh() {
+    return this.connected && this.pi.online && this.pi.receivedAt > 0 && this.now() - this.pi.receivedAt <= PI_INTERVAL_MS * 2.5;
+  }
   fresh() {
     return this.connected && this.online && this.receivedAt > 0 && this.now() - this.receivedAt <= Math.max(2500, (this.config?.telemetry_interval_ms || 1000) * 2.5);
   }
@@ -114,7 +155,13 @@ export class ConsoleControl extends EventEmitter {
       config: this.config, command: this.command, commandAt: this.commandAt, telemetry: this.telemetry,
       owner: this.owner ? { client: this.owner.client, session: this.owner.session, armed: this.owner.armed } : null,
       lastHeartbeatAt: this.lastHeartbeatAt, notice: this.notice, history: this.history.samples,
+      ...(this.car === 'ford' ? { pi: this.piSnapshot() } : {}),
     };
+  }
+  piSnapshot() {
+    this.prunePi(this.now());
+    const { online, receivedAt, telemetry, history } = this.pi;
+    return { online, fresh: this.piFresh(), receivedAt, telemetry, history };
   }
   cancel(message) {
     this.owner = null; this.lastHeartbeatAt = 0;

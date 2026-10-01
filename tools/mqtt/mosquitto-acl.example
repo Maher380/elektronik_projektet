@@ -18,6 +18,8 @@ topic read cnb/ford/telemetry
 topic read cnb/ford/config/state
 topic read cnb/ford/command/state
 topic read cnb/ford/status
+topic read cnb/ford/pi/telemetry
+topic read cnb/ford/pi/status
 
 user cnb-ford
 topic read cnb/ford/command
@@ -25,3 +27,6 @@ topic write cnb/ford/telemetry
 topic write cnb/ford/config/state
 topic write cnb/ford/command/state
 topic write cnb/ford/status
+# The Ford's Raspberry Pi logs in as cnb-ford too, with its own client ID (cnb-ford-pi).
+topic write cnb/ford/pi/telemetry
+topic write cnb/ford/pi/status

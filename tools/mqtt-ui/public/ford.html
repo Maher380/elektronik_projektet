@@ -21,17 +21,19 @@
     <div><span class="eyebrow">UPTIME</span><strong id="uptime" class="mono">—</strong><small>Since car boot</small></div>
     <div><span class="eyebrow">ACTIVE SESSION</span><strong id="session" class="mono session">—</strong><small id="ownership">Monitoring only</small></div>
     <div><span class="eyebrow">HEARTBEAT</span><strong id="heartbeat">INACTIVE</strong><small id="heartbeat-detail">Sent only while controlling</small></div>
+    <div><span class="eyebrow">PI · SLAM</span><strong id="pi-state">WAITING</strong><small id="pi-temp">CPU —</small></div>
   </section>
   <section class="drive-panel" aria-label="Drive controls">
     <article class="drive-card steering-card">
       <div class="card-top"><h3>STEERING COMMAND</h3><button type="button" class="zero" id="steering-zero">0</button></div>
-      <div class="readout"><span>SLIDER <strong id="steering-slider-value" class="mono">0</strong></span><span>CAR <strong id="steering-car-value" class="mono">—</strong></span></div>
+      <div class="readout"><span>SLIDER <strong id="steering-slider-value" class="mono">0</strong></span><span class="echo">CAR <strong id="steering-car-value" class="mono">—</strong></span><span class="measured">WHEEL · SLAM <strong id="wheel-value" class="mono">—</strong></span></div>
+      <small id="wheel-detail" class="measured-detail">Command ≈ —°</small>
       <input id="steering" type="range" min="-90" max="90" step="1" value="0" aria-label="Steering command, −90 full left to +90 full right">
       <div class="scale"><span>−90 LEFT</span><span>0</span><span>RIGHT +90</span></div>
     </article>
     <article class="drive-card speed-card">
       <div class="card-top"><h3>SPEED COMMAND</h3><button type="button" class="zero" id="speed-zero">0</button></div>
-      <div class="readout"><span>SLIDER <strong id="speed-slider-value" class="mono">0</strong></span><span>CAR <strong id="speed-car-value" class="mono">—</strong></span></div>
+      <div class="readout"><span>SLIDER <strong id="speed-slider-value" class="mono">0</strong></span><span class="echo">CAR <strong id="speed-car-value" class="mono">—</strong></span><span class="measured">MEASURED · SLAM <strong id="measured-speed" class="mono">—</strong></span></div>
       <div class="speed-row">
         <input id="speed" type="range" min="-100" max="100" step="1" value="0" aria-label="Speed command, −100 full reverse to +100 full forward">
         <div class="scale vertical"><span>+100 FWD</span><span>0</span><span>REV −100</span></div>
@@ -54,9 +56,19 @@
       <p>↑ ↓ change the speed by 1, ← → change the steering by 10°. Hold a key to repeat. The 0 key sets the speed to 0.</p>
     </article>
   </section>
+  <section class="ford-charts" aria-label="Command beside measured, last 30 seconds">
+    <article class="chart-card">
+      <div class="card-top"><h3>STEERING · DEGREES</h3><span class="legend"><i class="command"></i>COMMAND ≈ <i class="measured"></i>WHEEL ANGLE (SLAM)</span></div>
+      <div class="plot"><canvas id="steering-chart" role="img"></canvas><div class="empty">No steering data yet</div></div>
+    </article>
+    <article class="chart-card">
+      <div class="card-top"><h3>SPEED</h3><span class="legend"><i class="command"></i>COMMAND (−100…+100) <i class="measured"></i>MEASURED (SLAM, m/s)</span></div>
+      <div class="plot"><canvas id="speed-chart" role="img"></canvas><div class="empty">No speed data yet</div></div>
+    </article>
+  </section>
   <div class="control-notes"><span>Keep this tab visible while driving · leaving it stops the car</span></div>
   <div id="feedback" class="feedback" role="status" aria-live="polite">Connecting to the local console…</div>
-  <footer><span><b class="tiny-dot"></b><strong id="stream-state">CONNECTING</strong><span class="footer-separator">/</span><span class="mono">cnb/ford/telemetry</span></span><span id="received-age">No samples yet</span><span class="footer-brand">FORD <b>MANUAL BY REMOTE</b></span></footer>
+  <footer><span><b class="tiny-dot"></b><strong id="stream-state">CONNECTING</strong><span class="footer-separator">/</span><span class="mono">cnb/ford/telemetry · cnb/ford/pi/telemetry</span></span><span id="received-age">No samples yet</span><span class="footer-brand">FORD <b>MANUAL BY REMOTE</b></span></footer>
 </main>
 </body>
 </html>
