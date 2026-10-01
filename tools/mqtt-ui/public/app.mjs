@@ -3,7 +3,7 @@ const $ = id => document.getElementById(id);
 const client = crypto.randomUUID();
 const charts = ['left', 'center', 'right', 'steering', 'speed'].map(key => new Chart(key));
 const styles = { decide_action: 'DecideAction', slow_left: 'SlowLeft', slow_right: 'SlowRight', gradual_sweep: 'GradualSweep' };
-let state = null, csrf = null, stream = null, connected = false, received = 0, dirty = false, pending = 0, configLoaded = false;
+let state = null, csrf = null, stream = null, connected = false, received = 0, dirty = false, pending = 0, configLoaded = false, motorTestSupported = false;
 let feedbackUntil = 0;
 const text = (id, value) => { $(id).textContent = value; };
 const number = (n, digits = 1) => typeof n === 'number' && Number.isFinite(n) ? n.toFixed(digits) : '—';
@@ -15,6 +15,7 @@ function accept(next) { state = next; received = performance.now(); connected = 
 async function post(action, extra = {}, keepalive = false) {
   const response = await fetch('/api/' + action, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Cnb-Token': csrf }, body: JSON.stringify({ client, ...extra }), keepalive });
   const result = await response.json();
+  if (action === 'motor' && response.status === 404) throw Error('Webbservern saknar motortest. Starta om web-UI-servern och ladda om sidan.');
   if (!response.ok) throw Error(result.error || 'Request failed.');
   if (result.state) accept(result.state);
   return result;
@@ -28,6 +29,15 @@ async function act(action, extra = {}) {
 $('start').addEventListener('click', () => void act('start'));
 $('stop').addEventListener('click', () => void act('stop'));
 $('servo-test').addEventListener('submit', event => { event.preventDefault(); void act('servo', { angle: Number($('servo-angle').value) }); });
+$('motor-test').addEventListener('submit', event => {
+  event.preventDefault();
+  if (!motorTestSupported) { message('Starta om web-UI-servern och ladda om sidan för motortest.', 'error', 12000); return; }
+  void act('motor', {
+    direction: $('motor-direction').value,
+    duty: Number($('motor-duty').value),
+    duration_ms: Number($('motor-duration').value),
+  });
+});
 $('configuration').addEventListener('input', () => { dirty = true; });
 $('configuration').addEventListener('submit', async event => {
   event.preventDefault();
@@ -67,7 +77,7 @@ function render() {
   text('vehicle-state', fresh ? (displayedControl || 'unknown').toUpperCase() : 'NO LIVE DATA');
   $('vehicle-state').className = fresh && displayedControl === 'armed' ? 'armed' : '';
   text('motion-state', fresh ? `${latestState.motion_state || 'unknown'} · ${latestState.reason || 'unknown'}` : 'Waiting for fresh telemetry');
-  text('current-style', fresh ? data.servo_test ? 'Manual servo' : config?.system_test ? 'Longest clearance' : styles[data.driver_style] || data.driver_style || '—' : '—');
+  text('current-style', fresh ? data.motor_test ? `Manual ${data.motor_test_direction || 'motor'}` : data.servo_test ? 'Manual servo' : config?.system_test ? 'Longest clearance' : styles[data.driver_style] || data.driver_style || '—' : '—');
   const seconds = Math.floor((data.uptime_ms || 0) / 1000);
   text('uptime', fresh ? `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—');
   text('sequence', fresh ? '#' + data.sequence : '—');
@@ -103,9 +113,11 @@ function render() {
   $('driver-style').disabled = !!config?.system_test || !ready || armed || pending > 0;
   $('driver-style').closest('label').hidden = !!config?.system_test;
   $('stop-distance').min = config?.system_test ? 1 : 30; $('stop-distance').max = config?.system_test ? 100 : 70;
-  for (const id of ['reaction-field', 'loop-field', 'servo-test']) $(id).hidden = !config?.system_test;
+  for (const id of ['reaction-field', 'loop-field', 'servo-test', 'motor-test']) $(id).hidden = !config?.system_test;
   $('set-servo').disabled = !ready || pending > 0 || (!!state.owner && !own);
-  for (const id of ['drive-duty', 'stop-distance', 'telemetry-interval', 'reaction-distance', 'loop-interval', 'servo-angle']) $(id).disabled = !ready || pending > 0 || (!!state.owner && !own);
+  $('run-motor').disabled = !motorTestSupported || !ready || pending > 0 || (!!state.owner && !own);
+  $('run-motor').title = motorTestSupported ? '' : 'Starta om web-UI-servern och ladda om sidan.';
+  for (const id of ['drive-duty', 'stop-distance', 'telemetry-interval', 'reaction-distance', 'loop-interval', 'servo-angle', 'motor-direction', 'motor-duty', 'motor-duration']) $(id).disabled = !ready || pending > 0 || (!!state.owner && !own);
   text('config-status', config ? `${dirty ? 'UNSENT CHANGES · ' : ''}Confirmed: ${config.system_test ? 'Longest clearance' : styles[config.driver_style]} · duty ${number(config.drive_duty, 2)} · stop ${number(config.stop_distance_cm, 0)} cm${config.system_test ? ` · reaction ${config.reaction_distance_cm} cm · loop ${config.loop_interval_ms} ms` : ''} · telemetry ${config.telemetry_interval_ms} ms` : 'Waiting for configuration from car');
   if (performance.now() > feedbackUntil) {
     text('feedback', !serverFresh ? 'Local console disconnected. Reconnecting; control will not restart automatically.' : state.notice);
@@ -126,7 +138,7 @@ setInterval(render, 100);
 async function connect() {
   try {
     const response = await fetch('/api/bootstrap'); if (!response.ok) throw Error('Local console unavailable.');
-    const bootstrap = await response.json(); csrf = bootstrap.csrf; accept(bootstrap.state);
+    const bootstrap = await response.json(); csrf = bootstrap.csrf; motorTestSupported = bootstrap.features?.motor_test === true; accept(bootstrap.state);
     stream?.close(); stream = new EventSource('/api/events');
     stream.onmessage = event => { try { accept(JSON.parse(event.data)); } catch { connected = false; } };
     stream.onerror = () => { connected = false; stream.close(); setTimeout(connect, 1500); };

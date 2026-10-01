@@ -48,6 +48,13 @@
       <button id="set-servo" type="submit" class="button apply" disabled>Stop motor &amp; test servo</button>
       <p>Holds the angle with the motor disabled. Start resumes automatic steering. Stop centres the servo.</p>
     </form>
+    <form id="motor-test" hidden>
+      <label>MOTOR DIRECTION<select id="motor-direction"><option value="forward">Forward</option><option value="backward">Backward</option></select></label>
+      <label>MOTOR DUTY <span class="label-hint">0.00–1.00</span><div class="number-wrap"><input id="motor-duty" type="number" min="0" max="1" step="0.01" value="1" required><span>duty</span></div></label>
+      <label>DURATION<div class="number-wrap"><input id="motor-duration" type="number" min="50" max="1000" step="10" value="300" required><span>ms</span></div></label>
+      <button id="run-motor" type="submit" class="button apply" disabled>Run motor test</button>
+      <p>Runs one timed pulse with steering centred. Use Stop if anything looks wrong.</p>
+    </form>
     <div class="control-notes"><span id="config-status">Waiting for configuration from car</span><span>Keep this tab visible while driving · leaving it requests a stop</span></div>
     <div id="feedback" class="feedback" role="status" aria-live="polite">Connecting to the local console…</div>
   </section>

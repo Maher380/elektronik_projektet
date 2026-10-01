@@ -7,6 +7,10 @@
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
 #configuration { grid-template-columns: repeat(auto-fit, minmax(145px, 1fr)); }
-#servo-test { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
-#servo-test[hidden], [hidden] { display: none !important; }
-#servo-test p { color: var(--muted, #aab5c4); font-size: 12px; max-width: 420px; }
+#servo-test,
+#motor-test { display: flex; align-items: end; flex-wrap: wrap; gap: 16px; margin-top: 20px; }
+#servo-test[hidden],
+#motor-test[hidden],
+[hidden] { display: none !important; }
+#servo-test p,
+#motor-test p { color: var(--muted, #aab5c4); font-size: 12px; max-width: 420px; }

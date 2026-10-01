@@ -148,14 +148,20 @@ export class DemoTransport extends EventEmitter {
       }
     } else { steering = style === 'slow_left' ? -90 : style === 'slow_right' ? 90 : -90 + (Math.floor(t * 20) % 72 <= 36 ? Math.floor(t * 20) % 72 : 72 - Math.floor(t * 20) % 72) * 5; selected = Math.min(...Object.values(distances)); }
     const armed = this.state.control_state === 'armed', blocked = selected <= this.config.stop_distance_cm;
-    const speed = armed && !blocked ? this.config.drive_duty : 0;
-    Object.assign(this.state, { motion_state: !armed ? 'stopped' : blocked ? 'inhibited' : speed > 0 ? 'moving' : 'stopped', reason: !armed ? this.state.reason : blocked ? 'obstacle' : 'none' });
+    const motorActive = this.motorTest && now < this.motorTest.until;
+    if (this.motorTest && !motorActive) { this.motorTest = null; this.state.motor_test = false; this.state.motor_test_duty = 0; this.state.motion_state = 'stopped'; this.state.reason = 'operator_stop'; }
+    const speed = motorActive ? this.motorTest.duty : armed && !blocked ? this.config.drive_duty : 0;
+    Object.assign(this.state, { motion_state: motorActive ? speed > 0 ? 'moving' : 'stopped' : !armed ? 'stopped' : blocked ? 'inhibited' : speed > 0 ? 'moving' : 'stopped', reason: motorActive ? 'manual_test' : !armed ? this.state.reason : blocked ? 'obstacle' : 'none' });
     this.message('telemetry', {
       ...this.state, sequence: ++this.sequence, uptime_ms: Math.floor(now - this.born), distance_cm: distances,
       adc_raw: Object.fromEntries(Object.entries(distances).map(([k, v]) => [k, Math.round(29000 / v)])),
       system_test: this.config.system_test, decision_distance_cm: decision,
       steering_deg: this.state.servo_test ? this.state.servo_angle_deg : armed && !blocked ? steering : 0,
-      motor: { speed_command: speed, forward_duty: armed && blocked ? 1 : speed, backward_duty: armed && blocked ? 1 : 0 },
+      motor: {
+        speed_command: speed,
+        forward_duty: motorActive ? this.motorTest.direction === 'forward' ? speed : 0 : armed && blocked ? 1 : speed,
+        backward_duty: motorActive ? this.motorTest.direction === 'backward' ? speed : 0 : armed && blocked ? 1 : 0,
+      },
       closest: { sensor: Object.keys(distances).reduce((a, b) => distances[a] < distances[b] ? a : b), distance_cm: Math.min(...Object.values(distances)) },
     });
   }
@@ -166,8 +172,18 @@ export class DemoTransport extends EventEmitter {
       this.message('config/state', { ...this.config, revision: data.revision, result: error ? 'rejected' : 'applied', ...(error ? { error } : {}) });
     } else if (data.command === 'heartbeat') {
       if (data.session_id === this.state.session_id) this.heartbeatAt = clock();
+    } else if (data.command === 'motor') {
+      Object.assign(this.state, {
+        last_request_id: data.request_id, session_id: '', result: 'accepted',
+        control_state: 'disarmed', motion_state: data.duty > 0 ? 'moving' : 'stopped',
+        reason: 'manual_test', motor_test: true,
+        motor_test_direction: data.direction, motor_test_duty: data.duty,
+      });
+      this.motorTest = { direction: data.direction, duty: data.duty, until: clock() + data.duration_ms };
+      this.message('command/state', this.state);
     } else {
       const start = data.command === 'start';
+      this.motorTest = null; this.state.motor_test = false; this.state.motor_test_duty = 0;
       this.state.servo_test = data.command === 'servo'; this.state.servo_angle_deg = data.angle_deg ?? 0;
       Object.assign(this.state, { last_request_id: data.request_id, session_id: start ? data.session_id : '', result: 'accepted', control_state: start ? 'armed' : 'disarmed', motion_state: 'stopped', reason: start ? 'none' : 'operator_stop' });
       this.heartbeatAt = clock(); this.message('command/state', this.state);

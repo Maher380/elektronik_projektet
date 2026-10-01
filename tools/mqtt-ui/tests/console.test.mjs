@@ -78,6 +78,23 @@ test('a pending servo test blocks Start; Stop cancels the manual operation', asy
   assert.equal(f.control.servoBusy, false);
   assert.equal(f.transport.sent.at(-1).data.command, 'stop');
 });
+test('manual motor test sends direction, duty and duration and requires matching ACK', async () => {
+  const f = setup(); autoAck(f); await f.control.start('owner');
+  f.receive('config/state', { ...config, system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250 });
+  f.transport.callback = async (_, data) => {
+    if (data.command === 'motor') f.receive('command/state', {
+      ...command, last_request_id: data.request_id, result: 'accepted', control_state: 'disarmed',
+      motor_test: true, motor_test_direction: data.direction, motor_test_duty: data.duty,
+    });
+  };
+  await f.control.motor('owner', 'backward', 1, 300);
+  assert.equal(f.control.owner, null);
+  assert.equal(f.transport.sent.at(-1).data.command, 'motor');
+  assert.equal(f.transport.sent.at(-1).data.direction, 'backward');
+  assert.equal(f.transport.sent.at(-1).data.duty, 1);
+  assert.equal(f.transport.sent.at(-1).data.duration_ms, 300);
+  for (const input of [['left', 1, 300], ['forward', 1.1, 300], ['forward', 1, 49]]) await assert.rejects(f.control.motor('owner', ...input));
+});
 test('retained state alone cannot start a car; opening and ticking never publishes', async () => {
   const f = setup(); await f.control.tick(); assert.equal(f.transport.sent.length, 0);
   f.transport.emit('connection', false); f.transport.emit('connection', true);
@@ -163,6 +180,7 @@ test('HTTP is loopback-only, serves only allowlisted files and requires origin +
   const transport = new DemoTransport(), app = createConsole(transport, 0), url = await app.listen(); t.after(() => app.close());
   const boot = await (await fetch(url + '/api/bootstrap')).json();
   assert.equal(boot.state.demo, true); assert.equal(boot.state.owner, null);
+  assert.equal(boot.features.motor_test, true);
   assert.equal(JSON.stringify(boot).includes('password'), false);
   for (const resource of ['/core.mjs', '/.env', '/..%2fmqtt%2f.env']) assert.equal((await fetch(url + resource)).status, 404);
   const body = JSON.stringify({ client: 'a'.repeat(32) });
@@ -175,5 +193,8 @@ test('HTTP is loopback-only, serves only allowlisted files and requires origin +
   const options = { method: 'POST', headers: { Origin: url, 'Content-Type': 'application/json', 'X-Cnb-Token': boot.csrf }, body };
   assert.equal((await fetch(url + '/api/start', options)).status, 200);
   assert.equal((await fetch(url + '/api/stop', options)).status, 200);
+  const motor = await fetch(url + '/api/motor', { ...options, body: JSON.stringify({ client: 'a'.repeat(32), direction: 'backward', duty: 0.5, duration_ms: 300 }) });
+  assert.equal(motor.status, 200);
+  assert.equal((await motor.json()).state.command.motor_test_direction, 'backward');
   assert.equal(app.control.owner, null);
 });

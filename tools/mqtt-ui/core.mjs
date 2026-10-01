@@ -181,6 +181,22 @@ export class ConsoleControl extends EventEmitter {
     } catch (error) { await this.sendStop().catch(() => {}); throw error; }
     finally { this.servoBusy = false; }
   }
+  async motor(client, direction, duty, duration_ms) {
+    if (!['forward', 'backward'].includes(direction)) throw Error('Motor direction must be forward or backward.');
+    if (!Number.isFinite(duty) || duty < 0 || duty > 1) throw Error('Motor duty: allowed range 0.00 to 1.00.');
+    if (!Number.isInteger(duration_ms) || duration_ms < 50 || duration_ms > 1000) throw Error('Motor duration: allowed range 50 to 1000 ms.');
+    if (!this.fresh() || !this.config?.system_test) throw Error('Wait for live system-test firmware.');
+    if (this.servoBusy || (this.owner && this.owner.client !== client)) throw Error('Another operation controls the car.');
+    this.cancel('Manual motor test requested; autonomous control disabled.');
+    try {
+      const request_id = this.id();
+      const state = await this.acknowledged('command', request_id, TOPIC + '/command', {
+        schema_version: 1, request_id, session_id: randomBytes(8).toString('hex'), command: 'motor', direction, duty, duration_ms,
+      });
+      if (state.result !== 'accepted' || state.control_state !== 'disarmed' || state.motor_test !== true || state.motor_test_direction !== direction || Math.abs((state.motor_test_duty ?? -1) - duty) > 0.001) throw Error('Motor test was not confirmed by the car.');
+      this.notice = `Motor test acknowledged: ${direction} duty ${duty.toFixed(2)} for ${duration_ms} ms.`;
+    } catch (error) { await this.sendStop().catch(() => {}); throw error; }
+  }
   async configure(client, input) {
     const systemTest = this.config?.system_test === true;
     const config = validateConfig(systemTest ? { reaction_distance_cm: this.config.reaction_distance_cm,

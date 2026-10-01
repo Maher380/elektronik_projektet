@@ -36,7 +36,7 @@ export function createConsole(transport, port = 8765) {
         const content = await readFile(path.join(directory, 'public', file));
         res.writeHead(200, { 'Content-Type': type }); res.end(content); return;
       }
-      if (req.method === 'GET' && route === '/api/bootstrap') { json(res, 200, { csrf, state: control.snapshot() }); return; }
+      if (req.method === 'GET' && route === '/api/bootstrap') { json(res, 200, { csrf, features: { motor_test: true }, state: control.snapshot() }); return; }
       if (req.method === 'GET' && route === '/api/events') {
         if (streams.size >= 8) { json(res, 429, { error: 'Too many console tabs.' }); return; }
         res.writeHead(200, { 'Content-Type': 'text/event-stream', Connection: 'keep-alive' });
@@ -56,6 +56,7 @@ export function createConsole(transport, port = 8765) {
         case '/api/start': await control.start(data.client); break;
         case '/api/stop': await control.stop(); break;
         case '/api/servo': await control.servo(data.client, data.angle); break;
+        case '/api/motor': await control.motor(data.client, data.direction, data.duty, data.duration_ms); break;
         case '/api/config': await control.configure(data.client, data.config); break;
         case '/api/release': await control.release(data.client); break;
         default: json(res, 404, { error: 'Not found.' }); return;
