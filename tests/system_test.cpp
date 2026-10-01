@@ -135,6 +135,12 @@ struct Factory final : driver::factory::Interface {
             driver::mqtt::Qos::AtLeastOnce, true), "queue config");
     }
     void output(float f, float b, bool enabled, unsigned servoHz) {
+        if (pwms[5]->duty() != f || pwms[6]->duty() != b || sleep->read() != enabled) {
+            std::fprintf(stderr, "Expected PWM %.2f/%.2f sleep %d; actual %.2f/%.2f sleep %d at tick %u\n",
+                static_cast<double>(f), static_cast<double>(b), enabled,
+                static_cast<double>(pwms[5]->duty()), static_cast<double>(pwms[6]->duty()),
+                sleep->read(), static_cast<unsigned>(host::ticks));
+        }
         check(pwms[5]->duty() == f, "forward PWM");
         check(pwms[6]->duty() == b, "backward PWM");
         check(sleep->read() == enabled, "sleep enable");
@@ -194,30 +200,36 @@ int main() {
         {{15,40,15},0,false,330}, {{20,40,18},0,false,330},
         {{40,40,0},-30,false,386}};
     for (const auto& row : cases) {
-        const auto decision = decide(row.distances, Configuration{});
+        WallPid wallPid{};
+        const auto decision = decide(row.distances, Configuration{}, wallPid, 20U);
         check(decision.angle == row.angle && decision.blocked == row.blocked,
               "route and proportional wall correction");
     }
-    // Test the real Vagrant navigation block, rather than a copied helper.
+    // Exercise the real output sequence with fake hardware and time.
     {
         Factory navigation; std::atomic<bool> done{false}; host::ticks = 0;
-        unsigned tick = 0, rowIndex = 0;
+        unsigned tick = 0;
         host::afterTick = [&] {
-            if (tick == 0) {
-                navigation.distances(cases[0].distances[0], cases[0].distances[1], cases[0].distances[2]);
+            switch (tick) {
+            case 0:
+                navigation.distances(60, 60, 60);
                 check(navigation.broker->simulateIncoming("cnb/vagrant/config/set",
                     R"({"schema_version":1,"revision":1,"stop_distance_cm":30,"reaction_distance_cm":40,"loop_interval_ms":20,"drive_duty":0.5,"telemetry_interval_ms":200})"), "queue navigation settings");
                 navigation.start();
-            } else if (tick % 2 == 1) {
-                const auto& row = cases[rowIndex];
-                navigation.output(row.blocked ? 1 : .5F, row.blocked ? 1 : 0, true, row.hz);
-                if (++rowIndex == std::size(cases)) { done.store(true); }
-                else { const auto& next = cases[rowIndex].distances; navigation.distances(next[0], next[1], next[2]); }
+                break;
+            case 1: navigation.output(1, 0, true, 330); break;
+            case 18: navigation.output(1, 0, true, 330); break;
+            case 19: navigation.output(.5F, 0, true, 330); navigation.distances(20, 10, 20); break;
+            case 21: navigation.output(1, 1, true, 330); break;
+            case 29: navigation.output(0, 0, false, 330); break;
+            case 39: navigation.output(0, 1, true, 330); break;
+            case 69: navigation.output(0, 0, false, 330); navigation.distances(60, 60, 60); break;
+            case 83: navigation.output(1, 0, true, 330); done.store(true); break;
             }
             ++tick;
         };
         app::logic::VagrantLogic{navigation}.run(done); host::afterTick = {};
-        check(rowIndex == std::size(cases), "all navigation cases exercised");
+        check(tick == 84, "navigation timing exercised");
     }
     Control runtime{true};
     ConfigurationRequest request{}; request.revision = 1;
@@ -248,27 +260,27 @@ int main() {
             config(R"({"schema_version":1,"revision":1,"stop_distance_cm":30,"reaction_distance_cm":40,"loop_interval_ms":1000,"drive_duty":0.5,"telemetry_interval_ms":200})");
             f.start(1); break;
         case 1:
-            f.output(.5F,0,true,500);
+            f.output(1,0,true,500);
             command(R"({"schema_version":1,"request_id":2,"session_id":"test","command":"servo","angle_deg":30})"); break;
         case 2:
             f.output(0,0,false,291);
             command(R"({"schema_version":1,"request_id":3,"session_id":"test","command":"start"})", true); break;
         case 3: f.output(0,0,false,291); f.distances(15,20,60); f.start(3); break;
-        case 4: f.output(.5F,0,true,215); break;
+        case 4: f.output(1,0,true,215); break;
         case 5:
             config(R"({"schema_version":1,"revision":2,"stop_distance_cm":25,"reaction_distance_cm":50,"loop_interval_ms":20,"drive_duty":1,"telemetry_interval_ms":200})"); break;
         case 6: f.output(1,0,true,215); f.distances(20,10,20); break;
         case 8: f.output(1,1,true,330); break;
         case 9: f.distances(nan,nan,nan); break;
-        case 10: f.output(1,0,true,330); break; // obstacle clears without a new Start
+        case 10: f.output(1,1,true,330); break; // finish the brake phase before moving again
         case 11:
             config(R"({"schema_version":1,"revision":3,"stop_distance_cm":25,"reaction_distance_cm":50,"loop_interval_ms":1000,"drive_duty":0.7,"telemetry_interval_ms":200})"); break;
         case 12:
-            f.output(.7F,0,true,330);
+            f.output(1,1,true,330);
             command(R"({"schema_version":1,"request_id":4,"session_id":"test","command":"stop"})"); break;
         case 13: f.output(0,0,false,330); break; // stop is not delayed by the 1000ms sensor interval
         case 14: f.start(5); break;
-        case 15: f.output(.7F,0,true,330); break;
+        case 15: f.output(1,0,true,330); break;
         case 315: f.output(0,0,false,330); break; // heartbeat expired
         case 316: f.start(4); break; // replay must not rearm
         case 317: f.output(0,0,false,330); stop.store(true); break;

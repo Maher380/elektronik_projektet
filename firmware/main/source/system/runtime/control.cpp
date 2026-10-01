@@ -2,6 +2,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <limits>
 
 namespace app::runtime
 {
@@ -94,7 +95,8 @@ bool Control::setDriverStyle(navigation::DriverStyle style) noexcept
 
 void Control::setMqttConnected(bool connected) noexcept
 {
-    if (myMqttConnected && !connected && (myControlState == ControlState::Armed))
+    if (myMqttConnected && !connected
+        && (myControlState == ControlState::Armed || myMotorTest))
     {
         disarm(StateReason::MqttDisconnected);
     }
@@ -138,6 +140,9 @@ CommandResult Control::handleCommand(const Command& command,
             myLastControlRequestId = command.requestId;
             myLastStartRequestId = command.requestId;
             myServoTest = false;
+            myMotorTest = false;
+            myMotorTestDuty = 0.0F;
+            myMotorTestUntilMs = 0U;
             myActiveSession = command.sessionId;
             myLastHeartbeatMs = nowMs;
             myControlState = ControlState::Armed;
@@ -163,6 +168,26 @@ CommandResult Control::handleCommand(const Command& command,
             disarm(StateReason::OperatorStop);
             myServoAngleDegrees = command.servoAngleDegrees;
             myServoTest = true;
+            return {true, CommandError::None};
+
+        case CommandType::Motor:
+            if (!mySystemTest || myActuatorFault || !command.hasRequestId
+                || command.requestId == 0U
+                || !isFiniteInRange(command.motorDuty, 0.0F, 1.0F)
+                || command.motorDurationMs < 50U || command.motorDurationMs > 1000U)
+            {
+                return {false, CommandError::InvalidRequest};
+            }
+            if (!myMqttConnected) { return {false, CommandError::MqttDisconnected}; }
+            if (command.requestId <= myLastControlRequestId) { return {false, CommandError::StaleRequest}; }
+            myLastControlRequestId = command.requestId;
+            disarm(StateReason::ManualTest);
+            myMotorTestDirection = command.motorDirection;
+            myMotorTestDuty = command.motorDuty;
+            myMotorTestUntilMs = nowMs + command.motorDurationMs;
+            myMotorTest = true;
+            myMotionState = command.motorDuty > 0.0F ? MotionState::Moving : MotionState::Stopped;
+            myStateReason = StateReason::ManualTest;
             return {true, CommandError::None};
 
         case CommandType::Heartbeat:
@@ -191,6 +216,22 @@ void Control::forceDisarm(StateReason reason) noexcept
 {
     if (reason == StateReason::ActuatorFault) { myActuatorFault = true; }
     disarm(reason);
+}
+
+bool Control::updateMotorTest(std::uint32_t nowMs) noexcept
+{
+    if (!myMotorTest) { return false; }
+    const std::uint32_t remaining = myMotorTestUntilMs - nowMs;
+    if (remaining > 0U && remaining < (std::numeric_limits<std::uint32_t>::max() / 2U))
+    {
+        return true;
+    }
+    myMotorTest = false;
+    myMotorTestDuty = 0.0F;
+    myMotorTestUntilMs = 0U;
+    myMotionState = MotionState::Stopped;
+    myStateReason = StateReason::OperatorStop;
+    return false;
 }
 
 const char* Control::activeSessionId() const noexcept
@@ -253,6 +294,9 @@ bool Control::isActiveSession(
 void Control::disarm(StateReason reason) noexcept
 {
     myServoTest = false;
+    myMotorTest = false;
+    myMotorTestDuty = 0.0F;
+    myMotorTestUntilMs = 0U;
     myControlState = ControlState::Disarmed;
     myMotionState = MotionState::Stopped;
     myStateReason = myActuatorFault ? StateReason::ActuatorFault : reason;

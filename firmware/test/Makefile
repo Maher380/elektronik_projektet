@@ -20,6 +20,7 @@ SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301_programmer.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/l298n.cpp \
+	$(FIRMWARE_SRC_DIR)/driver/motor/mp6550.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/serial/stub.cpp
 
 ALL_FILES := $(TEST_FILES) $(SOURCE_FILES)

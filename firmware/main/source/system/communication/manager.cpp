@@ -108,6 +108,25 @@ bool readDriverStyle(const cJSON* item, navigation::DriverStyle& style, ParseErr
     return false;
 }
 
+bool readMotorDirection(const cJSON* item,
+                        runtime::MotorTestDirection& direction,
+                        ParseError& error) noexcept
+{
+    if (!cJSON_IsString(item)) { error = ParseError::InvalidType; return false; }
+    if (std::strcmp(item->valuestring, "forward") == 0)
+    {
+        direction = runtime::MotorTestDirection::Forward;
+        return true;
+    }
+    if (std::strcmp(item->valuestring, "backward") == 0)
+    {
+        direction = runtime::MotorTestDirection::Backward;
+        return true;
+    }
+    error = ParseError::InvalidType;
+    return false;
+}
+
 bool boundedJson(const char* payload) noexcept
 {
     // Bound cJSON's recursive parser stack before parsing untrusted input.
@@ -360,6 +379,7 @@ bool parseCommand(const char* payload,
     }
 
     const bool servo = std::strcmp(commandItem->valuestring, "servo") == 0;
+    const bool motor = std::strcmp(commandItem->valuestring, "motor") == 0;
     const bool heartbeat = std::strcmp(commandItem->valuestring, "heartbeat") == 0;
     constexpr const char* HeartbeatFields[]{"schema_version", "session_id", "command"};
     constexpr const char* ControlFields[]{
@@ -367,9 +387,13 @@ bool parseCommand(const char* payload,
 
     constexpr const char* ServoFields[]{
         "schema_version", "request_id", "session_id", "command", "angle_deg"};
-    const char* const* fields = heartbeat ? HeartbeatFields : servo ? ServoFields : ControlFields;
+    constexpr const char* MotorFields[]{
+        "schema_version", "request_id", "session_id", "command", "direction", "duty", "duration_ms"};
+    const char* const* fields = heartbeat ? HeartbeatFields
+        : servo ? ServoFields : motor ? MotorFields : ControlFields;
     const std::size_t fieldCount = heartbeat ? std::size(HeartbeatFields)
-                                             : servo ? std::size(ServoFields) : std::size(ControlFields);
+        : servo ? std::size(ServoFields) : motor ? std::size(MotorFields)
+        : std::size(ControlFields);
     bool valid = validateFields(root, fields, fieldCount, error) && readSchema(root, error)
         && copySession(root, command.sessionId);
 
@@ -408,6 +432,22 @@ bool parseCommand(const char* payload,
                 cJSON_Delete(root);
                 return false;
             }
+        }
+        else if (motor)
+        {
+            command.type = runtime::CommandType::Motor;
+            std::uint32_t duration{0U};
+            if (!readMotorDirection(cJSON_GetObjectItemCaseSensitive(root, "direction"),
+                                    command.motorDirection,
+                                    error)
+                || !readFloat(root, "duty", command.motorDuty)
+                || !readUnsigned(root, "duration_ms", duration))
+            {
+                if (error == ParseError::None) { error = ParseError::InvalidType; }
+                cJSON_Delete(root);
+                return false;
+            }
+            command.motorDurationMs = duration;
         }
         else if (std::strcmp(commandItem->valuestring, "stop") == 0)
         {
@@ -468,6 +508,13 @@ bool writeCommandState(char* destination,
         && (cJSON_AddNumberToObject(root, "last_request_id", requestId) != nullptr)
         && (cJSON_AddBoolToObject(root, "servo_test", control.isServoTest()) != nullptr)
         && (cJSON_AddNumberToObject(root, "servo_angle_deg", control.servoAngleDegrees()) != nullptr)
+        && (cJSON_AddBoolToObject(root, "motor_test", control.isMotorTest()) != nullptr)
+        && (cJSON_AddStringToObject(root,
+                                    "motor_test_direction",
+                                    control.motorTestDirection() == runtime::MotorTestDirection::Backward
+                                        ? "backward" : "forward")
+            != nullptr)
+        && (cJSON_AddNumberToObject(root, "motor_test_duty", control.motorTestDuty()) != nullptr)
         && (cJSON_AddStringToObject(root, "session_id", control.activeSessionId()) != nullptr)
         && (cJSON_AddStringToObject(root, "driver_style", toString(control.configuration().driverStyle)) != nullptr)
         && (cJSON_AddStringToObject(root, "result", result) != nullptr)
@@ -676,6 +723,7 @@ const char* toString(runtime::StateReason reason) noexcept
         case runtime::StateReason::HeartbeatTimeout: return "heartbeat_timeout";
         case runtime::StateReason::MqttDisconnected: return "mqtt_disconnected";
         case runtime::StateReason::MessageOverflow: return "message_overflow";
+        case runtime::StateReason::ManualTest: return "manual_test";
         case runtime::StateReason::None: return "none";
     }
     return "none";

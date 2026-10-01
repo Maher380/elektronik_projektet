@@ -5,7 +5,6 @@
 
 #pragma once
 
-#include "FreeRTOSConfig.h"
 #include <cstdint>
 
 #include "driver/motor/interface.h"

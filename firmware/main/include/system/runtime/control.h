@@ -64,6 +64,14 @@ enum class CommandType : std::uint8_t
     Stop,
     Heartbeat,
     Servo,
+    Motor,
+};
+
+/** Direction for the bounded manual motor test command. */
+enum class MotorTestDirection : std::uint8_t
+{
+    Forward,
+    Backward,
 };
 
 /** Parsed transient command. */
@@ -74,6 +82,9 @@ struct Command
     bool hasRequestId{false};
     /** Requested servo angle for the transient Servo command only. */
     float servoAngleDegrees{0.0F};
+    MotorTestDirection motorDirection{MotorTestDirection::Forward};
+    float motorDuty{0.0F};
+    std::uint32_t motorDurationMs{0U};
     std::array<char, SessionIdSize> sessionId{};
 };
 
@@ -122,6 +133,7 @@ enum class StateReason : std::uint8_t
     MqttDisconnected,
     MessageOverflow,
     ActuatorFault,
+    ManualTest,
     None,
 };
 
@@ -142,6 +154,11 @@ public:
     bool isServoTest() const noexcept { return myServoTest; }
     /** Angle requested by the most recently accepted manual servo command. */
     float servoAngleDegrees() const noexcept { return myServoAngleDegrees; }
+    /** Clear expired manual motor tests and report whether one is active. */
+    bool updateMotorTest(std::uint32_t nowMs) noexcept;
+    bool isMotorTest() const noexcept { return myMotorTest; }
+    MotorTestDirection motorTestDirection() const noexcept { return myMotorTestDirection; }
+    float motorTestDuty() const noexcept { return myMotorTestDuty; }
 
     static constexpr std::uint32_t HeartbeatTimeoutMs{3000U};
 
@@ -185,6 +202,10 @@ private:
     const bool mySystemTest;
     bool myServoTest{false};
     float myServoAngleDegrees{0.0F};
+    bool myMotorTest{false};
+    MotorTestDirection myMotorTestDirection{MotorTestDirection::Forward};
+    float myMotorTestDuty{0.0F};
+    std::uint32_t myMotorTestUntilMs{0U};
     Configuration myConfiguration{};
     std::uint32_t myConfigurationRevision{0U};
     bool myHasConfigurationRevision{false};

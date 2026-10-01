@@ -5,6 +5,7 @@
 #include <memory>
 
 #include "system/pin_manager/esp32s3.h"
+#include "system/logic/reverse_controller.h"
 #include "test/a89301_programmer.h"
 #include "test/pin_manager.h"
 
@@ -14,10 +15,37 @@
 #include "driver/distance_sensor/gp2y0a21yk.h"
 #include "driver/motor/a89301.h"
 #include "driver/motor/l298n.h"
+#include "driver/motor/mp6550.h"
 #include "driver/pwm/stub.h"
 
 int main()
 {
+    using Phase = app::logic::ReverseController::Phase;
+    app::logic::ReverseController reverse;
+    if (reverse.update(0U, 1U, true, false) != Phase::Braking
+        || reverse.update(79U, 1U, true, false) != Phase::Braking
+        || reverse.update(80U, 1U, true, false) != Phase::Settling
+        || reverse.update(180U, 1U, true, false) != Phase::Reversing
+        || reverse.update(480U, 1U, true, false) != Phase::Recovering
+        || reverse.update(580U, 1U, true, false) != Phase::Holding
+        || reverse.update(600U, 2U, true, false) != Phase::Holding
+        || reverse.update(610U, 2U, true, false) != Phase::Holding
+        || reverse.update(620U, 3U, true, false) != Phase::Braking
+        || reverse.update(700U, 3U, true, false) != Phase::Settling
+        || reverse.update(800U, 3U, true, false) != Phase::Reversing
+        || reverse.update(1100U, 3U, true, false) != Phase::Recovering
+        || reverse.update(1200U, 3U, true, false) != Phase::Holding
+        || reverse.update(1220U, 4U, true, false) != Phase::Holding
+        || reverse.update(1240U, 5U, true, false) != Phase::Holding
+        || reverse.update(1260U, 6U, true, false) != Phase::Holding
+        || reverse.update(1280U, 7U, false, true) != Phase::Holding
+        || reverse.update(1300U, 8U, false, true) != Phase::Ready
+        || reverse.update(1320U, 9U, true, false) != Phase::Braking)
+    {
+        std::printf("Reverse retry sequence failed\n");
+        return -1;
+    }
+
     auto& pinManager = sys::pin_manager::Esp32s3::instance();
 
     if (!test::runPinManagerTest(pinManager)) { return -1; }
@@ -189,6 +217,23 @@ int main()
     if (!invertedMotor.init() || invertedDirection.read())
     {
         std::printf("A89301 inverted direction test failed\n");
+        return -1;
+    }
+
+    driver::pwm::Stub forwardPwm;
+    driver::pwm::Stub backwardPwm;
+    driver::motor::MP6550 bridge{forwardPwm, backwardPwm};
+    if (!bridge.init() || !bridge.setSpeed(0.5F)
+        || forwardPwm.duty() != 0.5F || backwardPwm.duty() != 0.0F
+        || !bridge.stop(driver::motor::StopMode::Brake)
+        || forwardPwm.duty() != 1.0F || backwardPwm.duty() != 1.0F
+        || !bridge.stop(driver::motor::StopMode::Coast)
+        || forwardPwm.duty() != 0.0F || backwardPwm.duty() != 0.0F
+        || !bridge.setDirection(driver::motor::Direction::Backward)
+        || !bridge.setSpeed(1.0F)
+        || forwardPwm.duty() != 0.0F || backwardPwm.duty() != 1.0F)
+    {
+        std::printf("MP6550 brake, coast, reverse sequence failed\n");
         return -1;
     }
 
