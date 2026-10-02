@@ -19,3 +19,19 @@ function Stop-CnbProcess([string]$Label, [string]$Name, [string]$Marker) {
 
 Stop-CnbProcess 'Web panel' 'node.exe' $serverScript
 if (-not $KeepBroker) { Stop-CnbProcess 'Broker' 'mosquitto.exe' $brokerConf }
+
+# Close the web panel port that start-webstuff.ps1 opened in the firewall.
+$firewallGroup = 'cnb web panel'
+if (Get-NetFirewallRule -Group $firewallGroup -ErrorAction SilentlyContinue) {
+    Write-Host 'Closing the web panel firewall port - accept the Administrator prompt.'
+    try {
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes(
+            "Get-NetFirewallRule -Group '$firewallGroup' | Remove-NetFirewallRule"))
+        $admin = Start-Process -FilePath (Get-Process -Id $PID).Path -Verb RunAs -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @('-NoProfile', '-EncodedCommand', $encoded)
+        if ($admin.ExitCode -ne 0) { throw "exit code $($admin.ExitCode)" }
+        Write-Host 'Firewall rule removed.'
+    }
+    catch { Write-Warning "Firewall rule not removed ($($_.Exception.Message)). Run stop-webstuff.ps1 again." }
+}
+else { Write-Host 'No web panel firewall rule to remove.' }

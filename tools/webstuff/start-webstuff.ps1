@@ -100,5 +100,27 @@ else {
     Write-Host "Web panel ($Car) started at $url (pid $($web.Id))."
 }
 
+# --- Firewall for LAN access (removed again by stop-webstuff.ps1) ---
+# Other computers on cnb-net reach the panel only after LAN is turned on in the page.
+$firewallGroup = 'cnb web panel'
+$rule = "Get-NetFirewallRule -Group '$firewallGroup' -ErrorAction SilentlyContinue | Remove-NetFirewallRule; " +
+    "New-NetFirewallRule -DisplayName '$firewallGroup (TCP $Port)' -Group '$firewallGroup' -Direction Inbound " +
+    "-Protocol TCP -LocalPort $Port -RemoteAddress LocalSubnet -Action Allow -Profile Any | Out-Null"
+$existing = @(Get-NetFirewallRule -Group $firewallGroup -ErrorAction SilentlyContinue | Get-NetFirewallPortFilter)
+if ($existing.Count -eq 1 -and $existing[0].LocalPort -eq [string]$Port) {
+    Write-Host "Firewall already open for TCP $Port."
+}
+else {
+    Write-Host "Opening firewall for TCP $Port - accept the Administrator prompt."
+    try {
+        $encoded = [Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes($rule))
+        $admin = Start-Process -FilePath (Get-Process -Id $PID).Path -Verb RunAs -Wait -PassThru -WindowStyle Hidden `
+            -ArgumentList @('-NoProfile', '-EncodedCommand', $encoded)
+        if ($admin.ExitCode -ne 0) { throw "exit code $($admin.ExitCode)" }
+        Write-Host "Firewall open for TCP $Port (local subnet only)."
+    }
+    catch { Write-Warning "Firewall not changed ($($_.Exception.Message)). Other computers cannot reach the panel." }
+}
+
 if (-not $NoBrowser) { Start-Process $url }
 Write-Host "Logs: $logDir"
