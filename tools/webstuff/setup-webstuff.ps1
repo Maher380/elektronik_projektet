@@ -25,8 +25,8 @@ $brokerDir = Join-Path $env:USERPROFILE 'cnb-mqtt'
 $brokerConf = Join-Path $brokerDir 'mosquitto.conf'
 $passwords = Join-Path $brokerDir 'passwords'
 $acl = Join-Path $brokerDir 'acl'
-$repoAcl = Join-Path $PSScriptRoot 'mqtt\mosquitto-acl.example'
-$envFile = Join-Path $PSScriptRoot 'mqtt\.env'
+$repoAcl = Join-Path $PSScriptRoot '..\mqtt\mosquitto-acl.example'
+$envFile = Join-Path $PSScriptRoot '..\mqtt\.env'
 $mosquittoDir = Join-Path $env:ProgramFiles 'mosquitto'
 
 # --- 1. Tools ---
@@ -102,4 +102,4 @@ if ($serviceInTheWay -or $firewallMissing) {
 }
 else { Write-Host 'OK  Windows mosquitto service is out of the way and firewall allows 1883.' }
 
-Write-Host "`nSetup done. Start everything with .\tools\start-webstuff.ps1"
+Write-Host "`nSetup done. Start everything with .\tools\webstuff\start-webstuff.ps1"

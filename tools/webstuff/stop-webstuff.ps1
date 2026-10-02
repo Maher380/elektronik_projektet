@@ -5,7 +5,7 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
 $brokerConf = Join-Path (Join-Path $env:USERPROFILE 'cnb-mqtt') 'mosquitto.conf'
-$serverScript = Join-Path $PSScriptRoot 'mqtt-ui\server.mjs'
+$serverScript = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\mqtt-ui\server.mjs'))
 
 function Stop-CnbProcess([string]$Label, [string]$Name, [string]$Marker) {
     $found = @(Get-CimInstance Win32_Process -Filter "Name='$Name'" |

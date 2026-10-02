@@ -1,5 +1,5 @@
 # Starts the cnb MQTT broker and the web panel in the background, then opens the browser.
-# Stop both with .\tools\stop-webstuff.ps1. Logs go to %USERPROFILE%\cnb-mqtt\logs.
+# Stop both with .\tools\webstuff\stop-webstuff.ps1. Logs go to %USERPROFILE%\cnb-mqtt\logs.
 param(
     [ValidateSet('vagrant', 'ford')][string]$Car = 'ford',
     [ValidateRange(1024, 65535)][int]$Port = 8765,
@@ -11,8 +11,8 @@ $ErrorActionPreference = 'Stop'
 $brokerDir = Join-Path $env:USERPROFILE 'cnb-mqtt'
 $brokerConf = Join-Path $brokerDir 'mosquitto.conf'
 $logDir = Join-Path $brokerDir 'logs'
-$repoAcl = Join-Path $PSScriptRoot 'mqtt\mosquitto-acl.example'
-$serverScript = Join-Path $PSScriptRoot 'mqtt-ui\server.mjs'
+$repoAcl = Join-Path $PSScriptRoot '..\mqtt\mosquitto-acl.example'
+$serverScript = [IO.Path]::GetFullPath((Join-Path $PSScriptRoot '..\mqtt-ui\server.mjs'))
 $hotspotAddress = '192.168.137.1'
 
 function Find-CnbProcess([string]$Name, [string]$Marker) {
