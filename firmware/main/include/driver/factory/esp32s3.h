@@ -6,6 +6,7 @@
 #pragma once
 
 #include "driver/factory/interface.h"
+#include "driver/nvs/esp32s3.h"
 #include <memory>
 #include <cstdint>
 
@@ -176,6 +177,13 @@ public:
     std::unique_ptr<timer::Interface> timer(std::uint32_t timeout_ms) noexcept override;
 
     /**
+     * @brief Get the ESP32-S3 NVS driver.
+     *
+     * @return Reference to the NVS driver.
+     */
+    nvs::Interface& nvs() noexcept override;
+
+    /**
      * @brief Create a real ESP32-S3 WiFi hardware instance.
      *
      * @param[in] ssid WiFi network SSID.
@@ -189,6 +197,10 @@ public:
     Esp32s3& operator=(const Esp32s3&) = delete;
     Esp32s3(Esp32s3&&)                 = delete;
     Esp32s3& operator=(Esp32s3&&)      = delete;
+
+private:
+    /** The one NVS driver, shared by everything created by this factory. */
+    driver::nvs::Esp32s3 myNvs;
 };
 
 } // namespace driver::factory

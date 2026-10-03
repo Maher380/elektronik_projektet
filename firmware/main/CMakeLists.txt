@@ -31,6 +31,7 @@ idf_component_register(
         "source/system/pin_manager/esp32s3.cpp"
         "source/driver/wifi/esp32s3.cpp"
         "source/driver/mqtt/esp32s3.cpp"
+        "source/driver/nvs/esp32s3.cpp"
         "source/system/communication/manager.cpp"
         "source/system/runtime/control.cpp"
         "source/test_app/a89301_config_test.cpp"

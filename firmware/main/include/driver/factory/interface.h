@@ -14,6 +14,7 @@ namespace driver::gpio { class Interface; }
 namespace driver::motor { class Interface; }
 namespace driver::odometer { struct Config; class Interface; }
 namespace driver::mqtt { struct Config; class Interface; }
+namespace driver::nvs { class Interface; }
 namespace driver::pwm { struct Config; class Interface; }
 namespace driver::servo { class Interface; }
 namespace driver::serial { class Interface; }
@@ -179,6 +180,13 @@ public:
      * @return A unique pointer to the created Timer interface instance.
      */
     virtual std::unique_ptr<timer::Interface> timer(std::uint32_t timeout_ms) noexcept = 0;
+
+    /**
+     * @brief Get the NVS driver. There is one per factory, shared by everything that stores settings.
+     *
+     * @return Reference to the NVS driver.
+     */
+    virtual nvs::Interface& nvs() noexcept = 0;
 
     /**
      * @brief Create a WiFi driver instance.

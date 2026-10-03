@@ -6,6 +6,7 @@
 
 #include "system/pin_manager/esp32s3.h"
 #include "test/a89301_programmer.h"
+#include "test/nvs.h"
 #include "test/pin_manager.h"
 #include "test/servo.h"
 #include "test/voltage_meter.h"
@@ -16,6 +17,7 @@
 #include "driver/distance_sensor/gp2y0a21yk.h"
 #include "driver/motor/a89301.h"
 #include "driver/motor/l298n.h"
+#include "driver/nvs/stub.h"
 #include "driver/pwm/stub.h"
 
 int main()
@@ -26,6 +28,9 @@ int main()
     if (!test::runServoTest()) { return -1; }
     if (!test::runA89301ProgrammerTest()) { return -1; }
     if (!test::runVoltageMeterTest()) { return -1; }
+
+    driver::nvs::Stub testNvs;
+    if (!test::runNvsTest(testNvs)) { return -1; }
 
     driver::adc::Stub testAdc;
     driver::distance_sensor::GP2Y0A21YK testSensor{testAdc};

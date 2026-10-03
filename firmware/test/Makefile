@@ -12,6 +12,7 @@ CXX_FLAGS := -Wall -Wextra -Werror -std=c++17 -I$(FIRMWARE_INC_DIR) -I$(TEST_INC
 TEST_FILES := \
 	$(TEST_SRC_DIR)/test.cpp \
 	$(TEST_SRC_DIR)/test/a89301_programmer.cpp \
+	$(TEST_SRC_DIR)/test/nvs.cpp \
 	$(TEST_SRC_DIR)/test/pin_manager.cpp \
 	$(TEST_SRC_DIR)/test/servo.cpp \
 	$(TEST_SRC_DIR)/test/voltage_meter.cpp
