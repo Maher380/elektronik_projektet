@@ -34,7 +34,7 @@ input[type=range]{accent-color:var(--cyan);cursor:pointer}
 .pad-up{grid-area:1/2}.pad-left{grid-area:2/1}.pad-down{grid-area:2/2}.pad-right{grid-area:2/3}
 /* Pi values: command beside what the Pi measured. */
 .measured-detail{display:block;margin:-8px 0 12px;color:var(--muted);font-size:11px}
-.status-strip{grid-template-columns:repeat(7,minmax(0,1fr))}
+.status-strip{grid-template-columns:repeat(8,minmax(0,1fr))}
 .status-strip small.warm{color:var(--orange)}
 .status-strip small.hot,.status-strip strong.hot{color:#ff8a80}
 .ford-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:14px}
@@ -42,6 +42,11 @@ input[type=range]{accent-color:var(--cyan);cursor:pointer}
 .legend{display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:.8px;color:var(--muted)}
 .legend i{display:inline-block;width:14px;height:2px;margin-left:6px}
 .legend i.command{background:var(--cyan)}.legend i.measured{background:var(--lime)}
+/* Battery: a bar from BATTERY_MIN_V to BATTERY_MAX_V, with gaps at the low and critical limits. */
+.battery-bar{position:relative;height:6px;margin-top:9px;border-radius:3px;background:#0e1924;border:1px solid #324859;overflow:hidden}
+.battery-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--lime);transition:width .3s}
+.battery-bar i.low{background:var(--orange)}.battery-bar i.critical{background:#ff8a80}
+.battery-bar b{position:absolute;top:0;bottom:0;width:2px;margin-left:-1px;background:#0b1119}
 @media(max-width:1100px){.status-strip{grid-template-columns:repeat(4,minmax(0,1fr))}.status-strip>div:nth-child(3){border-right:1px solid #293c4c}.status-strip>div:nth-child(4n){border:0}}
 @media(max-width:980px){.ford-charts{grid-template-columns:1fr}}
 @media(max-width:720px){.status-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
