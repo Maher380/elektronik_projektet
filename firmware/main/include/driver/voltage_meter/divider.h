@@ -16,10 +16,20 @@ namespace driver::voltage_meter
 /**
  * @brief Voltage meter that reads through a resistor voltage divider.
  *
- * Wiring: measured voltage -> R1 -> ADC pin -> R2 -> GND. A capacitor from the
- * ADC pin to GND (about 100 nF) is needed for an accurate ADC reading through
- * resistors this large. It does not change the conversion, so it is not a
- * parameter.
+ * @verbatim
+   Vin (measured voltage)
+    │
+   R1
+    │
+    ├──────────► ADC pin
+    │       │
+   R2       C   about 100 nF, needed for accurate reads through large resistors
+    │       │
+   GND ─────┴── ADC GND (shared ground)
+   @endverbatim
+ *
+ * Vin = Vpin × (R1 + R2) / R2. C does not change the conversion, so it is not
+ * a parameter.
  *
  * Each readVoltage() takes one ADC sample and returns the average of the last
  * SampleCount samples. The first valid sample fills the whole buffer.
