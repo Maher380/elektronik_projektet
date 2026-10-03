@@ -60,6 +60,18 @@ public:
                                                                   driver::gpio::Interface& echo) noexcept override;
 
     /**
+     * @brief Create a voltage meter that reads through a resistor voltage divider.
+     *
+     * @param[in] adc Reference to the ADC driver connected to the divider joint.
+     * @param[in] r1Ohm Resistor from the measured voltage to the ADC pin, in Ohms.
+     * @param[in] r2Ohm Resistor from the ADC pin to GND, in Ohms.
+     * @return A unique pointer to the created voltage meter interface instance.
+     */
+    std::unique_ptr<voltage_meter::Interface> voltageMeter(driver::adc::Interface& adc,
+                                                           float r1Ohm,
+                                                           float r2Ohm) noexcept override;
+
+    /**
      * @brief Create a real ESP32-S3 GPIO input hardware instance.
      * * @param[in] pin The hardware pin number to configure as input.
      * @return A unique pointer to the created GPIO interface instance.

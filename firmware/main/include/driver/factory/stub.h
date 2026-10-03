@@ -19,6 +19,7 @@
 #include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
 #include "driver/timer/stub.h"
+#include "driver/voltage_meter/stub.h"
 #include "driver/wifi/stub.h"
 
 namespace driver::factory {
@@ -165,6 +166,24 @@ public:
     std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(gpio::Interface&, gpio::Interface&) noexcept override
     {
         return std::make_unique<driver::distance_sensor::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated voltage meter stub instance.
+     *
+     * @param[in] adc Reference to the ADC driver connected to the divider joint (unused).
+     * @param[in] r1Ohm Resistor from the measured voltage to the ADC pin (unused).
+     * @param[in] r2Ohm Resistor from the ADC pin to GND (unused).
+     * @return A unique pointer to the created simulated voltage meter interface instance.
+     */
+    std::unique_ptr<voltage_meter::Interface> voltageMeter(adc::Interface& adc,
+                                                           float r1Ohm,
+                                                           float r2Ohm) noexcept override
+    {
+        (void)adc;
+        (void)r1Ohm;
+        (void)r2Ohm;
+        return std::make_unique<driver::voltage_meter::Stub>();
     }
 
     /**

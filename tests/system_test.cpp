@@ -21,6 +21,7 @@
 #include "driver/servo/vagrant.h"
 #include "driver/serial/stub.h"
 #include "driver/timer/stub.h"
+#include "driver/voltage_meter/stub.h"
 #include "driver/wifi/stub.h"
 #include "freertos/task.h"
 #include "cJSON.h"
@@ -105,6 +106,9 @@ struct Factory final : driver::factory::Interface {
     std::unique_ptr<driver::distance_sensor::Interface> ultrasonic_sensor(driver::gpio::Interface&,
                                                                           driver::gpio::Interface&) noexcept override {
         return std::make_unique<driver::distance_sensor::Stub>();
+    }
+    std::unique_ptr<driver::voltage_meter::Interface> voltageMeter(driver::adc::Interface&, float, float) noexcept override {
+        return std::make_unique<driver::voltage_meter::Stub>();
     }
     std::unique_ptr<driver::motor::Interface> motor(driver::pwm::Interface& f, driver::pwm::Interface& b) noexcept override {
         return std::make_unique<driver::motor::MP6550>(f, b);
