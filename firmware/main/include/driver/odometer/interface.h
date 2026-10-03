@@ -23,12 +23,38 @@ struct Config
 };
 
 /**
+ * @brief Largest magnet count a driver has to support.
+ *
+ * Drivers keep one pulse timestamp per magnet to measure a whole revolution, so the
+ * count is bounded. Configurations above this are clamped.
+ */
+inline constexpr std::uint8_t MaxPulsesPerRevolution{16U};
+
+/**
  * @brief Ratio of a circle's circumference to its diameter.
  */
 inline constexpr float Pi{3.14159265358979323846F};
 
 /**
- * @brief Compute the distance travelled per sensor pulse from a Config.
+ * @brief Compute the distance the wheel rolls in one full revolution from a Config.
+ *
+ * @param[in] config Odometer configuration.
+ * @return Wheel circumference in meters.
+ */
+inline constexpr float distancePerRevolution(const Config& config) noexcept
+{
+    return Pi * config.wheelDiameterM;
+}
+
+/**
+ * @brief Compute the nominal distance travelled per sensor pulse from a Config.
+ *
+ * @attention This is the circumference shared equally between the magnets. It is the
+ *            true distance for a given pulse only when the magnets are evenly spaced.
+ *            Unevenly spaced magnets make it an average: a count of whole revolutions
+ *            is still exact, and a part-revolution count is off by at most the worst
+ *            spacing error, which does not accumulate. Prefer
+ *            distancePerRevolution() for anything timed, such as speed.
  *
  * @param[in] config Odometer configuration.
  * @return Distance in meters per pulse, 0 if pulsesPerRevolution is 0.
@@ -37,8 +63,7 @@ inline constexpr float distancePerPulse(const Config& config) noexcept
 {
     if (config.pulsesPerRevolution == 0U) { return 0.0F; }
 
-    const float wheelCircumferenceM{Pi * config.wheelDiameterM};
-    return wheelCircumferenceM / static_cast<float>(config.pulsesPerRevolution);
+    return distancePerRevolution(config) / static_cast<float>(config.pulsesPerRevolution);
 }
 
 /**
@@ -90,6 +115,10 @@ public:
 
     /**
      * @brief Get the current speed.
+     *
+     * Implementations measure over a whole number of wheel revolutions where they can,
+     * so that uneven magnet spacing does not show up as speed that varies pulse to
+     * pulse while the wheel turns at a constant rate.
      *
      * @return Speed in meters per second, 0 if standing still or not initialized.
      */

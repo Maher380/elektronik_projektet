@@ -18,15 +18,33 @@ constexpr std::int64_t StandstillTimeoutUs{1'000'000};
 
 constexpr float UsToS{1.0e-6F};
 
+/**
+ * @brief Clamp a configured magnet count into the range the driver can store.
+ *
+ * @param[in] config Odometer configuration.
+ * @return Magnet count, at least 1 and at most MaxPulsesPerRevolution.
+ */
+std::uint8_t magnetsOf(const Config& config) noexcept
+{
+    if (config.pulsesPerRevolution == 0U) { return 1U; }
+    if (config.pulsesPerRevolution > MaxPulsesPerRevolution) { return MaxPulsesPerRevolution; }
+    return config.pulsesPerRevolution;
+}
+
 } // namespace
 
 // -----------------------------------------------------------------------------
 A3144::A3144(gpio::Interface& gpio, const Config& config) noexcept
     : myGpio{gpio}
     , myDistancePerPulse{distancePerPulse(config)}
+    , myDistancePerRevolution{distancePerRevolution(config)}
+    , myPulsesPerRevolution{magnetsOf(config)}
     , myPulseCount{0U}
+    , myWindowPulses{0U}
     , myLastPulseUs{0}
     , myPulsePeriodUs{0}
+    , myPulseTimesUs{}
+    , myRevolutionPeriodUs{0}
     , myInitialized{false}
 {}
 
@@ -102,12 +120,21 @@ float A3144::speed() const noexcept
     portENTER_CRITICAL(&myMux);
     const std::int64_t lastPulseUs{myLastPulseUs};
     const std::int64_t periodUs{myPulsePeriodUs};
+    const std::int64_t revolutionUs{myRevolutionPeriodUs};
     portEXIT_CRITICAL(&myMux);
 
-    // Need at least two pulses to know the period, and a recent one to be moving.
+    // Need at least two pulses to know a period, and a recent one to be moving.
     if ((periodUs <= 0) || ((esp_timer_get_time() - lastPulseUs) > StandstillTimeoutUs))
     {
         return 0.0F;
+    }
+
+    // One whole revolution covers the full circumference however the magnets are
+    // spaced, so prefer it. Before the first revolution is complete, fall back to the
+    // latest gap and the nominal per-pulse distance, which assumes even spacing.
+    if (revolutionUs > 0)
+    {
+        return myDistancePerRevolution / (static_cast<float>(revolutionUs) * UsToS);
     }
 
     return myDistancePerPulse / (static_cast<float>(periodUs) * UsToS);
@@ -117,9 +144,12 @@ float A3144::speed() const noexcept
 void A3144::reset() noexcept
 {
     portENTER_CRITICAL(&myMux);
-    myPulseCount    = 0U;
-    myLastPulseUs   = 0;
-    myPulsePeriodUs = 0;
+    myPulseCount         = 0U;
+    myWindowPulses       = 0U;
+    myLastPulseUs        = 0;
+    myPulsePeriodUs      = 0;
+    myRevolutionPeriodUs = 0;
+    for (auto& pulseTimeUs : myPulseTimesUs) { pulseTimeUs = 0; }
     portEXIT_CRITICAL(&myMux);
 }
 
@@ -137,7 +167,30 @@ void IRAM_ATTR A3144::onPulse(void* arg) noexcept
 
     if (!hasPrevious || (sinceLastUs >= MinPulseIntervalUs))
     {
-        self->myPulsePeriodUs = hasPrevious ? sinceLastUs : 0;
+        // A gap this long means the wheel stood still. The timestamps in the window
+        // describe the journey before the stop, so start the window again at this pulse
+        // instead of averaging the standstill into the speed. Distance is untouched.
+        const bool restarting{hasPrevious && (sinceLastUs > StandstillTimeoutUs)};
+        if (restarting)
+        {
+            self->myWindowPulses       = 0U;
+            self->myRevolutionPeriodUs = 0;
+        }
+
+        // The slot for this pulse still holds the pulse one revolution back, so read it
+        // before overwriting. The window slides by one magnet on every pulse.
+        const auto magnets = static_cast<std::uint32_t>(self->myPulsesPerRevolution);
+        const std::uint32_t slot{self->myWindowPulses % magnets};
+        if (self->myWindowPulses >= magnets)
+        {
+            self->myRevolutionPeriodUs = nowUs - self->myPulseTimesUs[slot];
+        }
+        self->myPulseTimesUs[slot] = nowUs;
+        ++self->myWindowPulses;
+
+        // One pulse is not enough to know a speed, whether it is the first ever or the
+        // first after a stop.
+        self->myPulsePeriodUs = (hasPrevious && !restarting) ? sinceLastUs : 0;
         self->myLastPulseUs   = nowUs;
         ++self->myPulseCount;
     }
