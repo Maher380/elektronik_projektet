@@ -56,7 +56,7 @@ constexpr app::communication::Topics Topics{
     {nullptr, "cnb/ford/command"}};
 
 // Car network: the operator laptop's hotspot, so the broker is always at 192.168.137.1.
-// Compiled in, passwords included, until it moves to NVS (ADR 0001).
+// Compiled in, passwords included, until it moves to NVS (see nvs_usage.md).
 constexpr app::communication::NetworkSettings Network{
     "cnb-net", "cnbrules",
     "mqtt://192.168.137.1:1883", "cnb-ford", "cnb-ford", "cnb"};
