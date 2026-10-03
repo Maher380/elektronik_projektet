@@ -12,6 +12,7 @@
 #include "driver/factory/interface.h"
 #include "driver/gpio/interface.h"
 #include "driver/motor/interface.h"
+#include "driver/odometer/interface.h"
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
 #include "driver/voltage_meter/interface.h"
@@ -30,7 +31,15 @@ constexpr std::uint8_t DirectionPin{7U}; // D4 -> A89301 DIR
 constexpr std::uint8_t SpeedPin{8U};     // D5 -> A89301 SPD, 20 kHz PWM
 constexpr std::uint8_t SteeringPin{9U};  // D6 -> steering servo
 constexpr std::uint8_t BatteryAdcPin{4U}; // A3 <- drive battery divider joint
+constexpr std::uint8_t OdometerPin{18U};  // D9 <- A3144 wheel sensor, active low
 constexpr std::uint32_t SteeringPwmFrequencyHz{50U};
+
+// Odometer geometry. Four magnets on the wheel, deliberately not assumed evenly spaced:
+// the driver times a whole revolution, so only the count and the circumference matter.
+/** Magnets fitted to the measured wheel. */
+constexpr std::uint8_t OdometerMagnets{4U};
+/** Rear wheel diameter, 34 mm from ford-build.md; 0.107 m circumference. */
+constexpr float WheelDiameterM{0.034F};
 
 // Calibration, compiled in until it moves to NVS.
 /** Duty for speed command ±100: about 1.5 m/s unloaded. Raise only after the load test. */
@@ -124,6 +133,22 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
     if (batteryAdc) { battery = factory.voltageMeter(*batteryAdc, BatteryR1Ohm, BatteryR2Ohm); }
     if (!battery || !batteryAdc->init() || !battery->isInitialized())
     { ESP_LOGW("FORD", "Battery meter failed; battery voltage not reported"); }
+    // The odometer is optional too: without it the car still drives to a speed command,
+    // it just cannot report measured speed. The speed loop of ADR 0006 will need it.
+    auto odometerGpio = factory.gpioInputPullup(OdometerPin);
+    std::unique_ptr<driver::odometer::Interface> odometer{};
+    if (odometerGpio && odometerGpio->isInitialized())
+    {
+        odometer = factory.odometer(*odometerGpio, driver::odometer::Config{
+            .pulsesPerRevolution = OdometerMagnets,
+            .wheelDiameterM = WheelDiameterM,
+        });
+    }
+    if (!odometer || !odometer->init())
+    {
+        odometer = nullptr; // Not unique_ptr::reset(): Interface has a reset() of its own.
+        ESP_LOGW("FORD", "Odometer failed; measured speed and distance not reported");
+    }
 
     app::runtime::Control control{false, true}; // ManualByRemote is Ford's only drive style.
     app::communication::Manager communication{factory, Topics, Network}; // Wi-Fi/MQTT lifecycle.
@@ -218,6 +243,11 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
         snapshot.forwardDuty = appliedState == MotorState::DrivingForward ? appliedDuty : 0.0F;
         snapshot.backwardDuty = appliedState == MotorState::DrivingReverse ? appliedDuty : 0.0F;
         snapshot.motorState = toString(appliedState);
+        if (odometer)
+        {
+            snapshot.measuredSpeedMs = odometer->speed();
+            snapshot.odometerDistanceM = odometer->distance();
+        }
         if (battery && (!batteryRead || (now - lastBatteryReadMs) >= BatteryReadIntervalMs))
         {
             snapshot.batteryVoltage = battery->readVoltage();
