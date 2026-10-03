@@ -21,6 +21,8 @@
 
 #include <atomic>
 #include "driver/factory/esp32s3.h"
+#include "driver/nvs/interface.h"
+#include "esp_log.h"
 #include "sdkconfig.h"
 #include "system/logic/target.h"
 
@@ -44,6 +46,10 @@ extern "C" void app_main(void)
     #else
     std::atomic<bool> stop{false};
     driver::factory::Esp32s3 factory;
+
+    // Ready before any logic opens a namespace; without it every setting falls back to its default.
+    if (!factory.nvs().init()) { ESP_LOGE("main", "NVS init failed: stored settings unavailable"); }
+
     app::logic::TargetLogic logic{factory};
     logic.run(stop);
     #endif
