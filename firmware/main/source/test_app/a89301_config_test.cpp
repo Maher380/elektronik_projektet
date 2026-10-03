@@ -42,7 +42,7 @@ void runA89301ConfigTest() noexcept
     constexpr std::uint8_t directionPin{7U};  // D4 / GPIO7 -> DIR
     constexpr std::uint8_t brakePin{5U};      // D2 / GPIO5 -> BRAKE
     constexpr std::uint8_t odometerPin{18U};  // D9 / GPIO18 <- A3144 wheel sensor
-    constexpr std::uint8_t wheelPulsesPerRev{4U};  // 4 magnets, spacing need not be even.
+    constexpr std::uint8_t wheelPulsesPerRev{6U};  // 6 magnets, deliberately uneven.
     constexpr std::uint8_t motorTempPin{1U};  // A0 / GPIO1 <- TMP36 taped to the motor can
     // Temporarily lowered (60 -> 45, 40 -> 32) because the TMP36 sits on two layers of electrical tape,
     // so it reads low and late. Raise again when the sensor has direct contact with the motor can.

@@ -34,10 +34,10 @@ constexpr std::uint8_t BatteryAdcPin{4U}; // A3 <- drive battery divider joint
 constexpr std::uint8_t OdometerPin{18U};  // D9 <- A3144 wheel sensor, active low
 constexpr std::uint32_t SteeringPwmFrequencyHz{50U};
 
-// Odometer geometry. Four magnets on the wheel, deliberately not assumed evenly spaced:
-// the driver times a whole revolution, so only the count and the circumference matter.
+// Odometer geometry. Six magnets on the wheel, deliberately uneven: four gaps of about
+// an eighth of a turn and two of about a quarter. See ADR 0008 and ford_odometer.md.
 /** Magnets fitted to the measured wheel. */
-constexpr std::uint8_t OdometerMagnets{4U};
+constexpr std::uint8_t OdometerMagnets{6U};
 /** Rear wheel diameter, 34 mm from ford-build.md; 0.107 m circumference. */
 constexpr float WheelDiameterM{0.034F};
 

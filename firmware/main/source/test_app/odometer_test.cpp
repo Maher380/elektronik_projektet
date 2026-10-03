@@ -33,7 +33,7 @@ void runOdometerTest() noexcept
     // Ford's rear wheel, which is what is wired to D9. Vagrant has 2 magnets on a 31 mm
     // wheel; change these two numbers when testing that car instead.
     const driver::odometer::Config config{
-        .pulsesPerRevolution = 4U,   // 4 magnets per wheel, spacing need not be even
+        .pulsesPerRevolution = 6U,   // 6 magnets per wheel, deliberately uneven
         .wheelDiameterM = 0.034F,    // 34 mm wheel
     };
 

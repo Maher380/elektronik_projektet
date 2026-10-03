@@ -1,67 +1,133 @@
 # Ford: Odometer
 
 The Ford counts wheel rotation with an A3144 Hall-effect sensor on `D9` (GPIO18)
-and **four magnets** on a rear wheel. The firmware sends `measured_speed_ms` and
+and **six magnets** on a rear wheel. The firmware sends `measured_speed_ms` and
 `odometer_distance_m` in `cnb/ford/telemetry`.
 
 | Property | Value | From |
 | --- | --- | --- |
 | Sensor pin | `D9` / GPIO18, input with internal pull-up | [pin_mapping.md](pin_mapping.md) |
-| Magnets | 4, spacing not assumed even | Fitted 2026-10-03 |
+| Magnets | 6: four smaller, two slightly larger | Fitted 2026-10-04 |
 | Wheel diameter | 34 mm | `ford-build.md` in the host repo |
-| Circumference | 0.1068 m | π × 34 mm |
-| Nominal distance per pulse | 26.7 mm | circumference ÷ 4 |
+| Circumference | 106.81 mm | pi x 34 mm |
+| Nominal distance per pulse | 17.80 mm | circumference / 6 |
 
 The A3144 output is open-collector and active low: it pulls low while a magnet's
 south pole is at the sensor. Pulses are counted on the falling edge by a GPIO
 interrupt, so the main loop rate cannot make the firmware miss one. The internal
-pull-up is required and no external one is.
+pull-up is required and no external one is. All six magnets must present the same
+pole, since the A3144 is unipolar and a reversed pole reads as no magnet at all.
 
-## The magnets are not evenly spaced
+## The layout
 
-They were fitted by hand, so the gaps between them differ. This matters for speed
-but not much for distance.
+Four magnets were placed first, roughly a quarter-turn apart. Two slightly larger
+ones were then added at the midpoints of the two gaps either side of *one* of the
+originals, so that original has a larger magnet on each side.
 
-**Speed is timed over a whole revolution, not over one gap.** Timing a single gap
-and multiplying by the nominal 26.7 mm would report a speed that swings pulse to
-pulse while the wheel turns at a perfectly constant rate, because a wide gap takes
-longer than a narrow one. The error is the spacing error: magnets at 0°, 70°, 180°
-and 250° would read 29 % high across each 70° gap and 18 % low across each 110° one,
-alternating, at a dead constant wheel speed. A revolution, in contrast, covers the whole
+```
+        A0   <- the flanked magnet
+      /    \
+    B        B        cyclic order:  A0  B  A1  A2  A3  B
+    |        |        gap (deg):      45  45  90  90  45  45
+    A1       A3       fraction:     .125 .125 .25 .25 .125 .125
+      \    /          distance:     13.4 13.4 26.7 26.7 13.4 13.4 mm
+        A2
+```
+
+The gaps sum to exactly 1 by construction, whatever the real angles turn out to
+be. The figures above are the design intent, measured by eye; the real ones come
+from the calibration session.
+
+**The unevenness is deliberate and it is useful.** The sequence of six fractions
+has no rotational symmetry, so observing one revolution and comparing against a
+stored table identifies which gap the wheel is in, from timing alone. A wheel with
+six evenly spaced magnets would be the harder case, not the easier one: every
+rotation would fit equally well and the phase would be unrecoverable.
+
+> The two added magnets are the **larger** pair and they sit in the narrow gaps, so
+> they are only 13.4 mm from their neighbours. A larger magnet is detected over a
+> wider arc, so the risk is that two pulses merge into one. Confirm the count rises
+> by exactly 6 per turn before trusting anything else here.
+
+## Speed
+
+### Over a revolution, not over a gap
+
+Timing one gap and multiplying by the nominal 17.80 mm reports a speed that swings
+with the spacing rather than with the car: at a dead constant wheel speed the four
+narrow gaps read **33 % high** and the two wide ones **33 % low**, alternating.
+
+So the driver times a whole revolution. One revolution covers the full
 circumference wherever the magnets sit, so the spacing cancels **exactly** and
-nothing has to be measured or calibrated.
-
-The window slides forward by one magnet on every pulse — the driver keeps the last
-four pulse timestamps and compares the newest with the one four pulses back — so
-the reading still updates four times per revolution. The cost is lag: the value is
-an average over the last revolution, so it trails a real change in speed by up to
-half a revolution. That is the price of not having to know where the magnets are.
+nothing has to be measured or calibrated. The window slides forward by one magnet
+on every pulse — the driver keeps the last six pulse timestamps and compares the
+newest with the one six pulses back — so the reading still updates six times per
+revolution.
 
 Standing still restarts the window, so the stopped time is never averaged into the
 speed after the car pulls away. Until the first revolution after a start or a reset
 is complete, the driver falls back to timing the last gap, which *does* assume even
 spacing and is an estimate only.
 
-**Distance uses the nominal 26.7 mm per pulse.** Over whole revolutions this is
-exact however the magnets sit. A part-revolution reading is off by at most the worst
-spacing error — about 6 mm in the 0/70/180/250° example — and that error does not
-accumulate, because it comes back to exact at every full turn.
+### What it costs
+
+Averaging over a revolution is exact but late. At 0.5 m/s:
+
+| | value |
+| --- | --- |
+| Revolution | 213.6 ms |
+| Lag of the revolution window | about **107 ms** (half a revolution) |
+| Lag of a per-gap reading | 13.4 ms narrow, 26.7 ms wide |
+
+A speed loop at the 20-30 Hz asked for in ADR 0006 has a 33-50 ms cycle, so 107 ms
+is two to three cycles of pure phase lag and the loop has to be detuned to stay
+stable. Correcting each gap with its measured fraction removes the averaging and
+brings the lag inside one cycle. That is what the calibration is for; see ADR 0008
+in the host repo.
+
+### Pulse rate is not steady
+
+Six magnets give **28.1 pulses per second** at 0.5 m/s on average, against 4.7 for
+the single magnet they replaced. But the gaps are uneven, so the instantaneous rate
+alternates:
+
+| Gap | Interval at 0.5 m/s | Instantaneous rate |
+| --- | --- | --- |
+| Narrow (.125) | 26.7 ms | 37.4 Hz |
+| Wide (.25) | 53.4 ms | 18.7 Hz |
+| Average | 35.6 ms | 28.1 Hz |
+
+**The 18.7 Hz figure is the one a control loop has to survive**, and it is below the
+20 Hz floor ADR 0006 asked for. The average meets the target and the worst case does
+not.
+
+## Distance
+
+Distance uses the nominal 17.80 mm per pulse. Over whole revolutions this is exact
+however the magnets sit, because six nominal pulses are one real circumference. A
+part-revolution reading is off by at most **8.90 mm**, and the error does not
+accumulate — it returns to exact at every full turn:
+
+| After pulse | 1 | 2 | 3 | 4 | 5 | 6 |
+| --- | --- | --- | --- | --- | --- | --- |
+| Error (mm) | +4.45 | +8.90 | 0 | -8.90 | -4.45 | 0 |
+
+Note this got **worse** with six magnets, not better: the four original magnets gave
+about 5.9 mm, and the deliberate 2:1 spacing gives 8.90 mm. Six magnets traded a
+little distance accuracy for pulse rate, and the gap table buys it back.
+
+An Odometer measures the wheel and not the ground, so a wheel that slips or locks
+reads wrong and nothing here can tell that it has.
 
 ## Limits
 
-At 0.5 m/s the four magnets give **about 19 pulses per second**, against 4.7 for the
-single magnet they replaced. ADR 0006 in the host repo names the magnets as a
-precondition for the speed loop rather than an improvement to it, and asks for four to
-six of them to close that loop at 20–30 Hz. Four is the bottom of that range: 19 Hz at
-0.5 m/s is just under the 20 Hz figure, and the ADR's "roughly 28 pulses per second"
-needs six. Four is enough to build the loop on; if it turns out to be marginal at low
-speed, two more magnets are the cheapest fix, and the driver needs only its magnet
-count changed because it never assumes the spacing is even.
+**Noise filter.** Pulses closer together than 1 ms are discarded as contact noise.
+The narrowest gap is 13.35 mm, which takes 1 ms only at 13.4 m/s, so the filter
+cannot discard a real pulse anywhere in this car's speed range. The thing that can
+is two magnets whose detection arcs overlap, which is a mounting problem rather than
+a timing one.
 
-Pulses closer together than 1 ms are discarded as contact noise. That only throws
-away a real pulse if two magnets sit within about 8° of each other at 2.5 m/s, or
-3.4° at 1 m/s, so it is safe for hand-fitted spacing but not for two magnets placed
-almost on top of one another.
-
-The mounting is known to miss pulses above roughly 2.5 m/s. That is a hardware
-problem and is not fixed in software.
+**Missed pulses above about 2.5 m/s** with the current mounting. That is a hardware
+problem and is not fixed in software. It costs distance, and once per-gap correction
+is in use it also costs the phase, which is why the driver falls back to the
+revolution window whenever it is unsure of its place.
