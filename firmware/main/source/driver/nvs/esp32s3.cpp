@@ -48,6 +48,22 @@ public:
         return nvs_get_u32(myHandle, key, &value) == ESP_OK;
     }
 
+    bool setFloat(const char* key, const float value) noexcept override
+    {
+        return saved(nvs_set_blob(myHandle, key, &value, sizeof(value)));
+    }
+
+    bool getFloat(const char* key, float& value) noexcept override
+    {
+        float stored{0.0F};
+        std::size_t length{sizeof(stored)};
+
+        // A shorter blob also reads as ESP_OK, so the length must match too.
+        if ((nvs_get_blob(myHandle, key, &stored, &length) != ESP_OK) || (length != sizeof(stored))) { return false; }
+        value = stored;
+        return true;
+    }
+
     bool setString(const char* key, const char* value) noexcept override
     {
         return (value != nullptr) && saved(nvs_set_str(myHandle, key, value));

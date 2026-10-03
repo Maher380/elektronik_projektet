@@ -38,6 +38,8 @@ last drive style, and known Wi-Fi networks and MQTT servers.
 
 - If NVS is full or from an incompatible ESP-IDF version, `init()` erases it and
   all stored settings are lost. That is one reason for rule 5.
+- NVS has no float type. `setFloat()` stores a float as a 4-byte blob, so only
+  `getFloat()` reads it back; `getU32()` on the same key fails.
 - NVS is not encrypted. Anyone with the car and a USB cable can read stored
   passwords, just as they could read the passwords compiled into the firmware
   before. Only store credentials where that is acceptable.

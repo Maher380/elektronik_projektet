@@ -32,6 +32,10 @@ public:
     virtual bool setU32(const char* key, std::uint32_t value) noexcept = 0;
     virtual bool getU32(const char* key, std::uint32_t& value) noexcept = 0;
 
+    /** NVS has no float type, so a float is stored as a 4-byte blob that only getFloat() reads. */
+    virtual bool setFloat(const char* key, float value) noexcept = 0;
+    virtual bool getFloat(const char* key, float& value) noexcept = 0;
+
     virtual bool setString(const char* key, const char* value) noexcept = 0;
 
     /**

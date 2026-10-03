@@ -35,12 +35,17 @@ bool runNvsTest(driver::nvs::Interface& nvs) noexcept
 
         std::uint8_t u8{0U};
         std::uint32_t u32{0U};
+        float real{0.0F};
         char text[16]{'\0'};
 
         if (!expect(!handle->getU8("missing", u8), "missing key should read as false")) { return false; }
         if (!expect(handle->setU8("ver", 1U) && handle->getU8("ver", u8) && (u8 == 1U), "u8 round trip")) { return false; }
         if (!expect(handle->setU32("count", 70000U) && handle->getU32("count", u32) && (u32 == 70000U),
                     "u32 round trip")) { return false; }
+        if (!expect(handle->setFloat("r1", 101240.0F) && handle->getFloat("r1", real) && (real == 101240.0F),
+                    "float round trip")) { return false; }
+        if (!expect(!handle->getU32("r1", u32) && !handle->getFloat("count", real),
+                    "a float and a u32 must not read as each other")) { return false; }
         if (!expect(handle->setString("car", "FORD") && handle->getString("car", text, sizeof(text)) &&
                     (std::strcmp(text, "FORD") == 0), "string round trip")) { return false; }
         if (!expect(!handle->getString("car", text, 4U), "string must not fit a too small buffer")) { return false; }

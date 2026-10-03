@@ -48,13 +48,14 @@ public:
 private:
     static constexpr std::size_t Count{static_cast<std::size_t>(Namespace::Count)};
 
-    enum class Type : std::uint8_t { U8, U32, String };
+    enum class Type : std::uint8_t { U8, U32, Float, String };
 
     struct Entry
     {
         Type type{Type::U8};
         std::uint32_t number{0U};
         std::string text{};
+        float real{0.0F};
     };
 
     using Storage = std::map<std::string, Entry>;
@@ -94,6 +95,20 @@ private:
             const Entry* entry{find(key, Type::U32)};
             if (entry == nullptr) { return false; }
             value = entry->number;
+            return true;
+        }
+
+        bool setFloat(const char* key, const float value) noexcept override
+        {
+            myStorage[key] = Entry{Type::Float, 0U, {}, value};
+            return true;
+        }
+
+        bool getFloat(const char* key, float& value) noexcept override
+        {
+            const Entry* entry{find(key, Type::Float)};
+            if (entry == nullptr) { return false; }
+            value = entry->real;
             return true;
         }
 
