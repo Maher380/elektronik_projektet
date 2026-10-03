@@ -42,7 +42,7 @@ void runA89301ConfigTest() noexcept
     constexpr std::uint8_t directionPin{7U};  // D4 / GPIO7 -> DIR
     constexpr std::uint8_t brakePin{5U};      // D2 / GPIO5 -> BRAKE
     constexpr std::uint8_t odometerPin{18U};  // D9 / GPIO18 <- A3144 wheel sensor
-    constexpr std::uint8_t wheelPulsesPerRev{1U};
+    constexpr std::uint8_t wheelPulsesPerRev{4U};  // 4 magnets, spacing need not be even.
     constexpr std::uint8_t motorTempPin{1U};  // A0 / GPIO1 <- TMP36 taped to the motor can
     // Temporarily lowered (60 -> 45, 40 -> 32) because the TMP36 sits on two layers of electrical tape,
     // so it reads low and late. Raise again when the sensor has direct contact with the motor can.
@@ -148,7 +148,10 @@ void runA89301ConfigTest() noexcept
     a89301::Programmer programmer(i2c, [](const std::uint32_t ms) { esp_rom_delay_us(ms * 1000U); });
 
     driver::gpio::Esp32s3 odometerGpio(odometerPin, driver::gpio::Direction::InputPullup);
-    driver::odometer::A3144 odometer(odometerGpio, driver::odometer::Config{.pulsesPerRevolution = wheelPulsesPerRev});
+    driver::odometer::A3144 odometer(odometerGpio, driver::odometer::Config{
+        .pulsesPerRevolution = wheelPulsesPerRev,
+        .wheelDiameterM = 0.034F,
+    });
 
     char buf[200]{'\0'};
     serial.write("\nA89301 config: SDA GPIO11 (A4), SCL GPIO12 (A5), DIR GPIO7 (D4), BRAKE GPIO5 (D2), "
