@@ -7,6 +7,7 @@
 #include "system/pin_manager/esp32s3.h"
 #include "test/a89301_programmer.h"
 #include "test/nvs.h"
+#include "test/odometer_gaps.h"
 #include "test/pin_manager.h"
 #include "test/servo.h"
 #include "test/voltage_meter.h"
@@ -28,6 +29,7 @@ int main()
     if (!test::runServoTest()) { return -1; }
     if (!test::runA89301ProgrammerTest()) { return -1; }
     if (!test::runVoltageMeterTest()) { return -1; }
+    if (!test::runOdometerGapsTest()) { return -1; }
 
     driver::nvs::Stub testNvs;
     if (!test::runNvsTest(testNvs)) { return -1; }
