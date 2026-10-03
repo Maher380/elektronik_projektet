@@ -6,12 +6,15 @@
 #include <cmath>
 #include <cstdint>
 #include <limits>
+#include <memory>
 
+#include "driver/adc/interface.h"
 #include "driver/factory/interface.h"
 #include "driver/gpio/interface.h"
 #include "driver/motor/interface.h"
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
+#include "driver/voltage_meter/interface.h"
 #include "system/communication/manager.h"
 #include "system/runtime/control.h"
 
@@ -26,6 +29,7 @@ constexpr std::uint8_t BrakePin{5U};     // D2 -> A89301 BRAKE, high = brake
 constexpr std::uint8_t DirectionPin{7U}; // D4 -> A89301 DIR
 constexpr std::uint8_t SpeedPin{8U};     // D5 -> A89301 SPD, 20 kHz PWM
 constexpr std::uint8_t SteeringPin{9U};  // D6 -> steering servo
+constexpr std::uint8_t BatteryAdcPin{4U}; // A3 <- drive battery divider joint
 constexpr std::uint32_t SteeringPwmFrequencyHz{50U};
 
 // Calibration, compiled in until it moves to NVS.
@@ -39,6 +43,11 @@ constexpr std::uint32_t DirectionChangeBrakeMs{300U};
 constexpr std::uint32_t DriveTimeoutMs{500U};
 /** True if DIR low drives the car forward with this motor's phase wiring. */
 constexpr bool InvertMotorDirection{false};
+/** Measured battery divider resistors (nominal 100 kΩ and 33 kΩ, 150 nF from A3 to GND). */
+constexpr float BatteryR1Ohm{101240.0F};
+constexpr float BatteryR2Ohm{32990.0F};
+/** Battery read period; the meter averages its last 16 reads, so about 1.6 s. */
+constexpr std::uint32_t BatteryReadIntervalMs{100U};
 
 // Publication and command channels shared with the operator console.
 // No config/set subscription: every Ford setting is compiled in.
@@ -109,6 +118,12 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
     if (!motor || !steering || !motor->init() || !motor->stop(driver::motor::StopMode::Brake)
         || !steering->init())
     { brake->write(true); ESP_LOGE("FORD", "Initialization failed; brake held"); return; }
+    // The battery meter is optional: the car drives without it, and telemetry leaves it out.
+    auto batteryAdc = factory.adc(BatteryAdcPin);
+    std::unique_ptr<driver::voltage_meter::Interface> battery{};
+    if (batteryAdc) { battery = factory.voltageMeter(*batteryAdc, BatteryR1Ohm, BatteryR2Ohm); }
+    if (!battery || !batteryAdc->init() || !battery->isInitialized())
+    { ESP_LOGW("FORD", "Battery meter failed; battery voltage not reported"); }
 
     app::runtime::Control control{false, true}; // ManualByRemote is Ford's only drive style.
     app::communication::Manager communication{factory, Topics, Network}; // Wi-Fi/MQTT lifecycle.
@@ -127,6 +142,8 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
     bool braking{false};
     std::uint32_t brakeStartMs{0U};
     bool actuatorFault{false}; // Latched output failure; restart required to drive again.
+    bool batteryRead{false};
+    std::uint32_t lastBatteryReadMs{0U};
     ESP_LOGI("FORD", "Ready: ManualByRemote, brake on; waiting for MQTT Start");
     while (!stop.load())
     {
@@ -201,6 +218,12 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
         snapshot.forwardDuty = appliedState == MotorState::DrivingForward ? appliedDuty : 0.0F;
         snapshot.backwardDuty = appliedState == MotorState::DrivingReverse ? appliedDuty : 0.0F;
         snapshot.motorState = toString(appliedState);
+        if (battery && (!batteryRead || (now - lastBatteryReadMs) >= BatteryReadIntervalMs))
+        {
+            snapshot.batteryVoltage = battery->readVoltage();
+            lastBatteryReadMs = now;
+            batteryRead = true;
+        }
         if (previousState != control.controlState() || previousMotion != control.motionState()
             || previousReason != control.stateReason()) { communication.notifyControlStateChanged(); }
         previousState = control.controlState();
