@@ -2,6 +2,11 @@
 # sdkconfig defaults to the plain ESP32, and the ADC driver does not compile.
 CONFIG_IDF_TARGET="esp32s3"
 
+# The Nano ESP32 has 16 MB flash. The default 2 MB layout capped the app at 1 MB,
+# which was 97% full; the large single-app layout gives it 1.5 MB.
+CONFIG_ESPTOOLPY_FLASHSIZE_16MB=y
+CONFIG_PARTITION_TABLE_SINGLE_APP_LARGE=y
+
 # app_main runs vehicle control and bounded MQTT JSON/queue handling.
 # Validate remaining stack on hardware under reconnect and command traffic.
 CONFIG_ESP_MAIN_TASK_STACK_SIZE=8192
