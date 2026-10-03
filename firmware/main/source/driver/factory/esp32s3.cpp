@@ -14,6 +14,7 @@
 #include "driver/servo/vagrant.h"
 #include "driver/serial/esp32s3.h"
 #include "driver/timer/esp32s3.h"
+#include "driver/voltage_meter/divider.h"
 #include "driver/wifi/esp32s3.h"
 
 namespace driver::factory {
@@ -34,6 +35,13 @@ std::unique_ptr<distance_sensor::Interface> Esp32s3::ultrasonic_sensor(gpio::Int
 {
     // Create a real SRF05 ultrasonic sensor from existing trigger (output) and echo (input) GPIOs.
     return std::make_unique<driver::distance_sensor::SRF05>(trigger, echo);
+}
+
+std::unique_ptr<voltage_meter::Interface> Esp32s3::voltageMeter(adc::Interface& adc,
+                                                                float r1Ohm,
+                                                                float r2Ohm) noexcept
+{
+    return std::make_unique<driver::voltage_meter::Divider>(adc, r1Ohm, r2Ohm);
 }
 
 std::unique_ptr<gpio::Interface> Esp32s3::gpioInput(std::uint8_t pin) noexcept {

@@ -255,7 +255,14 @@ export class FordDemoTransport extends EventEmitter {
       driver_style: 'manual_by_remote', steering_deg: steering,
       motor: { speed_command: speed, forward_duty: speed > 0 ? duty : 0, backward_duty: speed < 0 ? duty : 0, state },
       control_state: this.state.control_state, motion_state: this.state.motion_state, reason: this.state.reason,
+      battery_v: this.battery(now, speed),
     });
+  }
+  // Fake drive battery: drains from 8.4 V to 6.2 V every two minutes, then starts full again,
+  // and sags while driving, so all battery colours appear.
+  battery(now, speed) {
+    const t = (now - this.born) / 1000;
+    return Math.round((8.4 - 2.2 * (t % 120) / 120 - 0.3 * Math.abs(speed) / 100) * 100) / 100;
   }
   async publish(topic, data) {
     if (data.command === 'heartbeat' || data.command === 'drive') {

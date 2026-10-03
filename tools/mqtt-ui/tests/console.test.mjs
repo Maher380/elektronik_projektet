@@ -256,3 +256,12 @@ test('Ford demo simulates the Pi with the agreed payload', async () => {
   assert.deepEqual(Object.keys(sample.data).sort(), ['cpu_temp_c', 'measured_speed_mps', 'schema_version', 'slam_state', 'wheel_angle_deg']);
   assert.ok(piValues(sample.data));
 });
+
+test('Ford demo reports a drive battery voltage', async () => {
+  const demo = new FordDemoTransport(), seen = [];
+  demo.on('message', (topic, data) => seen.push({ topic, data }));
+  demo.start(); await new Promise(resolve => setTimeout(resolve, 300)); demo.close();
+  const sample = seen.find(m => m.topic === 'cnb/ford/telemetry');
+  assert.ok(sample);
+  assert.ok(Number.isFinite(sample.data.battery_v) && sample.data.battery_v >= 5 && sample.data.battery_v <= 9);
+});

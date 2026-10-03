@@ -44,6 +44,7 @@ Power connections do not use driver factory calls:
 | `factory.gpioOutput(7)` | `~D4` | ⚡ Digital output | A89301 DIR | 🔵 Used |
 | `factory.pwm(8)` | `~D5` | 〰️ PWM output, 20 kHz | A89301 SPD/SCL (speed) | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo (pulse width) | 🔵 Used |
+| `factory.adc(4)` | `A3 / ~D20` | 📈 ADC1_CH3 | Drive battery voltage divider: R1 101.24 kΩ from battery + (after the switch), R2 32.99 kΩ and 154 nF to `GND` | 🔵 Used |
 
 ## Code Value To Board Pin
 

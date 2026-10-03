@@ -11,6 +11,12 @@ const FULL_LOCK_DEG = 25;
 // A wheel angle further than this from the command is flagged.
 const WHEEL_DIFFERS_DEG = 5;
 const PI_INTERVAL_MS = 200;
+// Drive battery, a 2S LiPo. The bar spans BATTERY_MIN_V to BATTERY_MAX_V.
+const BATTERY_MIN_V = 5, BATTERY_MAX_V = 9, BATTERY_CELLS = 2;
+// At or below these the battery is low (stop soon) or critical (stop now, before the cells are damaged).
+const BATTERY_LOW_V = 6.8, BATTERY_CRITICAL_V = 6.4;
+const batteryLabels = { ok: 'OK', low: 'LOW · stop soon', critical: 'CRITICAL · stop now' };
+const batteryPercent = volts => Math.min(100, Math.max(0, (volts - BATTERY_MIN_V) / (BATTERY_MAX_V - BATTERY_MIN_V) * 100));
 const slamLabels = { tracking: 'TRACKING', lost: 'TRACKING LOST', starting: 'STARTING' };
 // crypto.randomUUID() only exists on https and localhost; getRandomValues also works over plain http on the LAN.
 const client = Array.from(crypto.getRandomValues(new Uint8Array(16)), b => b.toString(16).padStart(2, '0')).join('');
@@ -128,6 +134,16 @@ function renderPi(now, serverFresh, carSteering) {
   text('wheel-detail', `Command ≈ ${fixed(asked, 1, '°')} at full lock ${FULL_LOCK_DEG}°` + (fresh && wheel === null && data.slam_state === 'tracking' ? ' · wheel angle unknown while slow' : ''));
   $('wheel-value').classList.toggle('differs', wheel !== null && asked !== null && Math.abs(wheel - asked) > WHEEL_DIFFERS_DEG);
 }
+function renderBattery(fresh, data) {
+  const volts = fresh && typeof data.battery_v === 'number' && Number.isFinite(data.battery_v) ? data.battery_v : null;
+  const level = volts === null ? null : volts <= BATTERY_CRITICAL_V ? 'critical' : volts <= BATTERY_LOW_V ? 'low' : 'ok';
+  text('battery', volts === null ? '—' : `${volts.toFixed(2)} V`);
+  $('battery').className = 'mono' + (level === 'critical' ? ' hot' : level === 'low' ? ' alert' : '');
+  text('battery-detail', volts !== null ? `${(volts / BATTERY_CELLS).toFixed(2)} V/cell · ${batteryLabels[level]}`
+    : fresh ? 'No battery reading' : 'Waiting for telemetry');
+  $('battery-fill').style.width = volts === null ? '0' : batteryPercent(volts) + '%';
+  $('battery-fill').className = level || '';
+}
 function render() {
   text('steering-slider-value', signed(Number($('steering').value)));
   text('speed-slider-value', signed(Number($('speed').value)));
@@ -152,6 +168,7 @@ function render() {
   const duty = fresh ? Math.max(data.motor?.forward_duty || 0, data.motor?.backward_duty || 0) : null;
   text('duty', duty === null ? 'Duty —' : `Duty ${duty.toFixed(3)}`);
   text('current-style', fresh ? data.driver_style === 'manual_by_remote' ? 'ManualByRemote' : data.driver_style || '—' : '—');
+  renderBattery(fresh, data);
   const seconds = Math.floor((data.uptime_ms || 0) / 1000);
   text('uptime', fresh ? `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—');
   text('session', fresh ? command.session_id || '—' : '—');
@@ -188,6 +205,8 @@ setInterval(() => {
 // Stream the sliders even when they do not move: silence means the car stops driving.
 setInterval(sendDrive, 100);
 setInterval(render, 100);
+$('battery-low-mark').style.left = batteryPercent(BATTERY_LOW_V) + '%';
+$('battery-critical-mark').style.left = batteryPercent(BATTERY_CRITICAL_V) + '%';
 async function connect() {
   try {
     const response = await fetch('/api/bootstrap'); if (!response.ok) throw Error('Local console unavailable.');

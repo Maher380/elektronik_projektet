@@ -8,6 +8,7 @@
 #include <array>
 #include <cstddef>
 #include <cstdint>
+#include <limits>
 #include <memory>
 
 #include "system/runtime/control.h"
@@ -69,6 +70,8 @@ struct TelemetrySnapshot
     float backwardDuty{0.0F};
     /** Ford: what the motor is doing, e.g. "driving_forward"; nullptr leaves it out. */
     const char* motorState{nullptr};
+    /** Ford: drive battery voltage in Volts; NaN leaves it out. */
+    float batteryVoltage{std::numeric_limits<float>::quiet_NaN()};
     /** Raw counts used for these distances; -1 means unavailable. */
     std::array<std::int32_t, runtime::IrSensorCount> adcRaw{-1, -1, -1};
 };

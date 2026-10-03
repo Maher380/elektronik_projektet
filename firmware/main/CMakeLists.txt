@@ -27,6 +27,7 @@ idf_component_register(
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"
         "source/driver/timer/esp32s3.cpp"
+        "source/driver/voltage_meter/divider.cpp"
         "source/system/pin_manager/esp32s3.cpp"
         "source/driver/wifi/esp32s3.cpp"
         "source/driver/mqtt/esp32s3.cpp"

@@ -18,6 +18,7 @@ namespace driver::pwm { struct Config; class Interface; }
 namespace driver::servo { class Interface; }
 namespace driver::serial { class Interface; }
 namespace driver::timer { class Interface; }
+namespace driver::voltage_meter { class Interface; }
 namespace driver::wifi { class Interface; }
 
 namespace driver::factory {
@@ -126,6 +127,18 @@ public:
      */
     virtual std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(gpio::Interface& trigger,
                                                                           gpio::Interface& echo) noexcept = 0;
+
+    /**
+     * @brief Create a voltage meter that reads through a resistor voltage divider.
+     *
+     * @param[in] adc Reference to the ADC driver connected to the divider joint.
+     * @param[in] r1Ohm Resistor from the measured voltage to the ADC pin, in Ohms.
+     * @param[in] r2Ohm Resistor from the ADC pin to GND, in Ohms.
+     * @return A unique pointer to the created voltage meter interface instance.
+     */
+    virtual std::unique_ptr<voltage_meter::Interface> voltageMeter(adc::Interface& adc,
+                                                                   float r1Ohm,
+                                                                   float r2Ohm) noexcept = 0;
 
     /**
      * @brief Create a motor driver instance.
