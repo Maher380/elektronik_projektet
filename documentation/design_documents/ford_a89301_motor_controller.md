@@ -179,6 +179,10 @@ matched the odometer where the odometer was reliable.
   32 °C between runs. These limits are temporarily low because the TMP36 is
   taped over two layers of electrical tape and reads low and late. Raise them
   to 60 / 40 °C when the sensor has direct contact with the motor can.
+  ManualByRemote reports the same sensor as `motor_temp_c` (16-read average,
+  one read per 100 ms) and the web page colours it at the same limits
+  (`MOTOR_WARM_C` 40 / `MOTOR_HOT_C` 45 in `tools/mqtt-ui/public/ford.mjs`).
+  It only reports: the car does not brake on overtemperature.
 - **Stall protection:** the config app brakes if the chip reports spinning
   above 50 Hz but the wheel gives no odometer pulse for 1 s.
 
