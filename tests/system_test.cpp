@@ -16,10 +16,12 @@
 #include "driver/mqtt/stub.h"
 #include "driver/pwm/stub.h"
 #include "driver/motor/mp6550.h"
+#include "driver/nvs/stub.h"
 #include "driver/odometer/stub.h"
 #include "driver/servo/stub.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/stub.h"
+#include "driver/temperature_sensor/stub.h"
 #include "driver/timer/stub.h"
 #include "driver/voltage_meter/stub.h"
 #include "driver/wifi/stub.h"
@@ -110,6 +112,9 @@ struct Factory final : driver::factory::Interface {
     std::unique_ptr<driver::voltage_meter::Interface> voltageMeter(driver::adc::Interface&, float, float) noexcept override {
         return std::make_unique<driver::voltage_meter::Stub>();
     }
+    std::unique_ptr<driver::temperature_sensor::Interface> temperatureSensor(driver::adc::Interface&) noexcept override {
+        return std::make_unique<driver::temperature_sensor::Stub>();
+    }
     std::unique_ptr<driver::motor::Interface> motor(driver::pwm::Interface& f, driver::pwm::Interface& b) noexcept override {
         return std::make_unique<driver::motor::MP6550>(f, b);
     }
@@ -125,6 +130,8 @@ struct Factory final : driver::factory::Interface {
     std::unique_ptr<driver::wifi::Interface> wifi(const char*, const char*) noexcept override {
         auto value = std::make_unique<driver::wifi::Stub>(); radio = value.get(); return value;
     }
+    driver::nvs::Interface& nvs() noexcept override { return settings; }
+    driver::nvs::Stub settings;
     void distances(float left, float center, float right) {
         sensors[1]->distance = left; sensors[2]->distance = center; sensors[4]->distance = right;
     }
