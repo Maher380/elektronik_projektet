@@ -12,7 +12,10 @@
 #include "driver/factory/interface.h"
 #include "driver/gpio/interface.h"
 #include "driver/motor/interface.h"
+#include "driver/nvs/interface.h"
+#include "driver/odometer/gaps.h"
 #include "driver/odometer/interface.h"
+#include "driver/odometer/store.h"
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
 #include "driver/voltage_meter/interface.h"
@@ -40,6 +43,40 @@ constexpr std::uint32_t SteeringPwmFrequencyHz{50U};
 constexpr std::uint8_t OdometerMagnets{6U};
 /** Rear wheel diameter, 34 mm from ford-build.md; 0.107 m circumference. */
 constexpr float WheelDiameterM{0.034F};
+
+/**
+ * @brief Ford's gaps as the wheel was built, used until a session measures the real ones.
+ *
+ * Two larger magnets sit at the midpoints of the two gaps either side of one original, so
+ * four gaps are an eighth of a turn and two are a quarter. Treating them as equal sixths
+ * instead would make a per-gap speed wrong by a third; these design values get that down
+ * to roughly a tenth with no calibration at all, which is why they are worth compiling in.
+ */
+driver::odometer::GapTable fordDesignGaps() noexcept
+{
+    driver::odometer::GapTable table{};
+    table.count = OdometerMagnets;
+
+    const float design[OdometerMagnets]{0.125F, 0.125F, 0.25F, 0.25F, 0.125F, 0.125F};
+    for (std::uint8_t index{0U}; index < OdometerMagnets; ++index)
+    {
+        table.fraction[index] = design[index];
+    }
+
+    return table;
+}
+
+/** Name for the speed source, so the operator can see which reading they are looking at. */
+const char* toString(driver::odometer::SpeedSource source) noexcept
+{
+    switch (source)
+    {
+        case driver::odometer::SpeedSource::None: return "none";
+        case driver::odometer::SpeedSource::Revolution: return "revolution";
+        case driver::odometer::SpeedSource::PerGap: return "per_gap";
+    }
+    return "none";
+}
 
 // Calibration, compiled in until it moves to NVS.
 /** Duty for speed command ±100: about 1.5 m/s unloaded. Raise only after the load test. */
@@ -149,6 +186,33 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
         odometer = nullptr; // Not unique_ptr::reset(): Interface has a reset() of its own.
         ESP_LOGW("FORD", "Odometer failed; measured speed and distance not reported");
     }
+    if (odometer)
+    {
+        // A measured table if one has been stored, the design values otherwise. Scoped so
+        // the namespace is released again: the car only reads it, and the calibration
+        // session needs to be able to open it.
+        auto gaps = fordDesignGaps();
+        const char* gapSource{"design values"};
+        {
+            const driver::odometer::Store store{factory.nvs()};
+            driver::odometer::GapTable stored{};
+            float spread{0.0F};
+            if (store.load(OdometerMagnets, stored, spread))
+            {
+                gaps = stored;
+                gapSource = "calibration";
+                ESP_LOGI("FORD", "Odometer gaps from calibration, spread %.4f", spread);
+            }
+        }
+        if (!odometer->setGapTable(gaps))
+        {
+            ESP_LOGW("FORD", "Odometer gap table refused; speed stays on the revolution window");
+        }
+        else
+        {
+            ESP_LOGI("FORD", "Odometer: %u magnets, gaps from %s", OdometerMagnets, gapSource);
+        }
+    }
 
     app::runtime::Control control{false, true}; // ManualByRemote is Ford's only drive style.
     app::communication::Manager communication{factory, Topics, Network}; // Wi-Fi/MQTT lifecycle.
@@ -245,8 +309,19 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
         snapshot.motorState = toString(appliedState);
         if (odometer)
         {
+            // An odometer cannot see direction, so tell it what the motor was told. Only
+            // while actually driving: coasting keeps the last known direction, which is
+            // the best guess available, and a standstill discards the phase anyway.
+            if (appliedState == MotorState::DrivingForward) { odometer->setForward(true); }
+            else if (appliedState == MotorState::DrivingReverse) { odometer->setForward(false); }
+
+            // Recovers which gap the wheel is in; returns at once if nothing is new.
+            odometer->update();
+
             snapshot.measuredSpeedMs = odometer->speed();
             snapshot.odometerDistanceM = odometer->distance();
+            snapshot.measuredSpeedSource = toString(odometer->speedSource());
+            snapshot.odometerPhaseLosses = odometer->phaseLossCount();
         }
         if (battery && (!batteryRead || (now - lastBatteryReadMs) >= BatteryReadIntervalMs))
         {

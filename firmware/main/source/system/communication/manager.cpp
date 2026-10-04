@@ -68,6 +68,8 @@ struct WireTelemetrySnapshot
     float batteryVoltage{std::numeric_limits<float>::quiet_NaN()};
     float measuredSpeedMs{std::numeric_limits<float>::quiet_NaN()};
     float odometerDistanceM{std::numeric_limits<float>::quiet_NaN()};
+    const char* measuredSpeedSource{nullptr};
+    std::uint32_t odometerPhaseLosses{0U};
     runtime::ControlState controlState{runtime::ControlState::Disarmed};
     runtime::MotionState motionState{runtime::MotionState::Stopped};
     runtime::StateReason reason{runtime::StateReason::Boot};
@@ -601,6 +603,14 @@ bool writeTelemetry(char* destination,
         && (!std::isfinite(snapshot.odometerDistanceM)
             || (cJSON_AddNumberToObject(root, "odometer_distance_m", snapshot.odometerDistanceM)
                 != nullptr))
+        && ((snapshot.measuredSpeedSource == nullptr)
+            || (cJSON_AddStringToObject(root, "measured_speed_source", snapshot.measuredSpeedSource)
+                != nullptr))
+        && ((snapshot.measuredSpeedSource == nullptr)
+            || (cJSON_AddNumberToObject(root,
+                                        "odometer_phase_losses",
+                                        static_cast<double>(snapshot.odometerPhaseLosses))
+                != nullptr))
         && (cJSON_AddStringToObject(root,
                                     "control_state",
                                     toString(snapshot.controlState))
@@ -909,6 +919,8 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.batteryVoltage = snapshot.batteryVoltage;
     wireSnapshot.measuredSpeedMs = snapshot.measuredSpeedMs;
     wireSnapshot.odometerDistanceM = snapshot.odometerDistanceM;
+    wireSnapshot.measuredSpeedSource = snapshot.measuredSpeedSource;
+    wireSnapshot.odometerPhaseLosses = snapshot.odometerPhaseLosses;
     wireSnapshot.controlState = control.controlState();
     wireSnapshot.motionState = control.motionState();
     wireSnapshot.reason = control.stateReason();

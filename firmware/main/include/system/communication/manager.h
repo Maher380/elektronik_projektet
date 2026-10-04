@@ -76,6 +76,10 @@ struct TelemetrySnapshot
     float measuredSpeedMs{std::numeric_limits<float>::quiet_NaN()};
     /** Ford: distance the Odometer has counted since boot in meters; NaN leaves it out. */
     float odometerDistanceM{std::numeric_limits<float>::quiet_NaN()};
+    /** Ford: what the measured speed was worked out from; nullptr leaves it out. */
+    const char* measuredSpeedSource{nullptr};
+    /** Ford: times the Odometer has given up a recovered magnet phase. */
+    std::uint32_t odometerPhaseLosses{0U};
     /** Raw counts used for these distances; -1 means unavailable. */
     std::array<std::int32_t, runtime::IrSensorCount> adcRaw{-1, -1, -1};
 };
