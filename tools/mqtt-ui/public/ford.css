@@ -42,6 +42,9 @@ input[type=range]{accent-color:var(--cyan);cursor:pointer}
 .legend{display:flex;align-items:center;gap:6px;font-size:9px;letter-spacing:.8px;color:var(--muted)}
 .legend i{display:inline-block;width:14px;height:2px;margin-left:6px}
 .legend i.command{background:var(--cyan)}.legend i.measured{background:var(--lime)}
+/* Odometer on the right rear wheel: a second measured speed, beside SLAM's. */
+.readout .odometer strong{color:#c79bff}
+.legend i.odometer{background:#c79bff}
 /* Battery: a bar from BATTERY_MIN_V to BATTERY_MAX_V, with gaps at the low and critical limits. */
 .battery-bar{position:relative;height:6px;margin-top:9px;border-radius:3px;background:#0e1924;border:1px solid #324859;overflow:hidden}
 .battery-bar i{position:absolute;left:0;top:0;bottom:0;width:0;background:var(--lime);transition:width .3s}

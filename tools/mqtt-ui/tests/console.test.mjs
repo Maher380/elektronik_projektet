@@ -274,3 +274,15 @@ test('Ford demo reports a motor temperature', async () => {
   assert.ok(sample);
   assert.ok(Number.isFinite(sample.data.motor_temp_c) && sample.data.motor_temp_c >= 20 && sample.data.motor_temp_c <= 60);
 });
+
+test('Ford demo reports the odometer', async () => {
+  const demo = new FordDemoTransport(), seen = [];
+  demo.on('message', (topic, data) => seen.push({ topic, data }));
+  demo.start(); await new Promise(resolve => setTimeout(resolve, 300)); demo.close();
+  const sample = seen.find(m => m.topic === 'cnb/ford/telemetry');
+  assert.ok(sample);
+  assert.equal(sample.data.measured_speed_ms, 0);
+  assert.equal(sample.data.measured_speed_source, 'none');
+  assert.ok(Number.isFinite(sample.data.odometer_distance_m) && sample.data.odometer_distance_m >= 0);
+  assert.ok(Number.isInteger(sample.data.odometer_phase_losses));
+});

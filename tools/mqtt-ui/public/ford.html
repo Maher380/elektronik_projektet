@@ -35,7 +35,8 @@
     </article>
     <article class="drive-card speed-card">
       <div class="card-top"><h3>SPEED COMMAND</h3><button type="button" class="zero" id="speed-zero">0</button></div>
-      <div class="readout"><span>SLIDER <strong id="speed-slider-value" class="mono">0</strong></span><span class="echo">CAR <strong id="speed-car-value" class="mono">—</strong></span><span class="measured">MEASURED · SLAM <strong id="measured-speed" class="mono">—</strong></span></div>
+      <div class="readout"><span>SLIDER <strong id="speed-slider-value" class="mono">0</strong></span><span class="echo">CAR <strong id="speed-car-value" class="mono">—</strong></span><span class="measured">MEASURED · SLAM <strong id="measured-speed" class="mono">—</strong></span><span class="odometer">ODOMETER <strong id="odometer-speed" class="mono">—</strong></span></div>
+      <small id="odometer-detail" class="measured-detail">Odometer: waiting for telemetry</small>
       <div class="speed-row">
         <input id="speed" type="range" min="-100" max="100" step="1" value="0" aria-label="Speed command, −100 full reverse to +100 full forward">
         <div class="scale vertical"><span>+100 FWD</span><span>0</span><span>REV −100</span></div>
@@ -64,7 +65,7 @@
       <div class="plot"><canvas id="steering-chart" role="img"></canvas><div class="empty">No steering data yet</div></div>
     </article>
     <article class="chart-card">
-      <div class="card-top"><h3>SPEED</h3><span class="legend"><i class="command"></i>COMMAND (−100…+100) <i class="measured"></i>MEASURED (SLAM, m/s)</span></div>
+      <div class="card-top"><h3>SPEED</h3><span class="legend"><i class="command"></i>COMMAND (−100…+100) <i class="measured"></i>MEASURED (SLAM, m/s) <i class="odometer"></i>ODOMETER (m/s, no direction)</span></div>
       <div class="plot"><canvas id="speed-chart" role="img"></canvas><div class="empty">No speed data yet</div></div>
     </article>
   </section>

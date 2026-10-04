@@ -107,11 +107,16 @@ const steeringChart = new FordChart('steering-chart', [
   { color: '#48d9e8', side: 'left', format: v => Math.round(v) + '°', range: () => [-FULL_LOCK_DEG * 1.4, FULL_LOCK_DEG * 1.4] },
   { color: '#b4e36c', side: null, range: () => [-FULL_LOCK_DEG * 1.4, FULL_LOCK_DEG * 1.4] },
 ]);
+// SLAM and the odometer share the right-hand m/s axis, so both lines can be compared directly.
+let measuredTop = 1;
+const measuredRange = () => [-measuredTop, measuredTop];
 const speedChart = new FordChart('speed-chart', [
   { color: '#48d9e8', side: 'left', format: v => String(Math.round(v)), range: () => [-100, 100] },
-  { color: '#b4e36c', side: 'right', format: v => v.toFixed(1), range: values => { const top = Math.max(1, ...values.map(Math.abs)); return [-top, top]; } },
+  { color: '#b4e36c', side: 'right', format: v => v.toFixed(1), range: measuredRange },
+  { color: '#c79bff', side: null, range: measuredRange },
 ]);
 const number = n => typeof n === 'number' && Number.isFinite(n) ? n : null;
+const speedSources = { per_gap: 'per gap', revolution: 'revolution window', none: 'no reading yet' };
 function drawCharts(now) {
   const car = (pick) => buffer.car.map(s => ({ at: s.at, value: number(pick(s.data)) }));
   const pi = (pick) => buffer.pi.map(s => ({ at: s.at, value: number(pick(s.data)) }));
@@ -119,7 +124,19 @@ function drawCharts(now) {
   const wheel = pi(d => d.wheel_angle_deg?.slam);
   steeringChart.draw([command, wheel], now, `Steering, last 30 seconds: command ${fixed(command.at(-1)?.value, 1, '°')}, wheel angle ${fixed(wheel.at(-1)?.value, 1, '°')}`);
   const speed = car(d => d.motor?.speed_command), measured = pi(d => d.measured_speed_mps?.slam);
-  speedChart.draw([speed, measured], now, `Speed, last 30 seconds: command ${signed(speed.at(-1)?.value)}, measured ${fixed(measured.at(-1)?.value, 2, ' m/s')}`);
+  const odometer = car(d => d.measured_speed_ms);
+  measuredTop = Math.max(1, ...[...measured, ...odometer].map(p => Math.abs(p.value ?? 0)));
+  speedChart.draw([speed, measured, odometer], now, `Speed, last 30 seconds: command ${signed(speed.at(-1)?.value)}, measured ${fixed(measured.at(-1)?.value, 2, ' m/s')}, odometer ${fixed(odometer.at(-1)?.value, 2, ' m/s')}`);
+}
+// Odometer on the right rear wheel. Its speed has no sign: it cannot see which way the wheel turns.
+function renderOdometer(fresh, data) {
+  const speed = fresh ? number(data.measured_speed_ms) : null, distance = fresh ? number(data.odometer_distance_m) : null;
+  text('odometer-speed', speed === null ? '—' : `${speed.toFixed(2)} m/s`);
+  const losses = number(data.odometer_phase_losses);
+  text('odometer-detail', !fresh ? 'Odometer: waiting for telemetry'
+    : speed === null && distance === null ? 'Odometer: not in telemetry (not fitted or failed to start)'
+    : `Odometer: ${distance === null ? '—' : distance.toFixed(2) + ' m'} · ${speedSources[data.measured_speed_source] || data.measured_speed_source || '—'}`
+      + (losses === null ? '' : ` · ${losses} phase loss${losses === 1 ? '' : 'es'}`));
 }
 function renderPi(now, serverFresh, carSteering) {
   const pi = state.pi || {}, data = pi.telemetry || {};
@@ -182,6 +199,7 @@ function render() {
   text('current-style', fresh ? data.driver_style === 'manual_by_remote' ? 'ManualByRemote' : data.driver_style || '—' : '—');
   renderBattery(fresh, data);
   renderMotorTemp(fresh, data);
+  renderOdometer(fresh, data);
   const seconds = Math.floor((data.uptime_ms || 0) / 1000);
   text('uptime', fresh ? `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—');
   text('session', fresh ? command.session_id || '—' : '—');

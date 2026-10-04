@@ -201,6 +201,8 @@ export class FordDemoTransport extends EventEmitter {
     this.drive = null; this.driveAt = 0; this.heartbeatAt = 0; this.driven = 1; this.brakeAt = 0;
     // Simulated Pi: the car's real motion as SLAM would see it.
     this.motion = { speed: 0, wheel: 0 }; this.piAt = 0;
+    // Simulated odometer on the same motion: distance only grows, and speed has no sign.
+    this.odometer = { distance: 0, at: 0, forward: true, losses: 0 };
   }
   message(suffix, data, retained = false) { this.emit('message', this.topic + '/' + suffix, structuredClone(data), retained); }
   start() {
@@ -256,7 +258,22 @@ export class FordDemoTransport extends EventEmitter {
       motor: { speed_command: speed, forward_duty: speed > 0 ? duty : 0, backward_duty: speed < 0 ? duty : 0, state },
       control_state: this.state.control_state, motion_state: this.state.motion_state, reason: this.state.reason,
       battery_v: this.battery(now, speed), motor_temp_c: this.motorTemp(now, speed),
+      ...this.odometerSample(now),
     });
+  }
+  // Fake odometer: follows the simulated wheel speed, uses the per-gap reading going forward and
+  // the revolution window in reverse, and counts a phase loss on every stop or direction change,
+  // as the firmware does.
+  odometerSample(now) {
+    const o = this.odometer, speed = Math.abs(this.motion.speed) < 0.02 ? 0 : this.motion.speed;
+    o.distance += Math.abs(speed) * (o.at ? (now - o.at) / 1000 : 0); o.at = now;
+    const forward = speed >= 0;
+    if (speed === 0 ? o.moving : forward !== o.forward) o.losses++;
+    o.moving = speed !== 0; if (speed) o.forward = forward;
+    return {
+      measured_speed_ms: Math.round(Math.abs(speed) * 100) / 100, odometer_distance_m: Math.round(o.distance * 1000) / 1000,
+      measured_speed_source: !speed ? 'none' : forward ? 'per_gap' : 'revolution', odometer_phase_losses: o.losses,
+    };
   }
   // Fake drive battery: drains from 8.4 V to 6.2 V every two minutes, then starts full again,
   // and sags while driving, so all battery colours appear.
