@@ -133,7 +133,9 @@ is used.
 ### Measuring the gaps
 
 `cal yes` in the A89301 configuration app. **Lift the car first** — it spins the
-wheel under power for about a minute.
+wheel under power for about a minute. The app drives the motor over I2C, so the
+SPD/SCL wire has to move first; the steps are in "Switching between the two
+wirings" in `ford_a89301_motor_controller.md`.
 
 It measures at three duties and stores the result only if the three agree to within
 0.01 of a revolution per gap. That gate is the point of the session, not a

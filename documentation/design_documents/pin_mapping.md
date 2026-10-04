@@ -48,6 +48,12 @@ Power connections do not use driver factory calls:
 | `factory.gpioInputPullup(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor, 6 unevenly spaced magnets on the right rear wheel. Open-collector and active low, so the internal pull-up is required and no external one is | 🔵 Used |
 | `factory.adc(1)` | `A0 / ~D17` | 📈 ADC1_CH0 | TMP36 on the motor can, sent as `motor_temp_c`; 100 kΩ to `GND` so a missing sensor reads 0 V, not a floating value | 🔵 Used |
 
+The A89301 configuration app (`A89301_CONFIG_MODE`) talks I2C instead: SDA on
+`A4` (GPIO11, A89301 FG/SDA) and SCL on `A5` (GPIO12, with a 4.7 kΩ pull-up to
+3V3). The A89301 SPD/SCL wire moves from `~D5` to `A5` for it, and back again
+for the car. See "Switching between the two wirings" in
+`ford_a89301_motor_controller.md`.
+
 ## Code Value To Board Pin
 
 Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,

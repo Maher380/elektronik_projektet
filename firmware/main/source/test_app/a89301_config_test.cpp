@@ -756,7 +756,7 @@ void runA89301ConfigTest() noexcept
             }
 
             brakeGpio.write(false);
-            std::snprintf(buf, sizeof(buf), "Duty %.2f: settling %u ms...\n",
+            std::snprintf(buf, sizeof(buf), "Duty %.2f: settling %lu ms...\n",
                           static_cast<double>(calDuties[duty]), calSettleMs);
             serial.write(buf);
             if (waitOrAbort(calSettleMs))

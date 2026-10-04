@@ -21,6 +21,8 @@ idf_component_register(
         "source/driver/motor/l298n.cpp"
         "source/driver/motor/mp6550.cpp"
         "source/driver/odometer/a3144.cpp"
+        "source/driver/odometer/gaps.cpp"
+        "source/driver/odometer/store.cpp"
         "source/driver/pwm/esp32s3.cpp"
         "source/driver/servo/ford.cpp"
         "source/driver/servo/vagrant.cpp"
