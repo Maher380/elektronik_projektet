@@ -11,10 +11,16 @@
 
 #include <cstdint>
 
-#include "driver/odometer/interface.h"
-
 namespace driver::odometer
 {
+
+/**
+ * @brief Largest magnet count a driver has to support.
+ *
+ * Drivers keep one pulse timestamp per magnet to measure a whole revolution, so the
+ * count is bounded. Configurations above this are clamped.
+ */
+inline constexpr std::uint8_t MaxPulsesPerRevolution{16U};
 
 /**
  * @brief How much of the circumference each gap between magnets spans.
@@ -56,8 +62,13 @@ inline constexpr float MinPhaseMargin{0.05F};
  *
  * The margin alone leaks: at 0.04 noise about 0.9 % of locks were wrong. Because the
  * noise is independent from one revolution to the next, requiring three in a row took
- * that to zero in the same simulation, at a cost of three revolutions before the fast
- * reading becomes available - about 0.64 s at 0.5 m/s, covered by the revolution window.
+ * that to zero in the same simulation.
+ *
+ * @attention "In a row" must mean windows a whole revolution apart. A driver's revolution
+ *            window slides by one magnet per pulse, so consecutive windows share all but
+ *            one of their gaps and would simply repeat each other's mistake rather than
+ *            confirm it. A driver that checks every pulse gains nothing from this
+ *            constant; it has to space its checks by the magnet count.
  */
 inline constexpr std::uint8_t PhaseLockRevolutions{3U};
 

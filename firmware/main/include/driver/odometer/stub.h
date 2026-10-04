@@ -7,6 +7,7 @@
 
 #include <cstdint>
 
+#include "driver/odometer/gaps.h"
 #include "driver/odometer/interface.h"
 
 namespace driver::odometer
@@ -111,6 +112,80 @@ public:
     }
 
     /**
+     * @brief Nothing to do: the stub is told its speed rather than timing one.
+     */
+    void update() noexcept override {}
+
+    /**
+     * @brief Accept a gap table and remember it, so a test can read it back.
+     *
+     * @param[in] table Gap table.
+     * @return True if the table was plausible.
+     */
+    bool setGapTable(const GapTable& table) noexcept override
+    {
+        if (!isPlausible(table)) { return false; }
+
+        myGapTable = table;
+        return true;
+    }
+
+    /**
+     * @brief Record the simulated direction.
+     *
+     * @param[in] forward True if the car is being driven forwards.
+     */
+    void setForward(const bool forward) noexcept override
+    {
+        myForward = forward;
+    }
+
+    /**
+     * @brief Report the simulated speed source.
+     *
+     * A simulated speed is simply given, so it is attributed to the revolution window
+     * whenever it is non-zero rather than pretending a phase was recovered.
+     *
+     * @return The source of the simulated speed.
+     */
+    SpeedSource speedSource() const noexcept override
+    {
+        if (!myIsInitialized || (mySpeed == 0.0F)) { return SpeedSource::None; }
+
+        return SpeedSource::Revolution;
+    }
+
+    /**
+     * @brief A stub never establishes a phase, so it never loses one.
+     *
+     * @return Always 0.
+     */
+    std::uint32_t phaseLossCount() const noexcept override
+    {
+        return 0U;
+    }
+
+    /**
+     * @brief Read back the gap table the stub was given.
+     *
+     * @return The stored gap table, empty if none was set.
+     */
+    const GapTable& gapTable() const noexcept
+    {
+        return myGapTable;
+    }
+
+    /**
+     * @brief Read back the simulated direction.
+     *
+     * @return True if the stub was last told it was going forwards.
+     */
+    bool isForward() const noexcept
+    {
+        return myForward;
+    }
+
+    /**
      * @brief Simulation of hardware input.
      *
      * @param[in] pulses Number of pulses to add to the pulse count.
@@ -148,6 +223,12 @@ private:
 
     /** Simulated odometer state. */
     bool myIsInitialized;
+
+    /** Gap table the stub was last given. */
+    GapTable myGapTable{};
+
+    /** Direction the stub was last told. */
+    bool myForward{true};
 };
 
 } // namespace driver::odometer

@@ -7,6 +7,8 @@
 
 #include <cstdint>
 
+#include "driver/odometer/gaps.h"
+
 namespace driver::odometer
 {
 
@@ -21,14 +23,6 @@ struct Config
     /** Wheel diameter in meters. */
     float wheelDiameterM{0.0F};
 };
-
-/**
- * @brief Largest magnet count a driver has to support.
- *
- * Drivers keep one pulse timestamp per magnet to measure a whole revolution, so the
- * count is bounded. Configurations above this are clamped.
- */
-inline constexpr std::uint8_t MaxPulsesPerRevolution{16U};
 
 /**
  * @brief Ratio of a circle's circumference to its diameter.
@@ -65,6 +59,24 @@ inline constexpr float distancePerPulse(const Config& config) noexcept
 
     return distancePerRevolution(config) / static_cast<float>(config.pulsesPerRevolution);
 }
+
+/**
+ * @brief What a reported speed was worked out from.
+ *
+ * Reported alongside the speed so an operator can see which one they are looking at:
+ * the two differ in how much they lag, not in whether they are correct.
+ */
+enum class SpeedSource : std::uint8_t
+{
+    /** Standing still, or too few pulses to know a speed yet. */
+    None,
+
+    /** Timed over a whole revolution. Always correct, lags half a revolution. */
+    Revolution,
+
+    /** Timed over one gap and corrected by its stored fraction. Lags half a gap. */
+    PerGap,
+};
 
 /**
  * @brief Abstract interface for odometer drivers.
@@ -128,6 +140,55 @@ public:
      * @brief Reset the pulse count (and thereby the distance) to zero.
      */
     virtual void reset() noexcept = 0;
+
+    /**
+     * @brief Do the per-revolution bookkeeping that cannot run in an interrupt.
+     *
+     * Recovering which gap the wheel is in means deriving fractions and matching them
+     * against the stored table, which is floating-point work and belongs in a task. Call
+     * it regularly from the driving loop; it returns at once when no new revolution has
+     * completed.
+     *
+     * @note Never calling it is safe. Without it the phase is never established, so
+     *       speed() stays on the revolution window - late, but never wrong.
+     */
+    virtual void update() noexcept = 0;
+
+    /**
+     * @brief Give the driver the measured gap fractions for its wheel.
+     *
+     * @param[in] table Gap table; an implausible one is refused and the previous kept.
+     * @return True if the table was accepted.
+     */
+    virtual bool setGapTable(const GapTable& table) noexcept = 0;
+
+    /**
+     * @brief Tell the driver which way the wheel is being driven.
+     *
+     * An Odometer cannot see direction, so it has to be told. A change discards the
+     * phase, because the gaps are then traversed in the opposite order.
+     *
+     * @param[in] forward True if the car is being driven forwards.
+     */
+    virtual void setForward(bool forward) noexcept = 0;
+
+    /**
+     * @brief What the latest speed() was worked out from.
+     *
+     * @return The source, so telemetry can report which reading the operator is seeing.
+     */
+    virtual SpeedSource speedSource() const noexcept = 0;
+
+    /**
+     * @brief How many times the driver has given up a phase it had established.
+     *
+     * Each one is a revolution spent back on the slower reading. The count is the best
+     * available measure of how well the magnets are mounted, since a missed pulse is the
+     * usual cause.
+     *
+     * @return Number of times the phase has been lost since init() or reset().
+     */
+    virtual std::uint32_t phaseLossCount() const noexcept = 0;
 };
 
 } // namespace driver::odometer
