@@ -73,6 +73,14 @@ public:
                                                            float r2Ohm) noexcept override;
 
     /**
+     * @brief Create a TMP36 analog temperature sensor.
+     *
+     * @param[in] adc Reference to the ADC driver connected to the TMP36 output.
+     * @return A unique pointer to the created temperature sensor interface instance.
+     */
+    std::unique_ptr<temperature_sensor::Interface> temperatureSensor(driver::adc::Interface& adc) noexcept override;
+
+    /**
      * @brief Create a real ESP32-S3 GPIO input hardware instance.
      * * @param[in] pin The hardware pin number to configure as input.
      * @return A unique pointer to the created GPIO interface instance.
