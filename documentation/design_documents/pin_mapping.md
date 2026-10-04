@@ -45,7 +45,7 @@ Power connections do not use driver factory calls:
 | `factory.pwm(8)` | `~D5` | 〰️ PWM output, 20 kHz | A89301 SPD/SCL (speed) | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo (pulse width) | 🔵 Used |
 | `factory.adc(4)` | `A3 / ~D20` | 📈 ADC1_CH3 | Drive battery voltage divider: R1 101.24 kΩ from battery + (after the switch), R2 32.99 kΩ and 154 nF to `GND` | 🔵 Used |
-| `factory.gpioInputPullup(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor, 6 unevenly spaced magnets on a rear wheel. Open-collector and active low, so the internal pull-up is required and no external one is | 🔵 Used |
+| `factory.gpioInputPullup(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor, 6 unevenly spaced magnets on the right rear wheel. Open-collector and active low, so the internal pull-up is required and no external one is | 🔵 Used |
 | `factory.adc(1)` | `A0 / ~D17` | 📈 ADC1_CH0 | TMP36 on the motor can, sent as `motor_temp_c`; 100 kΩ to `GND` so a missing sensor reads 0 V, not a floating value | 🔵 Used |
 
 ## Code Value To Board Pin
@@ -83,8 +83,8 @@ Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,
 | `13` | `A6 / ~D23` | ⚠️ ADC2_CH2 | ✅ | Analog / digital | 🟢 Available |
 | `14` | `A7 / ~D24` | ⚠️ ADC2_CH3 | ✅ | Analog / digital | 🟢 Available |
 | `17` | `~D8` | ⚠️ ADC2_CH6 | ✅ | Digital / PWM | 🔵 SRF05 Trigger |
-| `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🔵 Odometer (A3144 Hall sensor) |
-| `21` | `~D10` | - | ✅ | Digital / PWM | 🟢 Available |
+| `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🔵 Odometer, right rear (A3144 Hall sensor) |
+| `21` | `~D10` | - | ✅ | Digital / PWM | 🟢 Available, reserved for a second odometer (left rear) |
 | `38` | `~D11` | - | ✅ | SPI COPI | 🟡 Shared function |
 | `43` | `~D1 / TX0` | - | ✅ | UART transmit | 🟡 Shared function |
 | `44` | `~D0 / RX0` | - | ✅ | UART receive | 🟡 Shared function |

@@ -1,7 +1,8 @@
 # Ford: Odometer
 
 The Ford counts wheel rotation with an A3144 Hall-effect sensor on `D9` (GPIO18)
-and **six magnets** on a rear wheel. The firmware sends `measured_speed_ms` and
+and **six magnets** on the **right rear** wheel — the only wheel measured; a
+second sensor on the left rear is wanted but not fitted. The firmware sends `measured_speed_ms` and
 `odometer_distance_m` in `cnb/ford/telemetry`.
 
 | Property | Value | From |
