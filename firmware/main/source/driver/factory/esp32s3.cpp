@@ -13,6 +13,7 @@
 #include "driver/servo/ford.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/esp32s3.h"
+#include "driver/temperature_sensor/tmp36.h"
 #include "driver/timer/esp32s3.h"
 #include "driver/voltage_meter/divider.h"
 #include "driver/wifi/esp32s3.h"
@@ -42,6 +43,11 @@ std::unique_ptr<voltage_meter::Interface> Esp32s3::voltageMeter(adc::Interface& 
                                                                 float r2Ohm) noexcept
 {
     return std::make_unique<driver::voltage_meter::Divider>(adc, r1Ohm, r2Ohm);
+}
+
+std::unique_ptr<temperature_sensor::Interface> Esp32s3::temperatureSensor(adc::Interface& adc) noexcept
+{
+    return std::make_unique<driver::temperature_sensor::Tmp36>(adc);
 }
 
 std::unique_ptr<gpio::Interface> Esp32s3::gpioInput(std::uint8_t pin) noexcept {

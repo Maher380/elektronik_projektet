@@ -66,6 +66,7 @@ struct WireTelemetrySnapshot
     float backwardDuty{0.0F};
     const char* motorState{nullptr};
     float batteryVoltage{std::numeric_limits<float>::quiet_NaN()};
+    float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     runtime::ControlState controlState{runtime::ControlState::Disarmed};
     runtime::MotionState motionState{runtime::MotionState::Stopped};
     runtime::StateReason reason{runtime::StateReason::Boot};
@@ -593,6 +594,8 @@ bool writeTelemetry(char* destination,
             || (cJSON_AddStringToObject(motor, "state", snapshot.motorState) != nullptr))
         && (!std::isfinite(snapshot.batteryVoltage)
             || (cJSON_AddNumberToObject(root, "battery_v", snapshot.batteryVoltage) != nullptr))
+        && (!std::isfinite(snapshot.motorTemperatureC)
+            || (cJSON_AddNumberToObject(root, "motor_temp_c", snapshot.motorTemperatureC) != nullptr))
         && (cJSON_AddStringToObject(root,
                                     "control_state",
                                     toString(snapshot.controlState))
@@ -899,6 +902,7 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.backwardDuty = snapshot.backwardDuty;
     wireSnapshot.motorState = snapshot.motorState;
     wireSnapshot.batteryVoltage = snapshot.batteryVoltage;
+    wireSnapshot.motorTemperatureC = snapshot.motorTemperatureC;
     wireSnapshot.controlState = control.controlState();
     wireSnapshot.motionState = control.motionState();
     wireSnapshot.reason = control.stateReason();

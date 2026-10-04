@@ -26,6 +26,7 @@ idf_component_register(
         "source/driver/servo/vagrant.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"
+        "source/driver/temperature_sensor/tmp36.cpp"
         "source/driver/timer/esp32s3.cpp"
         "source/driver/voltage_meter/divider.cpp"
         "source/system/pin_manager/esp32s3.cpp"

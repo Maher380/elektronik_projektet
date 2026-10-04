@@ -72,6 +72,8 @@ struct TelemetrySnapshot
     const char* motorState{nullptr};
     /** Ford: drive battery voltage in Volts; NaN leaves it out. */
     float batteryVoltage{std::numeric_limits<float>::quiet_NaN()};
+    /** Ford: motor can temperature in degrees Celsius; NaN leaves it out. */
+    float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     /** Raw counts used for these distances; -1 means unavailable. */
     std::array<std::int32_t, runtime::IrSensorCount> adcRaw{-1, -1, -1};
 };

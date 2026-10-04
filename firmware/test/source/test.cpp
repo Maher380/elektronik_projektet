@@ -9,6 +9,7 @@
 #include "test/nvs.h"
 #include "test/pin_manager.h"
 #include "test/servo.h"
+#include "test/temperature_sensor.h"
 #include "test/voltage_meter.h"
 
 #include "driver/adc/stub.h"
@@ -28,6 +29,7 @@ int main()
     if (!test::runServoTest()) { return -1; }
     if (!test::runA89301ProgrammerTest()) { return -1; }
     if (!test::runVoltageMeterTest()) { return -1; }
+    if (!test::runTemperatureSensorTest()) { return -1; }
 
     driver::nvs::Stub testNvs;
     if (!test::runNvsTest(testNvs)) { return -1; }
