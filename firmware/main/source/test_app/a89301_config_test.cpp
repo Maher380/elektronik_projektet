@@ -18,7 +18,10 @@
 #include "driver/gpio/esp32s3.h"
 #include "driver/i2c/esp32s3.h"
 #include "driver/motor/a89301_programmer.h"
+#include "driver/nvs/esp32s3.h"
 #include "driver/odometer/a3144.h"
+#include "driver/odometer/gaps.h"
+#include "driver/odometer/store.h"
 #include "driver/serial/esp32s3.h"
 #include "esp_rom_sys.h"
 #include "esp_timer.h"
@@ -65,6 +68,7 @@ void runA89301ConfigTest() noexcept
         "  f / b            direction pin forward / backward\n"
         "  save             show working registers that differ from EEPROM\n"
         "  save yes         program those differences into EEPROM (keep VIN on!)\n"
+        "  cal [yes]        measure the magnet gaps and store them (lift the car)\n"
         "  sweep [speed] [seconds] [list]\n"
         "                   test PID_P/PID_I combinations, defaults 0.3, 5 s, list 1\n"
         "                   (list 2 = refined PID, list 3 = PID with MOTOR_INDUCTANCE 1,\n"
@@ -710,6 +714,181 @@ void runA89301ConfigTest() noexcept
 
     bool monitor{false};
     TickType_t lastMonitor{xTaskGetTickCount()};
+    // Measure the magnet gaps at several wheel speeds, and store them only if they agree.
+    // ADR 0008: Ford turns 12 motor commutations per wheel revolution against 6 magnets, so
+    // the motor's roughness falls at the same wheel angles on every revolution and averaging
+    // more revolutions cannot remove it. A single-speed measurement cannot tell the wheel's
+    // shape from the motor's behaviour; three speeds can, because geometry does not change
+    // with speed and the effect of torque ripple does.
+    auto runCalibration = [&]() {
+        namespace odo = driver::odometer;
+
+        constexpr float calDuties[]{0.10F, 0.15F, 0.20F};
+        constexpr std::uint8_t calDutyCount{
+            static_cast<std::uint8_t>(sizeof(calDuties) / sizeof(calDuties[0]))};
+        constexpr std::uint32_t calSettleMs{2000U}; // Let the speed steady before measuring.
+        constexpr std::uint8_t calRevolutions{20U}; // Revolutions averaged per duty.
+        constexpr std::uint32_t calStallMs{4000U};  // No new revolution for this long = give up.
+        /** Largest spread in one gap across the three speeds that still counts as agreement. */
+        constexpr float calTolerance{0.01F};
+
+        driver::nvs::Esp32s3 nvs;
+        if (!nvs.init()) { serial.write("NVS init failed; nothing could be stored\n"); return; }
+
+        odo::Store store{nvs};
+        if (!store.isOpen()) { serial.write("Could not open the odo namespace\n"); return; }
+
+        if (!odometer.isInitialized()) { serial.write("Odometer not initialized\n"); return; }
+
+        const std::uint8_t magnets{odometer.magnets()};
+        odo::GapTable measured[calDutyCount]{};
+        directionGpio.write(true); // Forward: the table describes the gaps in forward order.
+
+        for (std::uint8_t duty{0U}; duty < calDutyCount; ++duty)
+        {
+            const auto demand{
+                static_cast<std::uint16_t>(calDuties[duty] * a89301::SpeedDemandMax + 0.5F)};
+            if (!programmer.setSpeedDemand(demand))
+            {
+                serial.write("I2C write failed\n");
+                stopMotor();
+                return;
+            }
+
+            brakeGpio.write(false);
+            std::snprintf(buf, sizeof(buf), "Duty %.2f: settling %u ms...\n",
+                          static_cast<double>(calDuties[duty]), calSettleMs);
+            serial.write(buf);
+            if (waitOrAbort(calSettleMs))
+            {
+                serial.write("Aborted\n");
+                stopMotor();
+                return;
+            }
+
+            double sums[odo::MaxPulsesPerRevolution]{};
+            std::uint8_t samples{0U};
+            std::uint32_t lastPulses{odometer.pulseCount()};
+            std::uint32_t sinceSampleMs{0U};
+
+            while (samples < calRevolutions)
+            {
+                vTaskDelay(pdMS_TO_TICKS(pollPeriodMs));
+                sinceSampleMs += pollPeriodMs;
+
+                const float tempC{motorTempC()};
+                if (!std::isnan(tempC) && (tempC > maxMotorTempC))
+                {
+                    serial.write("Motor too hot; stopped, nothing stored\n");
+                    stopMotor();
+                    return;
+                }
+
+                if (serial.isDataAvailable())
+                {
+                    char discard[64]{'\0'};
+                    serial.read(discard, sizeof(discard));
+                    serial.write("Aborted\n");
+                    stopMotor();
+                    return;
+                }
+
+                if (sinceSampleMs > calStallMs)
+                {
+                    serial.write("Wheel is not turning. Is VIN on and the wheel free?\n");
+                    stopMotor();
+                    return;
+                }
+
+                // One sample per whole revolution. The driver's window slides by one magnet
+                // per pulse, so sampling faster would average overlapping windows and only
+                // look like more data than it is.
+                const std::uint32_t pulses{odometer.pulseCount()};
+                if ((pulses - lastPulses) < magnets) { continue; }
+
+                float gaps[odo::MaxPulsesPerRevolution]{};
+                if (odometer.observedGaps(gaps, magnets))
+                {
+                    for (std::uint8_t gap{0U}; gap < magnets; ++gap) { sums[gap] += gaps[gap]; }
+                    ++samples;
+                }
+
+                lastPulses    = pulses;
+                sinceSampleMs = 0U;
+            }
+
+            measured[duty].count = magnets;
+            for (std::uint8_t gap{0U}; gap < magnets; ++gap)
+            {
+                measured[duty].fraction[gap] = static_cast<float>(sums[gap] / samples);
+            }
+
+            std::snprintf(buf, sizeof(buf), "  %u revolutions:", samples);
+            serial.write(buf);
+            for (std::uint8_t gap{0U}; gap < magnets; ++gap)
+            {
+                std::snprintf(buf, sizeof(buf), " %.4f",
+                              static_cast<double>(measured[duty].fraction[gap]));
+                serial.write(buf);
+            }
+            serial.write("\n");
+        }
+
+        stopMotor();
+        serial.write("Stopped, brake on.\n");
+
+        std::uint8_t worstGap{0U};
+        float worstSpread{0.0F};
+        if (!odo::tablesAgree(measured, calDutyCount, calTolerance, worstGap, worstSpread))
+        {
+            std::snprintf(buf, sizeof(buf),
+                          "REFUSED: gap %u moved by %.4f between speeds, limit %.4f.\n"
+                          "A gap that changes with speed is the motor, not the wheel.\n"
+                          "Nothing was stored; any previous table is untouched.\n",
+                          worstGap, static_cast<double>(worstSpread),
+                          static_cast<double>(calTolerance));
+            serial.write(buf);
+            return;
+        }
+
+        odo::GapTable mean{};
+        if (!odo::meanTable(measured, calDutyCount, mean))
+        {
+            serial.write("REFUSED: the averaged table is not plausible. Nothing stored.\n");
+            return;
+        }
+
+        // Can this wheel be phased at all? Matching the table against itself gives the
+        // distance to the next-best rotation, which is exactly what the driver has to clear
+        // at run time. Magnets too close to evenly spaced score 0 and can never be placed, so
+        // the table would be stored and then never used.
+        float margin{0.0F};
+        (void)odo::bestRotation(mean.fraction, mean, margin);
+        if (margin < odo::MinPhaseMargin)
+        {
+            std::snprintf(buf, sizeof(buf),
+                          "REFUSED: phase margin %.4f, needs %.4f.\n"
+                          "These magnets are too evenly spaced to tell one gap from another,\n"
+                          "so the table could never be used. Space them more unevenly.\n",
+                          static_cast<double>(margin),
+                          static_cast<double>(odo::MinPhaseMargin));
+            serial.write(buf);
+            return;
+        }
+
+        if (!store.save(mean, worstSpread)) { serial.write("Store write failed\n"); return; }
+
+        serial.write("STORED:");
+        for (std::uint8_t gap{0U}; gap < magnets; ++gap)
+        {
+            std::snprintf(buf, sizeof(buf), " %.4f", static_cast<double>(mean.fraction[gap]));
+            serial.write(buf);
+        }
+        std::snprintf(buf, sizeof(buf), "\n  spread %.4f, phase margin %.4f\n",
+                      static_cast<double>(worstSpread), static_cast<double>(margin));
+        serial.write(buf);
+    };
+
     std::int64_t startUs{esp_timer_get_time()}; // Time reference for the monitor, reset by spd.
 
     // Safety supervision of manual spd runs: overtemperature and stalled wheel.
@@ -915,6 +1094,16 @@ void runA89301ConfigTest() noexcept
                 }
                 else { serial.write("I2C write failed\n"); }
             }
+        }
+        else if (std::strcmp(cmd, "cal") == 0)
+        {
+            const bool confirmed{(arg1 != nullptr) && (std::strcmp(arg1, "yes") == 0)};
+            if (!confirmed)
+            {
+                serial.write("cal spins the wheel under power at three duties, about a minute.\n"
+                             "LIFT THE CAR so the measured wheel turns freely, then: cal yes\n");
+            }
+            else { runCalibration(); }
         }
         else if (std::strcmp(cmd, "sweep") == 0)
         {
