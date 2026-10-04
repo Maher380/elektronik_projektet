@@ -101,6 +101,56 @@ alternates:
 20 Hz floor ADR 0006 asked for. The average meets the target and the worst case does
 not.
 
+### Per-gap correction
+
+Given a measured gap table, the driver does better than the window. Once it knows
+which gap the wheel is in, it times that single gap and scales it by that gap's own
+fraction, so the lag drops from 107 ms to 13-27 ms. See ADR 0008 for why.
+
+**Knowing which gap** is the hard part: one sensor and six magnets give no datum.
+The driver recovers it by matching the gaps it observes against every rotation of
+the stored table and taking the best fit, but only when the fit beats the runner-up
+by a clear margin. Ford's layout scores about 0.25; evenly spaced magnets score 0
+and are deliberately never phased. It then requires **three windows a whole
+revolution apart** to agree before it trusts the answer, because the window slides
+by one magnet per pulse, so consecutive windows share five of their six gaps and
+would repeat each other's mistakes rather than confirm them. In simulation that
+took the rate of wrong phase locks to zero. The phase settles after three
+revolutions.
+
+**It falls back to the window whenever it is unsure**: the first revolutions after
+starting, a direction change, a standstill, a missed pulse, or gaps that stop
+matching the table. Every loss is counted and reported as `odometer_phase_losses`,
+and `measured_speed_source` says which reading is live (`per_gap` or `revolution`).
+The reading is therefore at worst late, never wrong.
+
+**Reverse always uses the window.** The table describes the gaps in forward order,
+and Ford's gap pattern is a palindrome, so reversing cannot be detected from the
+timing either. Rather than risk a reading wrong by a third, the slower correct one
+is used.
+
+### Measuring the gaps
+
+`cal yes` in the A89301 configuration app. **Lift the car first** — it spins the
+wheel under power for about a minute.
+
+It measures at three duties and stores the result only if the three agree to within
+0.01 of a revolution per gap. That gate is the point of the session, not a
+formality: Ford turns 12 motor commutations per wheel revolution against 6 magnets,
+so the motor's roughness falls at the same wheel angles on every revolution.
+Averaging more revolutions does not remove it — the average converges on the wrong
+answer with a shrinking variance, which looks like a good measurement. Geometry
+does not change with speed and the effect of torque ripple does, so disagreement
+between speeds *is* the ripple, measured directly.
+
+It also refuses a table it could never phase, and one that does not sum to 1. On
+any refusal the previous table is left alone. The table and the spread it was
+measured with live in the `odo` NVS namespace; with none stored the firmware uses
+the design values above, which already cut the error from 33 % to about 11 %.
+
+Recalibrate after touching the wheel. Nothing on the car can tell that a magnet
+moved from a table that was correct when it was written.
+
 ## Distance
 
 Distance uses the nominal 17.80 mm per pulse. Over whole revolutions this is exact
