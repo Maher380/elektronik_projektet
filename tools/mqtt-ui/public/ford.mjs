@@ -58,6 +58,24 @@ function sendDrive() {
 function centre(id) { $(id).value = 0; $(id).dispatchEvent(new Event('input')); }
 // Hold before the request: the drive stream can begin before the start reply arrives.
 $('start').addEventListener('click', () => { speedHeld = true; void act('start'); });
+// Mirror the car's style until the operator picks one, so the box never claims a
+// selection the car is not on.
+let styleTouched = false;
+$('style-select').addEventListener('change', () => { styleTouched = true; });
+$('style-apply').addEventListener('click', async () => {
+  pending++;
+  message('Waiting for acknowledgement from the car…', '', 6000);
+  try { await post('drive-style', { style: $('style-select').value }); message(state.notice, 'success'); }
+  catch (error) { message(error.message, 'error', 12000); }
+  finally { pending--; }
+});
+$('cal-store').addEventListener('click', async () => {
+  pending++;
+  message('Storing the measured gap table…', '', 6000);
+  try { await post('store-gaps'); message(state.notice, 'success'); }
+  catch (error) { message(error.message, 'error', 12000); }
+  finally { pending--; }
+});
 // Arrow keys and the on-screen pad step a slider per press: speed by 1, steering by 10 degrees.
 // Holding a key repeats at the keyboard's rate. The value stays where it is when the key is released.
 const pad = { up: ['speed', 1], down: ['speed', -1], left: ['steering', -10], right: ['steering', 10] };
@@ -173,6 +191,47 @@ function renderMotorTemp(fresh, data) {
     : level === 'ok' ? 'Motor can · OK' : fresh ? 'No temperature reading' : 'Waiting for telemetry');
   $('motor-temp-detail').className = level === 'hot' ? 'hot' : level === 'warm' ? 'warm' : '';
 }
+const styleLabels = { manual_by_remote: 'ManualByRemote', gap_calibration: 'GapCalibration' };
+const calPhaseLabels = { idle: 'IDLE', settling: 'SETTLING', sampling: 'MEASURING', measured: 'MEASURED', failed: 'REFUSED' };
+// Why a run produced no table. These are the operator's next action, not an error code:
+// a disagreement means the magnets, a stall means the wheel, too_hot means wait.
+const calFailureDetail = {
+  no_odometer: 'No odometer. Check the A3144 sensor on D9.',
+  stalled: 'The wheel stopped turning. Is the battery on and the wheel free?',
+  too_hot: 'The motor can got too hot. Let it cool, then measure again.',
+  disagreed: 'A gap changed with speed, so that is the motor and not the wheel. Space the magnets more unevenly, then measure again.',
+  not_plausible: 'The averaged table is not usable. Measure again.',
+  thin_phase_margin: 'These magnets are too evenly spaced to tell one gap from another. Space them more unevenly.',
+  stopped: 'Stopped before it finished, so nothing was measured. A part-measured wheel is not a calibration.',
+};
+function renderCalibration(fresh, data, armed) {
+  const cal = fresh ? data.calibration : null;
+  $('calibration-panel').hidden = !cal;
+  if (!cal) return;
+  const phase = cal.phase || 'idle';
+  text('cal-phase', calPhaseLabels[phase] || phase.toUpperCase());
+  $('cal-phase').className = 'chip ' + (phase === 'measured' ? 'good' : phase === 'failed' ? 'warn' : 'neutral');
+  const dutyCount = cal.duty_count || 0;
+  text('cal-duty', dutyCount ? `${Math.min((cal.duty_index || 0) + 1, dutyCount)} of ${dutyCount}` : '—');
+  text('cal-turns', cal.revolutions_wanted ? `${cal.revolutions || 0} / ${cal.revolutions_wanted}` : '—');
+  text('cal-spread', Number.isFinite(cal.spread) ? cal.spread.toFixed(4) : '—');
+  text('cal-margin', Number.isFinite(cal.phase_margin) ? cal.phase_margin.toFixed(4) : '—');
+  const gaps = Array.isArray(cal.gaps) ? cal.gaps : [];
+  $('cal-gaps').textContent = gaps.length ? gaps.map(gap => gap.toFixed(4)).join('   ') : '';
+  let detail;
+  if (phase === 'measured') detail = cal.stored ? 'Stored. It takes effect when the car next restarts.' : 'Measured. Check the spread, then confirm to store it.';
+  else if (phase === 'failed') detail = calFailureDetail[cal.failure] || 'The run produced no table.';
+  else if (phase === 'settling') detail = 'Letting the wheel speed steady before measuring.';
+  else if (phase === 'sampling') detail = 'Averaging whole revolutions at this speed.';
+  else detail = 'Press Start with the car lifted to measure.';
+  if (cal.store_failed) detail = 'Writing to flash failed. The measured table is still waiting; try again.';
+  if (!cal.overheat_guard && (phase === 'settling' || phase === 'sampling')) {
+    detail += ' No motor temperature sensor, so the overheat guard is off.';
+  }
+  text('cal-detail', detail);
+  $('cal-detail').className = 'measured-detail' + (phase === 'failed' || cal.store_failed ? ' hot' : '');
+  $('cal-store').disabled = pending > 0 || armed || phase !== 'measured' || cal.stored === true;
+}
 function render() {
   text('steering-slider-value', signed(Number($('steering').value)));
   text('speed-slider-value', signed(Number($('speed').value)));
@@ -196,7 +255,18 @@ function render() {
   $('motor-state').classList.toggle('alert', fresh && (data.motor?.state === 'braking' || timedOut));
   const duty = fresh ? Math.max(data.motor?.forward_duty || 0, data.motor?.backward_duty || 0) : null;
   text('duty', duty === null ? 'Duty —' : `Duty ${duty.toFixed(3)}`);
-  text('current-style', fresh ? data.driver_style === 'manual_by_remote' ? 'ManualByRemote' : data.driver_style || '—' : '—');
+  const style = fresh ? data.drive_style : null;
+  text('current-style', style ? styleLabels[style] || style : '—');
+  text('style-detail', style === 'gap_calibration' ? 'Measures its own magnet gaps'
+    : style === 'manual_by_remote' ? 'Operator drives live' : 'Waiting for telemetry');
+  // A style is chosen only while disarmed, which is what makes "arming starts the
+  // selected style" answerable: one answer, fixed before anything can move.
+  if (style && !styleTouched && $('style-select').value !== style) { $('style-select').value = style; }
+  const canSelect = fresh && !!state.config && !armed && !state.owner && pending === 0;
+  $('style-apply').disabled = !canSelect;
+  $('style-select').disabled = !canSelect;
+  $('style-lock').textContent = armed ? 'Stop the car to change it' : canSelect ? 'Select, then Start to run it' : 'Waiting for telemetry';
+  renderCalibration(fresh, data, armed);
   renderBattery(fresh, data);
   renderMotorTemp(fresh, data);
   renderOdometer(fresh, data);

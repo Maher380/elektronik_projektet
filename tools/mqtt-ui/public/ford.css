@@ -54,3 +54,19 @@ input[type=range]{accent-color:var(--cyan);cursor:pointer}
 @media(max-width:980px){.ford-charts{grid-template-columns:1fr}}
 @media(max-width:720px){.status-strip{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(max-width:980px){.drive-panel{grid-template-columns:1fr 1fr}.steering-card,.pad-card{grid-column:1/-1}.speed-card,.drive-actions{grid-row:auto}}
+
+/* Drive style selection and the magnet gap calibration. The style panel sits above the
+   drive controls because which style is selected decides whether those controls do
+   anything at all; the calibration panel appears only while that style is selected. */
+.style-panel,.calibration-panel{display:grid;gap:16px;margin-bottom:14px}
+.style-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:10px}
+.style-row select{flex:1 1 260px;min-width:0;padding:7px 9px;border-radius:6px;background:#0e1924;color:var(--text);border:1px solid #324859;font:inherit;font-size:12px}
+.style-row select:disabled{opacity:.5}
+.style-row .button{flex:0 0 auto}
+.style-row small{color:var(--muted);font-size:10px}
+#style-note{margin:10px 0 0;color:var(--muted);font-size:11px;line-height:1.5}
+#style-note strong{color:var(--orange)}
+/* The measured fractions, one per magnet gap. Monospaced so the columns line up and an
+   outlier is visible at a glance, which is what the operator is looking for. */
+.cal-gaps{margin-top:10px;min-height:14px;font-size:12px;letter-spacing:.6px;color:var(--lime);white-space:pre-wrap}
+.calibration-panel .measured-detail.hot{color:#ff8a80}

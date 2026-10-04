@@ -5,6 +5,9 @@ export const TOPIC = 'cnb/vagrant';
 export const CARS = ['vagrant', 'ford'];
 export const topicFor = car => 'cnb/' + car;
 export const STYLES = ['decide_action', 'slow_left', 'slow_right', 'gradual_sweep'];
+// The drive styles a Ford can run. It has no obstacle distances, so none of the
+// autonomous styles apply to it; gap_calibration drives a fixed measurement script.
+export const FORD_STYLES = ['manual_by_remote', 'gap_calibration'];
 export const clock = () => performance.timeOrigin + performance.now();
 const uint = n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff;
 // Topics below a car's tree that the console subscribes to. The Ford's Raspberry Pi
@@ -28,7 +31,7 @@ export function piValues(data) {
   };
 }
 
-export const CONFIG_KEYS = ['stop_distance_cm', 'drive_duty', 'telemetry_interval_ms', 'driver_style', 'reaction_distance_cm', 'loop_interval_ms'];
+export const CONFIG_KEYS = ['stop_distance_cm', 'drive_duty', 'telemetry_interval_ms', 'drive_style', 'reaction_distance_cm', 'loop_interval_ms'];
 const configValues = value => Object.fromEntries(CONFIG_KEYS.filter(k => value[k] !== undefined).map(k => [k, value[k]]));
 export function validateConfig(value, systemTest = false) {
   const keys = CONFIG_KEYS;
@@ -36,11 +39,11 @@ export function validateConfig(value, systemTest = false) {
   for (const [key, min, max] of [['stop_distance_cm', systemTest ? 1 : 30, systemTest ? 100 : 70], ['drive_duty', 0, 1], ['telemetry_interval_ms', 200, 5000]]) {
     if (!Number.isFinite(value[key]) || value[key] < min || value[key] > max) throw Error(`${key}: allowed range ${min}–${max}.`);
   }
-  if (!Number.isInteger(value.telemetry_interval_ms) || !STYLES.includes(value.driver_style)) throw Error('Invalid interval or driver style.');
+  if (!Number.isInteger(value.telemetry_interval_ms) || !STYLES.includes(value.drive_style)) throw Error('Invalid interval or drive style.');
   if (value.reaction_distance_cm !== undefined && (!Number.isFinite(value.reaction_distance_cm) || value.reaction_distance_cm < 1 || value.reaction_distance_cm > 200)) throw Error('Reaction distance: allowed range 1–200 cm.');
   if (value.loop_interval_ms !== undefined && (!Number.isInteger(value.loop_interval_ms) || value.loop_interval_ms < 20 || value.loop_interval_ms > 1000)) throw Error('Loop interval: allowed range 20–1000 ms, whole milliseconds.');
   if (systemTest && (value.reaction_distance_cm ?? 40) <= value.stop_distance_cm) throw Error('Reaction distance must be greater than stop distance.');
-  if (systemTest && value.driver_style !== 'decide_action') throw Error('This system test uses longest clearance steering.');
+  if (systemTest && value.drive_style !== 'decide_action') throw Error('This system test uses longest clearance steering.');
   return configValues(value);
 }
 
@@ -109,7 +112,7 @@ export class ConsoleControl extends EventEmitter {
     }
     if (suffix === 'config/state' && uint(data.revision)) {
       // The Ford has no settings; its config/state only names its drive style.
-      if (this.car === 'ford') { if (data.driver_style !== 'manual_by_remote') return; }
+      if (this.car === 'ford') { if (!FORD_STYLES.includes(data.drive_style)) return; }
       else try { validateConfig(configValues(data), data.system_test === true); }
       catch { return; }
       this.config = data; this.highWater = Math.max(this.highWater, data.revision);
@@ -242,13 +245,56 @@ export class ConsoleControl extends EventEmitter {
       loop_interval_ms: this.config.loop_interval_ms, ...input } : input, systemTest);
     if (!this.fresh() || !this.config) throw Error('Wait for fresh telemetry and configuration.');
     if (this.owner && this.owner.client !== client) throw Error('Another browser tab controls the car.');
-    if ((this.telemetry.control_state === 'armed' || this.command?.control_state === 'armed') && config.driver_style !== this.config.driver_style) throw Error('Stop the car before changing driver style.');
+    if ((this.telemetry.control_state === 'armed' || this.command?.control_state === 'armed') && config.drive_style !== this.config.drive_style) throw Error('Stop the car before changing drive style.');
     if ([...this.pending.keys()].some(k => k.startsWith('config:'))) throw Error('Configuration acknowledgement still pending.');
     const revision = this.id();
     const state = await this.acknowledged('config', revision, this.topic + '/config/set', { schema_version: 1, revision, ...config }, true);
     if (state.result !== 'applied') throw Error('Configuration rejected: ' + (state.error || 'unknown'));
     this.notice = `Configuration #${revision} acknowledged by car.`;
   }
+  /**
+   * Ford: select a drive style and nothing else.
+   *
+   * The firmware narrows the Ford's config/set to the drive style, so this sends exactly
+   * the three fields it accepts. A style can only change while the car is disarmed, which
+   * is what makes "arming starts the selected style" answerable.
+   */
+  async selectDriveStyle(client, style) {
+    if (this.car !== 'ford') throw Error('Narrow drive style selection is for the Ford only.');
+    if (!FORD_STYLES.includes(style)) throw Error('Unknown Ford drive style: ' + style);
+    if (!this.fresh() || !this.config) throw Error('Wait for fresh telemetry and configuration.');
+    if (this.owner && this.owner.client !== client) throw Error('Another browser tab controls the car.');
+    if (this.telemetry.control_state === 'armed' || this.command?.control_state === 'armed') {
+      throw Error('Stop the car before changing drive style.');
+    }
+    if ([...this.pending.keys()].some(k => k.startsWith('config:'))) throw Error('Configuration acknowledgement still pending.');
+    const revision = this.id();
+    const state = await this.acknowledged('config', revision, this.topic + '/config/set', { schema_version: 1, revision, drive_style: style }, true);
+    if (state.result !== 'applied') throw Error('Drive style rejected: ' + (state.error || 'unknown'));
+    this.notice = `Drive style ${style} acknowledged by car.`;
+  }
+
+  /**
+   * Ford: confirm the measured magnet gap table and have the car store it.
+   *
+   * Accepted only while disarmed, because the run that produced the table disarmed the car
+   * on its way to finishing. A disagreeing run is never offered for storing: the firmware
+   * refuses it, because a gap that changes with speed is the motor and not the wheel.
+   */
+  async storeGaps() {
+    if (this.car !== 'ford') throw Error('Gap storage is for the Ford only.');
+    const calibration = this.telemetry?.calibration;
+    if (!calibration) throw Error('Select the gap calibration drive style first.');
+    if (calibration.phase !== 'measured') throw Error('No measured gap table is waiting to be stored.');
+    const session = this.owner?.session || randomBytes(8).toString('hex');
+    const request_id = this.id();
+    const state = await this.acknowledged('command', request_id, this.topic + '/command', {
+      schema_version: 1, request_id, session_id: session, command: 'store_gaps',
+    });
+    if (state.result !== 'accepted') throw Error('Store rejected: ' + (state.error || state.reason));
+    this.notice = 'Gap table stored. It takes effect when the car next restarts.';
+  }
+
   // ManualByRemote: stream the operator's sliders. QoS 0 and unacknowledged; the car
   // echoes what it applies in telemetry and each drive command renews its heartbeat.
   // @todo Add tests for drive streaming, ownership and the range checks.

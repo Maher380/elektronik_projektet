@@ -32,14 +32,14 @@ $('servo-test').addEventListener('submit', event => { event.preventDefault(); vo
 $('configuration').addEventListener('input', () => { dirty = true; });
 $('configuration').addEventListener('submit', async event => {
   event.preventDefault();
-  const config = { driver_style: $('driver-style').value, drive_duty: Number($('drive-duty').value), stop_distance_cm: Number($('stop-distance').value), telemetry_interval_ms: Number($('telemetry-interval').value) };
+  const config = { drive_style: $('drive-style').value, drive_duty: Number($('drive-duty').value), stop_distance_cm: Number($('stop-distance').value), telemetry_interval_ms: Number($('telemetry-interval').value) };
   if (state.config?.system_test) { config.reaction_distance_cm = Number($('reaction-distance').value); config.loop_interval_ms = Number($('loop-interval').value); }
   if (await act('config', { config })) dirty = false;
 });
 function loadConfig(config) {
   $('reaction-distance').value = config.reaction_distance_cm ?? 40;
   $('loop-interval').value = config.loop_interval_ms ?? 250;
-  $('driver-style').value = config.driver_style;
+  $('drive-style').value = config.drive_style;
   $('drive-duty').value = config.drive_duty;
   $('stop-distance').value = config.stop_distance_cm;
   const interval = $('telemetry-interval');
@@ -68,7 +68,7 @@ function render() {
   text('vehicle-state', fresh ? (displayedControl || 'unknown').toUpperCase() : 'NO LIVE DATA');
   $('vehicle-state').className = fresh && displayedControl === 'armed' ? 'armed' : '';
   text('motion-state', fresh ? `${latestState.motion_state || 'unknown'} · ${latestState.reason || 'unknown'}` : 'Waiting for fresh telemetry');
-  text('current-style', fresh ? data.servo_test ? 'Manual servo' : config?.system_test ? 'Longest clearance' : styles[data.driver_style] || data.driver_style || '—' : '—');
+  text('current-style', fresh ? data.servo_test ? 'Manual servo' : config?.system_test ? 'Longest clearance' : styles[data.drive_style] || data.drive_style || '—' : '—');
   const seconds = Math.floor((data.uptime_ms || 0) / 1000);
   text('uptime', fresh ? `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—');
   text('sequence', fresh ? '#' + data.sequence : '—');
@@ -101,13 +101,13 @@ function render() {
   $('start').disabled = !ready || armed || !!state.owner || pending > 0;
   $('stop').disabled = !(serverFresh && state.broker.connected);
   $('apply').disabled = !ready || pending > 0 || (!!state.owner && !own);
-  $('driver-style').disabled = !!config?.system_test || !ready || armed || pending > 0;
-  $('driver-style').closest('label').hidden = !!config?.system_test;
+  $('drive-style').disabled = !!config?.system_test || !ready || armed || pending > 0;
+  $('drive-style').closest('label').hidden = !!config?.system_test;
   $('stop-distance').min = config?.system_test ? 1 : 30; $('stop-distance').max = config?.system_test ? 100 : 70;
   for (const id of ['reaction-field', 'loop-field', 'servo-test']) $(id).hidden = !config?.system_test;
   $('set-servo').disabled = !ready || pending > 0 || (!!state.owner && !own);
   for (const id of ['drive-duty', 'stop-distance', 'telemetry-interval', 'reaction-distance', 'loop-interval', 'servo-angle']) $(id).disabled = !ready || pending > 0 || (!!state.owner && !own);
-  text('config-status', config ? `${dirty ? 'UNSENT CHANGES · ' : ''}Confirmed: ${config.system_test ? 'Longest clearance' : styles[config.driver_style]} · duty ${number(config.drive_duty, 2)} · stop ${number(config.stop_distance_cm, 0)} cm${config.system_test ? ` · reaction ${config.reaction_distance_cm} cm · loop ${config.loop_interval_ms} ms` : ''} · telemetry ${config.telemetry_interval_ms} ms` : 'Waiting for configuration from car');
+  text('config-status', config ? `${dirty ? 'UNSENT CHANGES · ' : ''}Confirmed: ${config.system_test ? 'Longest clearance' : styles[config.drive_style]} · duty ${number(config.drive_duty, 2)} · stop ${number(config.stop_distance_cm, 0)} cm${config.system_test ? ` · reaction ${config.reaction_distance_cm} cm · loop ${config.loop_interval_ms} ms` : ''} · telemetry ${config.telemetry_interval_ms} ms` : 'Waiting for configuration from car');
   if (performance.now() > feedbackUntil) {
     text('feedback', !serverFresh ? 'Local console disconnected. Reconnecting; control will not restart automatically.' : state.notice);
     $('feedback').className = 'feedback';

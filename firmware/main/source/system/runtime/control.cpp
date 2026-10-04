@@ -13,28 +13,36 @@ bool isFiniteInRange(float value, float minimum, float maximum) noexcept
 }
 } // namespace
 
-Control::Control(bool systemTest, bool manualByRemote) noexcept
-    : mySystemTest{systemTest}, myManualByRemote{manualByRemote}
+Control::Control(bool systemTest, bool remoteDrivenCar) noexcept
+    : mySystemTest{systemTest}, myRemoteDrivenCar{remoteDrivenCar}
 {
-    if (myManualByRemote)
+    if (myRemoteDrivenCar)
     {
         // The operator watches the echoed commands, so telemetry must feel live.
-        myConfiguration.driverStyle = navigation::DriverStyle::ManualByRemote;
+        myConfiguration.driveStyle = navigation::DriveStyle::ManualByRemote;
         myConfiguration.telemetryIntervalMs = 200U;
     }
 }
 
-bool Control::supportsDriverStyle(navigation::DriverStyle style) const noexcept
+bool Control::supportsDriveStyle(navigation::DriveStyle style) const noexcept
 {
-    // ManualByRemote cars have no obstacle distances for the autonomous styles.
-    if (myManualByRemote) { return style == navigation::DriverStyle::ManualByRemote; }
+    // A remote-driven car has no obstacle distances, so the autonomous styles cannot run
+    // on it. This is about the car, not about what is selected now.
+    if (myRemoteDrivenCar)
+    {
+        return (style == navigation::DriveStyle::ManualByRemote)
+            || (style == navigation::DriveStyle::GapCalibration);
+    }
     switch (style)
     {
-        case navigation::DriverStyle::DecideAction: return true;
-        case navigation::DriverStyle::SlowLeft:
-        case navigation::DriverStyle::SlowRight:
-        case navigation::DriverStyle::GradualSweep: return !mySystemTest;
-        case navigation::DriverStyle::ManualByRemote: return false;
+        case navigation::DriveStyle::DecideAction: return true;
+        case navigation::DriveStyle::SlowLeft:
+        case navigation::DriveStyle::SlowRight:
+        case navigation::DriveStyle::GradualSweep: return !mySystemTest;
+        case navigation::DriveStyle::ManualByRemote:
+        // GapCalibration measures a wheel's magnet gaps, so it needs an Odometer with
+        // magnets on it. Only a remote-driven car has one.
+        case navigation::DriveStyle::GapCalibration: return false;
     }
     return false;
 }
@@ -72,12 +80,12 @@ ConfigurationResult Control::applyConfiguration(
     {
         return ConfigurationResult::LoopIntervalOutOfRange;
     }
-    if (!request.hasDriverStyle) { candidate.driverStyle = myConfiguration.driverStyle; }
-    if (!supportsDriverStyle(candidate.driverStyle)) { return ConfigurationResult::InvalidDriverStyle; }
+    if (!request.hasDriveStyle) { candidate.driveStyle = myConfiguration.driveStyle; }
+    if (!supportsDriveStyle(candidate.driveStyle)) { return ConfigurationResult::InvalidDriveStyle; }
     // Reject the entire update: neither values nor revision may advance.
-    if (candidate.driverStyle != myConfiguration.driverStyle && myControlState != ControlState::Disarmed)
+    if (candidate.driveStyle != myConfiguration.driveStyle && myControlState != ControlState::Disarmed)
     {
-        return ConfigurationResult::DriverStyleRequiresDisarmed;
+        return ConfigurationResult::DriveStyleRequiresDisarmed;
     }
 
     if (myHasConfigurationRevision)
@@ -99,11 +107,11 @@ ConfigurationResult Control::applyConfiguration(
     return ConfigurationResult::Applied;
 }
 
-bool Control::setDriverStyle(navigation::DriverStyle style) noexcept
+bool Control::setDriveStyle(navigation::DriveStyle style) noexcept
 {
-    if (!supportsDriverStyle(style)) { return false; }
-    if (style != myConfiguration.driverStyle && myControlState != ControlState::Disarmed) { return false; }
-    myConfiguration.driverStyle = style;
+    if (!supportsDriveStyle(style)) { return false; }
+    if (style != myConfiguration.driveStyle && myControlState != ControlState::Disarmed) { return false; }
+    myConfiguration.driveStyle = style;
     return true;
 }
 
@@ -201,8 +209,33 @@ CommandResult Control::handleCommand(const Command& command,
             myLastHeartbeatMs = nowMs;
             return {true, CommandError::None};
 
+        case CommandType::StoreGaps:
+            // Confirmed while disarmed: the run that measured the table disarmed the car
+            // on its way to finishing, so there is no lease to check here.
+            if (!command.hasRequestId || command.requestId == 0U)
+            {
+                return {false, CommandError::InvalidRequest};
+            }
+            if (!myMqttConnected) { return {false, CommandError::MqttDisconnected}; }
+            if (myControlState != ControlState::Disarmed)
+            {
+                // Storing mid-run would confirm a table the run is still measuring.
+                return {false, CommandError::InvalidRequest};
+            }
+            if (command.requestId <= myLastControlRequestId)
+            {
+                // A QoS-1 retransmission is acknowledged but must not store twice.
+                return {true, CommandError::None};
+            }
+            myLastControlRequestId = command.requestId;
+            myStoreGapsRequested = true;
+            return {true, CommandError::None};
+
         case CommandType::Drive:
-            if (!myManualByRemote || myActuatorFault
+            // Keyed on the selected style, not on the car: a Drive command must be
+            // refused while a measurement style is driving its own script, or the
+            // operator's sliders would be injected into a run already in progress.
+            if (!isManualByRemoteStyle() || myActuatorFault
                 || !isFiniteInRange(command.steeringCommand, -90.0F, 90.0F)
                 || !isFiniteInRange(command.speedCommand, -100.0F, 100.0F))
             {
@@ -281,7 +314,7 @@ bool Control::sameConfiguration(const Configuration& lhs,
         && (lhs.loopIntervalMs == rhs.loopIntervalMs)
         && (lhs.driveDuty == rhs.driveDuty)
         && (lhs.telemetryIntervalMs == rhs.telemetryIntervalMs)
-        && (lhs.driverStyle == rhs.driverStyle);
+        && (lhs.driveStyle == rhs.driveStyle);
 }
 
 bool Control::isActiveSession(
@@ -302,21 +335,50 @@ void Control::disarm(StateReason reason) noexcept
     myHasDrive = false;
 }
 
-RemoteDrive Control::remoteDrive(std::uint32_t nowMs, std::uint32_t driveTimeoutMs) noexcept
+void Control::finishDriveStyle() noexcept
 {
-    if (!myManualByRemote || myControlState != ControlState::Armed)
-    {
-        myMotionState = MotionState::Stopped;
-        return {};
-    }
+    // A completed run is not a fault, so this reports its own reason rather than borrowing
+    // one from the fault channel. The car is left ready for the next Start.
+    disarm(StateReason::DriveStyleFinished);
+}
+
+bool Control::takeStoreGapsRequest() noexcept
+{
+    const bool requested{myStoreGapsRequested};
+    myStoreGapsRequested = false;
+    return requested;
+}
+
+bool Control::renewLease(const std::uint32_t nowMs) noexcept
+{
+    if (myControlState != ControlState::Armed) { return false; }
     if (!myMqttConnected)
     {
         disarm(StateReason::MqttDisconnected);
-        return {};
+        return false;
     }
     if ((nowMs - myLastHeartbeatMs) >= HeartbeatTimeoutMs)
     {
         disarm(StateReason::HeartbeatTimeout);
+        return false;
+    }
+    return true;
+}
+
+RemoteDrive Control::remoteDrive(std::uint32_t nowMs, std::uint32_t driveTimeoutMs) noexcept
+{
+    // Keyed on the selected style: only the operator-driven style has operator commands
+    // to return. Any other style gets nothing here and drives from its own decision.
+    if (!isManualByRemoteStyle())
+    {
+        myMotionState = MotionState::Stopped;
+        return {};
+    }
+    // The lease is style-independent; renewLease() disarms on a lost connection or a
+    // stale heartbeat, and disarm() has already set the motion state when it does.
+    if (!renewLease(nowMs))
+    {
+        myMotionState = MotionState::Stopped;
         return {};
     }
     if (!myHasDrive)

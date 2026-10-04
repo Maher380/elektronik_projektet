@@ -36,7 +36,7 @@ function Format-CnbMqttLine {
             (Get-CnbDisplayField $data 'sequence'), $state.ToUpperInvariant(),
             $motion.ToUpperInvariant(), (Get-CnbDisplayField $data 'uptime_ms')
         '  Mode: {0} | Reason: {1} | Steering: {2} deg' -f
-            (Get-CnbDisplayField $data 'driver_style'), (Get-CnbDisplayField $data 'reason'),
+            (Get-CnbDisplayField $data 'drive_style'), (Get-CnbDisplayField $data 'reason'),
             (Format-CnbNumber (Get-CnbDisplayField $data 'steering_deg') 1)
         '  {0,-13} {1,10} {2,10} {3,10}' -f 'Sensor', 'LEFT', 'CENTER', 'RIGHT'
         '  {0,-13} {1,10} {2,10} {3,10}' -f 'Distance cm',
@@ -64,7 +64,7 @@ function Format-CnbMqttLine {
     elseif ($topic -eq 'cnb/vagrant/config/state') {
         '[{0}] CONFIG #{1}: {2} | mode {3} | stop {4} cm | duty {5} | telemetry {6} ms | error {7}' -f $time,
             (Get-CnbDisplayField $data 'revision'), (Get-CnbDisplayField $data 'result'),
-            (Get-CnbDisplayField $data 'driver_style'), (Get-CnbDisplayField $data 'stop_distance_cm'),
+            (Get-CnbDisplayField $data 'drive_style'), (Get-CnbDisplayField $data 'stop_distance_cm'),
             (Format-CnbNumber (Get-CnbDisplayField $data 'drive_duty')),
             (Get-CnbDisplayField $data 'telemetry_interval_ms'), (Get-CnbDisplayField $data 'error')
         if ((Get-CnbDisplayField $data 'system_test' $false) -eq $true) {
@@ -76,7 +76,7 @@ function Format-CnbMqttLine {
         '[{0}] COMMAND #{1}: {2} | {3}/{4} | mode {5} | reason {6} | error {7} | session {8}' -f $time,
             (Get-CnbDisplayField $data 'last_request_id'), (Get-CnbDisplayField $data 'result'),
             (Get-CnbDisplayField $data 'control_state'), (Get-CnbDisplayField $data 'motion_state'),
-            (Get-CnbDisplayField $data 'driver_style'), (Get-CnbDisplayField $data 'reason'),
+            (Get-CnbDisplayField $data 'drive_style'), (Get-CnbDisplayField $data 'reason'),
             (Get-CnbDisplayField $data 'error'), (Get-CnbDisplayField $data 'session_id')
         if ((Get-CnbDisplayField $data 'servo_test' $false) -eq $true) {
             '  Manual servo: {0} deg | motor disabled' -f (Get-CnbDisplayField $data 'servo_angle_deg')

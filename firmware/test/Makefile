@@ -12,6 +12,8 @@ CXX_FLAGS := -Wall -Wextra -Werror -std=c++17 -I$(FIRMWARE_INC_DIR) -I$(TEST_INC
 TEST_FILES := \
 	$(TEST_SRC_DIR)/test.cpp \
 	$(TEST_SRC_DIR)/test/a89301_programmer.cpp \
+	$(TEST_SRC_DIR)/test/drive_style.cpp \
+	$(TEST_SRC_DIR)/test/gap_calibration.cpp \
 	$(TEST_SRC_DIR)/test/nvs.cpp \
 	$(TEST_SRC_DIR)/test/odometer_gaps.cpp \
 	$(TEST_SRC_DIR)/test/pin_manager.cpp \
@@ -21,6 +23,8 @@ TEST_FILES := \
 
 SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/system/pin_manager/esp32s3.cpp \
+	$(FIRMWARE_SRC_DIR)/system/runtime/control.cpp \
+	$(FIRMWARE_SRC_DIR)/system/logic/gapCalibration.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/servo/ford.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/distance_sensor/gp2y0a21yk.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301.cpp \

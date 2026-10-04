@@ -6,6 +6,8 @@
 
 #include "system/pin_manager/esp32s3.h"
 #include "test/a89301_programmer.h"
+#include "test/drive_style.h"
+#include "test/gap_calibration.h"
 #include "test/nvs.h"
 #include "test/odometer_gaps.h"
 #include "test/pin_manager.h"
@@ -29,6 +31,8 @@ int main()
     if (!test::runPinManagerTest(pinManager)) { return -1; }
     if (!test::runServoTest()) { return -1; }
     if (!test::runA89301ProgrammerTest()) { return -1; }
+    if (!test::runDriveStyleTest()) { return -1; }
+    if (!test::runGapCalibrationTest()) { return -1; }
     if (!test::runVoltageMeterTest()) { return -1; }
     if (!test::runOdometerGapsTest()) { return -1; }
     if (!test::runTemperatureSensorTest()) { return -1; }
@@ -73,7 +77,7 @@ int main()
         return -1;
     }
 
-    if (!testMotor.setSpeed(0.7F))
+    if (!testMotor.setDuty(0.7F))
     {
         std::printf("L298N motor speed test failed\n");
         return -1;
@@ -85,7 +89,7 @@ int main()
         return -1;
     }
 
-    if (!testMotor.setSpeed(0.3F) || (testPwm.duty() != 0.3F))
+    if (!testMotor.setDuty(0.3F) || (testPwm.duty() != 0.3F))
     {
         std::printf("L298N motor speed reduction test failed\n");
         return -1;
@@ -115,7 +119,7 @@ int main()
         return -1;
     }
 
-    if (!testMotor.setSpeed(0.5F) || !testMotor.stop(driver::motor::StopMode::Brake))
+    if (!testMotor.setDuty(0.5F) || !testMotor.stop(driver::motor::StopMode::Brake))
     {
         std::printf("L298N motor brake stop failed\n");
         return -1;
@@ -138,7 +142,7 @@ int main()
     driver::gpio::Stub bldcBrake;
     driver::motor::A89301 bldcMotor{bldcSpeedPwm, bldcDirection, bldcBrake};
 
-    if (bldcMotor.setSpeed(0.5F))
+    if (bldcMotor.setDuty(0.5F))
     {
         std::printf("A89301 motor should reject speed before init\n");
         return -1;
@@ -150,13 +154,13 @@ int main()
         return -1;
     }
 
-    if (!bldcMotor.setSpeed(0.7F) || (bldcSpeedPwm.duty() != 0.7F) || bldcBrake.read())
+    if (!bldcMotor.setDuty(0.7F) || (bldcSpeedPwm.duty() != 0.7F) || bldcBrake.read())
     {
         std::printf("A89301 motor speed test failed\n");
         return -1;
     }
 
-    if (bldcMotor.setSpeed(1.5F) || (bldcSpeedPwm.duty() != 0.7F))
+    if (bldcMotor.setDuty(1.5F) || (bldcSpeedPwm.duty() != 0.7F))
     {
         std::printf("A89301 motor should reject out-of-range speed\n");
         return -1;
@@ -175,13 +179,13 @@ int main()
         return -1;
     }
 
-    if (!bldcMotor.setSpeed(0.4F) || (bldcSpeedPwm.duty() != 0.4F) || bldcBrake.read())
+    if (!bldcMotor.setDuty(0.4F) || (bldcSpeedPwm.duty() != 0.4F) || bldcBrake.read())
     {
         std::printf("A89301 motor brake release failed\n");
         return -1;
     }
 
-    if (!bldcMotor.setSpeed(0.0F, driver::motor::StopMode::Coast)
+    if (!bldcMotor.setDuty(0.0F, driver::motor::StopMode::Coast)
         || (bldcSpeedPwm.duty() != 0.0F) || bldcBrake.read())
     {
         std::printf("A89301 motor coast stop failed\n");

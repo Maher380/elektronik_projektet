@@ -189,6 +189,25 @@ public:
      * @return Number of times the phase has been lost since init() or reset().
      */
     virtual std::uint32_t phaseLossCount() const noexcept = 0;
+
+    /**
+     * @brief Read the gap fractions of the revolution that just completed.
+     *
+     * The counterpart of setGapTable(). An Odometer that can be handed a calibration must
+     * also be able to produce one, or the only code able to measure its own wheel is code
+     * that knows which concrete driver it is holding - which is how the magnet gap
+     * calibration came to live outside the logic layer. See ADR 0009.
+     *
+     * Indexed so that out[i] is always the same physical gap for as long as no pulse is
+     * missed, which is what lets a calibration session average over many revolutions. The
+     * indices are arbitrary - nothing on the car can say which magnet is which - but they
+     * are consistent, and a consistent cyclic order is all a gap table needs.
+     *
+     * @param[out] out Buffer for count fractions.
+     * @param[in] count Must equal the configured magnet count.
+     * @return False if no whole revolution has been measured yet, or on a bad size.
+     */
+    virtual bool observedGaps(float* out, std::uint8_t count) const noexcept = 0;
 };
 
 } // namespace driver::odometer

@@ -19,11 +19,42 @@
     <div><span class="eyebrow">MOTOR</span><strong id="motor-state">—</strong><small id="duty">Duty —</small></div>
     <div><span class="eyebrow">BATTERY</span><strong id="battery" class="mono">—</strong><div class="battery-bar" aria-hidden="true"><i id="battery-fill"></i><b id="battery-low-mark"></b><b id="battery-critical-mark"></b></div><small id="battery-detail">Waiting for telemetry</small></div>
     <div><span class="eyebrow">MOTOR TEMP</span><strong id="motor-temp" class="mono">—</strong><small id="motor-temp-detail">Waiting for telemetry</small></div>
-    <div><span class="eyebrow">DRIVE STYLE</span><strong id="current-style">—</strong><small>Operator drives live</small></div>
+    <div><span class="eyebrow">DRIVE STYLE</span><strong id="current-style">—</strong><small id="style-detail">Operator drives live</small></div>
     <div><span class="eyebrow">UPTIME</span><strong id="uptime" class="mono">—</strong><small>Since car boot</small></div>
     <div><span class="eyebrow">ACTIVE SESSION</span><strong id="session" class="mono session">—</strong><small id="ownership">Monitoring only</small></div>
     <div><span class="eyebrow">HEARTBEAT</span><strong id="heartbeat">INACTIVE</strong><small id="heartbeat-detail">Sent only while controlling</small></div>
     <div><span class="eyebrow">PI · SLAM</span><strong id="pi-state">WAITING</strong><small id="pi-temp">CPU —</small></div>
+  </section>
+  <section class="style-panel" aria-label="Drive style">
+    <article class="drive-card">
+      <div class="card-top"><h3>DRIVE STYLE</h3><span id="style-lock" class="legend">Stop the car to change it</span></div>
+      <div class="style-row">
+        <select id="style-select" aria-label="Drive style">
+          <option value="manual_by_remote">ManualByRemote · you drive</option>
+          <option value="gap_calibration">GapCalibration · measure the magnet gaps</option>
+        </select>
+        <button type="button" id="style-apply" class="button" disabled>Select</button>
+      </div>
+      <p id="style-note">ManualByRemote is what the car boots on. GapCalibration spins the measured
+        wheel under power for about a minute: <strong>lift the car</strong> before starting it.</p>
+    </article>
+  </section>
+  <section class="calibration-panel" id="calibration-panel" aria-label="Magnet gap calibration" hidden>
+    <article class="drive-card">
+      <div class="card-top"><h3>MAGNET GAP CALIBRATION</h3><span id="cal-phase" class="chip neutral">IDLE</span></div>
+      <div class="readout">
+        <span>SPEED <strong id="cal-duty" class="mono">—</strong></span>
+        <span>REVOLUTIONS <strong id="cal-turns" class="mono">—</strong></span>
+        <span>SPREAD <strong id="cal-spread" class="mono">—</strong></span>
+        <span>PHASE MARGIN <strong id="cal-margin" class="mono">—</strong></span>
+      </div>
+      <small id="cal-detail" class="measured-detail">Press Start with the car lifted to measure.</small>
+      <div id="cal-gaps" class="cal-gaps mono" aria-label="Measured gap fractions"></div>
+      <div class="style-row">
+        <button type="button" id="cal-store" class="button" disabled>Confirm &amp; store</button>
+        <small id="cal-store-note">Nothing is written until you confirm it.</small>
+      </div>
+    </article>
   </section>
   <section class="drive-panel" aria-label="Drive controls">
     <article class="drive-card steering-card">

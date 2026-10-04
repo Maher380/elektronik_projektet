@@ -23,6 +23,7 @@
 #include "driver/odometer/gaps.h"
 #include "driver/odometer/store.h"
 #include "driver/serial/esp32s3.h"
+#include "system/ford.h"
 #include "esp_rom_sys.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -40,17 +41,17 @@ void runA89301ConfigTest() noexcept
     // Safety: spd runs and sweeps stop above maxMotorTempC or when the chip drives a wheel that does not turn.
     namespace a89301 = driver::motor::a89301;
 
-    constexpr std::uint8_t sdaPin{11U};       // A4 / GPIO11 -> FG/SDA
-    constexpr std::uint8_t sclPin{12U};       // A5 / GPIO12 -> SPD/SCL
-    constexpr std::uint8_t directionPin{7U};  // D4 / GPIO7 -> DIR
-    constexpr std::uint8_t brakePin{5U};      // D2 / GPIO5 -> BRAKE
-    constexpr std::uint8_t odometerPin{18U};  // D9 / GPIO18 <- A3144 wheel sensor
-    constexpr std::uint8_t wheelPulsesPerRev{6U};  // 6 magnets, deliberately uneven.
-    constexpr std::uint8_t motorTempPin{1U};  // A0 / GPIO1 <- TMP36 taped to the motor can
-    // Temporarily lowered (60 -> 45, 40 -> 32) because the TMP36 sits on two layers of electrical tape,
-    // so it reads low and late. Raise again when the sensor has direct contact with the motor can.
-    constexpr float maxMotorTempC{45.0F};     // Motor is stopped above this can temperature.
-    constexpr float coolMotorTempC{32.0F};    // Sweep waits until the can is below this temperature.
+    // Pins, geometry and limits come from system/ford.h, shared with fordLogic.cpp so the
+    // car app and this app cannot disagree about the wheel they are measuring (ADR 0009).
+    constexpr std::uint8_t sdaPin{app::ford::pin::Sda};
+    constexpr std::uint8_t sclPin{app::ford::pin::Scl};
+    constexpr std::uint8_t directionPin{app::ford::pin::Direction};
+    constexpr std::uint8_t brakePin{app::ford::pin::Brake};
+    constexpr std::uint8_t odometerPin{app::ford::pin::Odometer};
+    constexpr std::uint8_t wheelPulsesPerRev{app::ford::OdometerMagnets};
+    constexpr std::uint8_t motorTempPin{app::ford::pin::MotorTempAdc};
+    constexpr float maxMotorTempC{app::ford::MaxMotorTempC};
+    constexpr float coolMotorTempC{app::ford::CoolMotorTempC};
     constexpr double stallMinSpeedHz{50.0};   // Chip estimate above which the wheel must turn.
     constexpr std::int64_t stallTimeoutUs{1'000'000}; // No wheel pulse for this long = stalled.
     constexpr std::uint32_t safetyPeriodMs{100U};
@@ -83,7 +84,7 @@ void runA89301ConfigTest() noexcept
 
     // Measured on ford: chip electrical Hz per wheel revolution per second (1 pole pair, gear ~12).
     constexpr double estHzPerWheelRps{12.0};
-    constexpr double wheelCircumferenceM{3.14159265 * 0.034}; // 34 mm wheel.
+    constexpr double wheelCircumferenceM{app::ford::WheelCircumferenceM};
     constexpr double estLimitHz{1000.0};                      // Stay below the A89301 limit of about 1085 Hz.
     constexpr std::uint32_t profileSampleMs{250U};
     constexpr float profileUpDemands[]{0.12F, 0.15F, 0.20F, 0.25F, 0.30F, 0.35F, 0.40F,
@@ -723,14 +724,16 @@ void runA89301ConfigTest() noexcept
     auto runCalibration = [&]() {
         namespace odo = driver::odometer;
 
-        constexpr float calDuties[]{0.10F, 0.15F, 0.20F};
-        constexpr std::uint8_t calDutyCount{
-            static_cast<std::uint8_t>(sizeof(calDuties) / sizeof(calDuties[0]))};
-        constexpr std::uint32_t calSettleMs{2000U}; // Let the speed steady before measuring.
-        constexpr std::uint8_t calRevolutions{20U}; // Revolutions averaged per duty.
-        constexpr std::uint32_t calStallMs{4000U};  // No new revolution for this long = give up.
-        /** Largest spread in one gap across the three speeds that still counts as agreement. */
-        constexpr float calTolerance{0.01F};
+        // The recipe lives in system/ford.h, shared with the car app's GapCalibration drive
+        // style. These four values decide whether two stored tables are comparable, so one
+        // definition is the point: see ADR 0009.
+        namespace cal = app::ford::calibration;
+        constexpr const float* calDuties{cal::Duties};
+        constexpr std::uint8_t calDutyCount{cal::DutyCount};
+        constexpr std::uint32_t calSettleMs{cal::SettleMs};
+        constexpr std::uint8_t calRevolutions{cal::Revolutions};
+        constexpr std::uint32_t calStallMs{cal::StallMs};
+        constexpr float calTolerance{cal::Tolerance};
 
         driver::nvs::Esp32s3 nvs;
         if (!nvs.init()) { serial.write("NVS init failed; nothing could be stored\n"); return; }

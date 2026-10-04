@@ -105,6 +105,10 @@ export function createConsole(transport, port = 8765, car = 'vagrant', { address
         case '/api/stop': await control.stop(); break;
         case '/api/servo': await control.servo(data.client, data.angle); break;
         case '/api/config': await control.configure(data.client, data.config); break;
+        // Ford only: its config/set is narrowed to the drive style, and a measured
+        // gap table is stored only when the operator confirms it.
+        case '/api/drive-style': await control.selectDriveStyle(data.client, data.style); break;
+        case '/api/store-gaps': await control.storeGaps(); break;
         case '/api/release': await control.release(data.client); break;
         default: json(res, 404, { error: 'Not found.' }); return;
       }

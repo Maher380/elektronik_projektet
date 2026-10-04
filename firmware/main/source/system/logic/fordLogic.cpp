@@ -1,4 +1,12 @@
-/** @file fordLogic.cpp @brief Ford ManualByRemote: an operator drives motor and steering over MQTT. */
+/**
+ * @file fordLogic.cpp
+ * @brief Ford's logic: one loop, one drive style at a time. See ADR 0009.
+ *
+ * The loop is a fixed pipeline - read, decide, execute, publish - and `decideAction()`
+ * dispatches to the selected drive style. A style fills in a PlannedDrive and nothing more;
+ * the arm gate, the direction-change brake and the actuator-fault latch all sit in
+ * `executeAction()`, below every style, so no style can reach past them.
+ */
 #include "system/logic/fordLogic.h"
 
 #include <algorithm>
@@ -8,20 +16,11 @@
 #include <limits>
 #include <memory>
 
-#include "driver/adc/interface.h"
 #include "driver/factory/interface.h"
-#include "driver/gpio/interface.h"
-#include "driver/motor/interface.h"
 #include "driver/nvs/interface.h"
 #include "driver/odometer/gaps.h"
-#include "driver/odometer/interface.h"
 #include "driver/odometer/store.h"
-#include "driver/pwm/interface.h"
-#include "driver/servo/interface.h"
-#include "driver/temperature_sensor/interface.h"
-#include "driver/voltage_meter/interface.h"
-#include "system/communication/manager.h"
-#include "system/runtime/control.h"
+#include "system/ford.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -29,47 +28,26 @@
 
 namespace
 {
-// Pins, see documentation/design_documents/pin_mapping.md.
-constexpr std::uint8_t BrakePin{5U};     // D2 -> A89301 BRAKE, high = brake
-constexpr std::uint8_t DirectionPin{7U}; // D4 -> A89301 DIR
-constexpr std::uint8_t SpeedPin{8U};     // D5 -> A89301 SPD, 20 kHz PWM
-constexpr std::uint8_t SteeringPin{9U};  // D6 -> steering servo
-constexpr std::uint8_t BatteryAdcPin{4U}; // A3 <- drive battery divider joint
-constexpr std::uint8_t OdometerPin{18U};  // D9 <- A3144 wheel sensor, active low
-constexpr std::uint8_t MotorTempAdcPin{1U}; // A0 <- TMP36 on the motor can
-constexpr std::uint32_t SteeringPwmFrequencyHz{50U};
+// Ford's pins, geometry and settings come from system/ford.h, which the A89301
+// configuration app shares so that both run the gap calibration on one wheel.
+namespace ford = app::ford;
 
-// Odometer geometry. Six magnets on the wheel, deliberately uneven: four gaps of about
-// an eighth of a turn and two of about a quarter. See ADR 0008 and ford_odometer.md.
-/** Magnets fitted to the measured wheel. */
-constexpr std::uint8_t OdometerMagnets{6U};
-/** Rear wheel diameter, 34 mm from ford-build.md; 0.107 m circumference. */
-constexpr float WheelDiameterM{0.034F};
-
-/**
- * @brief Ford's gaps as the wheel was built, used until a session measures the real ones.
- *
- * Two larger magnets sit at the midpoints of the two gaps either side of one original, so
- * four gaps are an eighth of a turn and two are a quarter. Treating them as equal sixths
- * instead would make a per-gap speed wrong by a third; these design values get that down
- * to roughly a tenth with no calibration at all, which is why they are worth compiling in.
- */
+/** Ford's design gap fractions as a GapTable; see ford::DesignGapFractions. */
 driver::odometer::GapTable fordDesignGaps() noexcept
 {
     driver::odometer::GapTable table{};
-    table.count = OdometerMagnets;
+    table.count = ford::OdometerMagnets;
 
-    const float design[OdometerMagnets]{0.125F, 0.125F, 0.25F, 0.25F, 0.125F, 0.125F};
-    for (std::uint8_t index{0U}; index < OdometerMagnets; ++index)
+    for (std::uint8_t index{0U}; index < ford::OdometerMagnets; ++index)
     {
-        table.fraction[index] = design[index];
+        table.fraction[index] = ford::DesignGapFractions[index];
     }
 
     return table;
 }
 
 /** Name for the speed source, so the operator can see which reading they are looking at. */
-const char* toString(driver::odometer::SpeedSource source) noexcept
+const char* speedSourceName(driver::odometer::SpeedSource source) noexcept
 {
     switch (source)
     {
@@ -80,30 +58,13 @@ const char* toString(driver::odometer::SpeedSource source) noexcept
     return "none";
 }
 
-// Calibration, compiled in until it moves to NVS.
-/** Duty for speed command ±100: about 1.5 m/s unloaded. Raise only after the load test. */
-constexpr float TopSpeedDuty{0.15F};
-/** Duty for speed command ±1: the lowest demand that starts the motor from standstill. */
-constexpr float StartDuty{0.08F};
-/** How long the car brakes before it drives in the other direction. */
-constexpr std::uint32_t DirectionChangeBrakeMs{300U};
-/** No drive command for this long gives no drive; the car stays armed. */
-constexpr std::uint32_t DriveTimeoutMs{500U};
-/** True if DIR low drives the car forward with this motor's phase wiring. */
-constexpr bool InvertMotorDirection{false};
-/** Measured battery divider resistors (nominal 100 kΩ and 33 kΩ, 150 nF from A3 to GND). */
-constexpr float BatteryR1Ohm{101240.0F};
-constexpr float BatteryR2Ohm{32990.0F};
-/** Battery read period; the meter averages its last 16 reads, so about 1.6 s. */
-constexpr std::uint32_t BatteryReadIntervalMs{100U};
-/** Motor temperature read period; the sensor averages its last 16 reads, so about 1.6 s. */
-constexpr std::uint32_t MotorTempReadIntervalMs{100U};
-
 // Publication and command channels shared with the operator console.
-// No config/set subscription: every Ford setting is compiled in.
+// config/set is subscribed, but the Manager narrows it to the drive style for a
+// remote-driven car: every other Ford setting stays compiled in, and a payload offering
+// one is rejected rather than applied. See ADR 0009.
 constexpr app::communication::Topics Topics{
     {"cnb/ford/telemetry", "cnb/ford/config/state", "cnb/ford/command/state", "cnb/ford/status"},
-    {nullptr, "cnb/ford/command"}};
+    {"cnb/ford/config/set", "cnb/ford/command"}};
 
 // Car network: the operator laptop's hotspot, so the broker is always at 192.168.137.1.
 // Compiled in, passwords included, until it moves to NVS (see nvs_usage.md).
@@ -111,10 +72,24 @@ constexpr app::communication::NetworkSettings Network{
     "cnb-net", "cnbrules",
     "mqtt://192.168.137.1:1883", "cnb-ford", "cnb-ford", "cnb"};
 
-/** What the motor is doing, reported in telemetry as motor.state. */
-enum class MotorState : std::uint8_t { Braked, NoDrive, Braking, DrivingForward, DrivingReverse };
+/**
+ * @brief Turn a speed command into motor duty, skipping the duty band where the motor does not start.
+ * @param speedCommand -100 full reverse, 0 no drive, +100 full forward.
+ * @return 0 for no drive, otherwise ford::StartDuty to ford::TopSpeedDuty.
+ * @todo Add host tests for the mapping and its clamping.
+ */
+float dutyFor(float speedCommand) noexcept
+{
+    const float magnitude = std::min(std::abs(speedCommand), 100.0F);
+    if (magnitude <= 0.0F) { return 0.0F; }
+    return ford::StartDuty + (ford::TopSpeedDuty - ford::StartDuty) * (std::max(magnitude, 1.0F) - 1.0F) / 99.0F;
+}
+} // namespace
 
-const char* toString(MotorState state) noexcept
+namespace app::logic
+{
+
+const char* FordLogic::toString(const MotorState state) noexcept
 {
     switch (state)
     {
@@ -127,243 +102,427 @@ const char* toString(MotorState state) noexcept
     return "braked";
 }
 
-/**
- * @brief Turn a speed command into motor duty, skipping the duty band where the motor does not start.
- * @param speedCommand −100 full reverse, 0 no drive, +100 full forward.
- * @return 0 for no drive, otherwise StartDuty to TopSpeedDuty.
- * @todo Add host tests for the mapping and its clamping.
- */
-float dutyFor(float speedCommand) noexcept
+FordLogic::FordLogic(driver::factory::Interface& factory) noexcept
+    : myFactory{factory}
 {
-    const float magnitude = std::min(std::abs(speedCommand), 100.0F);
-    if (magnitude <= 0.0F) { return 0.0F; }
-    return StartDuty + (TopSpeedDuty - StartDuty) * (std::max(magnitude, 1.0F) - 1.0F) / 99.0F;
+    myPreviousState = myControl.controlState();
+    myPreviousMotion = myControl.motionState();
+    myPreviousReason = myControl.stateReason();
 }
 
-/**
- * @brief Run the ManualByRemote loop until stop is set.
- * @param factory Owns construction of the board-specific drivers.
- * @param stop Cooperative shutdown flag; the operator's panic stop is handled by MQTT.
- * @todo Add host tests for the direction-change brake and the drive/heartbeat timeouts.
- */
-void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bool>& stop)
+FordLogic::~FordLogic() noexcept = default;
+
+bool FordLogic::initializeDrivers() noexcept
 {
     // Brake before anything else, so the wheels cannot spin while Wi-Fi and MQTT start.
     // If start-up fails, the pin is released and the BRAKE pull-up keeps the brake on.
-    auto brake = factory.gpioOutput(BrakePin);
-    if (!brake || !brake->isInitialized()) { ESP_LOGE("FORD", "Brake GPIO failed"); return; }
-    brake->write(true);
-    auto direction = factory.gpioOutput(DirectionPin);
-    auto speedPwm = factory.pwm(SpeedPin);
+    myBrake = myFactory.gpioOutput(ford::pin::Brake);
+    if (!myBrake || !myBrake->isInitialized()) { ESP_LOGE("FORD", "Brake GPIO failed"); return false; }
+    myBrake->write(true);
+    myDirection = myFactory.gpioOutput(ford::pin::Direction);
+    mySpeedPwm = myFactory.pwm(ford::pin::Speed);
     driver::pwm::Config steeringConfig{};
-    steeringConfig.pin = SteeringPin;
-    steeringConfig.frequencyHz = SteeringPwmFrequencyHz;
-    auto steeringPwm = factory.pwm(steeringConfig);
-    if (!direction || !direction->isInitialized() || !speedPwm || !steeringPwm)
-    { ESP_LOGE("FORD", "Driver allocation failed"); return; }
-    // Wrappers use the drivers above; declaration order keeps them alive.
-    auto motor = factory.fordMotor(*speedPwm, *direction, *brake, InvertMotorDirection);
-    auto steering = factory.fordServo(*steeringPwm);
+    steeringConfig.pin = ford::pin::Steering;
+    steeringConfig.frequencyHz = ford::SteeringPwmFrequencyHz;
+    mySteeringPwm = myFactory.pwm(steeringConfig);
+    if (!myDirection || !myDirection->isInitialized() || !mySpeedPwm || !mySteeringPwm)
+    { ESP_LOGE("FORD", "Driver allocation failed"); return false; }
+    // Wrappers use the drivers above; member declaration order keeps them alive.
+    myMotor = myFactory.fordMotor(*mySpeedPwm, *myDirection, *myBrake, ford::InvertMotorDirection);
+    mySteering = myFactory.fordServo(*mySteeringPwm);
     // A89301::init() releases BRAKE with SPD at 0, so brake again straight after it.
-    if (!motor || !steering || !motor->init() || !motor->stop(driver::motor::StopMode::Brake)
-        || !steering->init())
-    { brake->write(true); ESP_LOGE("FORD", "Initialization failed; brake held"); return; }
+    if (!myMotor || !mySteering || !myMotor->init() || !myMotor->stop(driver::motor::StopMode::Brake)
+        || !mySteering->init())
+    { myBrake->write(true); ESP_LOGE("FORD", "Initialization failed; brake held"); return false; }
     // The battery meter is optional: the car drives without it, and telemetry leaves it out.
-    auto batteryAdc = factory.adc(BatteryAdcPin);
-    std::unique_ptr<driver::voltage_meter::Interface> battery{};
-    if (batteryAdc) { battery = factory.voltageMeter(*batteryAdc, BatteryR1Ohm, BatteryR2Ohm); }
-    if (!battery || !batteryAdc->init() || !battery->isInitialized())
+    myBatteryAdc = myFactory.adc(ford::pin::BatteryAdc);
+    if (myBatteryAdc)
+    { myBattery = myFactory.voltageMeter(*myBatteryAdc, ford::BatteryR1Ohm, ford::BatteryR2Ohm); }
+    if (!myBattery || !myBatteryAdc->init() || !myBattery->isInitialized())
     { ESP_LOGW("FORD", "Battery meter failed; battery voltage not reported"); }
     // The odometer is optional too: without it the car still drives to a speed command,
     // it just cannot report measured speed. The speed loop of ADR 0006 will need it.
-    auto odometerGpio = factory.gpioInputPullup(OdometerPin);
-    std::unique_ptr<driver::odometer::Interface> odometer{};
-    if (odometerGpio && odometerGpio->isInitialized())
+    myOdometerGpio = myFactory.gpioInputPullup(ford::pin::Odometer);
+    if (myOdometerGpio && myOdometerGpio->isInitialized())
     {
-        odometer = factory.odometer(*odometerGpio, driver::odometer::Config{
-            .pulsesPerRevolution = OdometerMagnets,
-            .wheelDiameterM = WheelDiameterM,
+        myOdometer = myFactory.odometer(*myOdometerGpio, driver::odometer::Config{
+            .pulsesPerRevolution = ford::OdometerMagnets,
+            .wheelDiameterM = static_cast<float>(ford::WheelDiameterM),
         });
     }
-    if (!odometer || !odometer->init())
+    if (!myOdometer || !myOdometer->init())
     {
-        odometer = nullptr; // Not unique_ptr::reset(): Interface has a reset() of its own.
+        myOdometer = nullptr; // Not unique_ptr::reset(): Interface has a reset() of its own.
         ESP_LOGW("FORD", "Odometer failed; measured speed and distance not reported");
     }
-    if (odometer)
+    loadOdometerGaps();
+    // The motor temperature sensor is optional too; it is reported, not acted on.
+    myMotorTempAdc = myFactory.adc(ford::pin::MotorTempAdc);
+    if (myMotorTempAdc) { myMotorTemp = myFactory.temperatureSensor(*myMotorTempAdc); }
+    if (!myMotorTemp || !myMotorTempAdc->init() || !myMotorTemp->isInitialized())
+    { ESP_LOGW("FORD", "Motor temperature sensor failed; motor temperature not reported"); }
+
+    // Only now that the brake is on: the Manager's constructor allocates the Wi-Fi and
+    // MQTT drivers, and the wheels must not be able to spin while those start.
+    myCommunication = std::make_unique<app::communication::Manager>(myFactory, Topics, Network);
+    return myCommunication != nullptr;
+}
+
+void FordLogic::loadOdometerGaps() noexcept
+{
+    if (!myOdometer) { return; }
+
+    // A measured table if one has been stored, the design values otherwise. Scoped so
+    // the namespace is released again: the car only reads it, and the calibration
+    // session needs to be able to open it.
+    auto gaps = fordDesignGaps();
+    const char* gapSource{"design values"};
     {
-        // A measured table if one has been stored, the design values otherwise. Scoped so
-        // the namespace is released again: the car only reads it, and the calibration
-        // session needs to be able to open it.
-        auto gaps = fordDesignGaps();
-        const char* gapSource{"design values"};
+        const driver::odometer::Store store{myFactory.nvs()};
+        driver::odometer::GapTable stored{};
+        float spread{0.0F};
+        if (store.load(ford::OdometerMagnets, stored, spread))
         {
-            const driver::odometer::Store store{factory.nvs()};
-            driver::odometer::GapTable stored{};
-            float spread{0.0F};
-            if (store.load(OdometerMagnets, stored, spread))
-            {
-                gaps = stored;
-                gapSource = "calibration";
-                ESP_LOGI("FORD", "Odometer gaps from calibration, spread %.4f", spread);
-            }
+            gaps = stored;
+            gapSource = "calibration";
+            ESP_LOGI("FORD", "Odometer gaps from calibration, spread %.4f", spread);
         }
-        if (!odometer->setGapTable(gaps))
+    }
+    if (!myOdometer->setGapTable(gaps))
+    {
+        ESP_LOGW("FORD", "Odometer gap table refused; speed stays on the revolution window");
+    }
+    else
+    {
+        ESP_LOGI("FORD", "Odometer: %u magnets, gaps from %s", ford::OdometerMagnets, gapSource);
+    }
+}
+
+void FordLogic::readSensors(const std::uint32_t nowMs) noexcept
+{
+    if (myBattery && (!myBatteryRead || (nowMs - myLastBatteryReadMs) >= ford::BatteryReadIntervalMs))
+    {
+        mySnapshot.batteryVoltage = myBattery->readVoltage();
+        myLastBatteryReadMs = nowMs;
+        myBatteryRead = true;
+    }
+    if (myMotorTemp
+        && (!myMotorTempRead || (nowMs - myLastMotorTempReadMs) >= ford::MotorTempReadIntervalMs))
+    {
+        myMotorTemperatureC = myMotorTemp->readTemperature();
+        mySnapshot.motorTemperatureC = myMotorTemperatureC;
+        myLastMotorTempReadMs = nowMs;
+        myMotorTempRead = true;
+    }
+}
+
+void FordLogic::decideAction(const std::uint32_t nowMs) noexcept
+{
+    switch (myControl.configuration().driveStyle)
+    {
+        case navigation::DriveStyle::ManualByRemote:
+            decideManualByRemoteAction(nowMs);
+            break;
+        case navigation::DriveStyle::GapCalibration:
+            decideGapCalibrationAction(nowMs);
+            break;
+        // A remote-driven car never has an autonomous style selected: Control's
+        // supportsDriveStyle() refuses them, so these cannot be reached. No drive is
+        // nevertheless the right answer rather than carrying on with a stale request.
+        case navigation::DriveStyle::DecideAction:
+        case navigation::DriveStyle::SlowLeft:
+        case navigation::DriveStyle::SlowRight:
+        case navigation::DriveStyle::GradualSweep:
+            myPlannedDrive = {};
+            break;
+    }
+}
+
+void FordLogic::decideManualByRemoteAction(const std::uint32_t nowMs) noexcept
+{
+    // 0/0 while disarmed; speed 0 after a drive timeout. remoteDrive() also enforces the
+    // operator's lease for this style.
+    const auto drive = myControl.remoteDrive(nowMs, ford::DriveTimeoutMs);
+    myManualByRemote.lastDrive = drive;
+
+    // The operator asks in speed commands; every style asks the car in duty. dutyFor()
+    // skips the band where the motor will not start, so this mapping is the style's job.
+    const float magnitude = dutyFor(drive.speedCommand);
+    myPlannedDrive.duty = drive.speedCommand < 0.0F ? -magnitude : magnitude;
+    myPlannedDrive.steeringCommand = drive.steeringCommand;
+}
+
+void FordLogic::decideGapCalibrationAction(const std::uint32_t nowMs) noexcept
+{
+    // The measurement never steers: the wheel it measures is the right rear one, and the
+    // car is on a stand. Centre the steering and ask for nothing until the run says so.
+    myPlannedDrive = {};
+
+    // The lease is style-independent. remoteDrive() enforces it for ManualByRemote, and
+    // this style never calls remoteDrive, so without this a console that went quiet would
+    // leave a powered wheel turning for the rest of the run.
+    const bool armed = myControl.renewLease(nowMs);
+
+    // Arming starts a run; the edge, not the level, because a finished run disarms.
+    if (armed && !myCalibration.wasArmed)
+    {
+        myCalibration.run.start(nowMs, ford::OdometerMagnets);
+        myCalibration.storeFailed = false;
+        ESP_LOGI("FORD", "GapCalibration: starting, %u magnets", ford::OdometerMagnets);
+    }
+    myCalibration.wasArmed = armed;
+
+    if (!myCalibration.run.isRunning()) { return; }
+
+    myPlannedDrive.duty =
+        myCalibration.run.update(nowMs, armed, myMotorTemperatureC, myOdometer.get());
+
+    // A run that has just ended disarms the car, so Start triggers the next one. Finishing
+    // is not a fault, so it does not go through the fail-safe disarm.
+    if (!myCalibration.run.isRunning())
+    {
+        myPlannedDrive.duty = 0.0F;
+        myControl.finishDriveStyle();
+        myCalibration.wasArmed = false;
+        if (myCalibration.run.hasTable())
         {
-            ESP_LOGW("FORD", "Odometer gap table refused; speed stays on the revolution window");
+            ESP_LOGI("FORD", "GapCalibration: measured, spread %.4f, margin %.4f; awaiting confirm",
+                     myCalibration.run.result().spread, myCalibration.run.result().margin);
         }
         else
         {
-            ESP_LOGI("FORD", "Odometer: %u magnets, gaps from %s", OdometerMagnets, gapSource);
+            ESP_LOGW("FORD", "GapCalibration: no table stored; failure %u",
+                     static_cast<unsigned>(myCalibration.run.failure()));
         }
     }
-    // The motor temperature sensor is optional too; it is reported, not acted on.
-    auto motorTempAdc = factory.adc(MotorTempAdcPin);
-    std::unique_ptr<driver::temperature_sensor::Interface> motorTemp{};
-    if (motorTempAdc) { motorTemp = factory.temperatureSensor(*motorTempAdc); }
-    if (!motorTemp || !motorTempAdc->init() || !motorTemp->isInitialized())
-    { ESP_LOGW("FORD", "Motor temperature sensor failed; motor temperature not reported"); }
+}
 
-    app::runtime::Control control{false, true}; // ManualByRemote is Ford's only drive style.
-    app::communication::Manager communication{factory, Topics, Network}; // Wi-Fi/MQTT lifecycle.
-    app::communication::TelemetrySnapshot snapshot{}; // No distance sensors: they stay null.
-    // Last published state: report transitions without waiting for telemetry.
-    auto previousState = control.controlState();
-    auto previousMotion = control.motionState();
-    auto previousReason = control.stateReason();
-    // Applied outputs; the motor is braked after start-up.
-    MotorState appliedState{MotorState::Braked};
-    float appliedDuty{0.0F};
-    float appliedSteering{std::numeric_limits<float>::quiet_NaN()};
-    // Direction-change brake: the last driven direction and when the brake started.
-    auto drivenDirection = driver::motor::Direction::Forward;
-    bool hasDriven{false};
-    bool braking{false};
-    std::uint32_t brakeStartMs{0U};
-    bool actuatorFault{false}; // Latched output failure; restart required to drive again.
-    bool batteryRead{false};
-    std::uint32_t lastBatteryReadMs{0U};
-    bool motorTempRead{false};
-    std::uint32_t lastMotorTempReadMs{0U};
+const char* FordLogic::toString(const GapCalibration::Phase phase) noexcept
+{
+    switch (phase)
+    {
+        case GapCalibration::Phase::Idle: return "idle";
+        case GapCalibration::Phase::Settling: return "settling";
+        case GapCalibration::Phase::Sampling: return "sampling";
+        case GapCalibration::Phase::Measured: return "measured";
+        case GapCalibration::Phase::Failed: return "failed";
+    }
+    return "idle";
+}
+
+const char* FordLogic::toString(const GapCalibration::Failure failure) noexcept
+{
+    switch (failure)
+    {
+        case GapCalibration::Failure::None: return nullptr;
+        case GapCalibration::Failure::NoOdometer: return "no_odometer";
+        case GapCalibration::Failure::Stalled: return "stalled";
+        case GapCalibration::Failure::TooHot: return "too_hot";
+        case GapCalibration::Failure::Disagreed: return "disagreed";
+        case GapCalibration::Failure::NotPlausible: return "not_plausible";
+        case GapCalibration::Failure::ThinMargin: return "thin_phase_margin";
+        case GapCalibration::Failure::Stopped: return "stopped";
+    }
+    return nullptr;
+}
+
+void FordLogic::publishCalibrationState() noexcept
+{
+    // Absent means "not this drive style", the same way every optional telemetry field
+    // means "not available" by being missing rather than by being sent empty.
+    if (myControl.configuration().driveStyle != navigation::DriveStyle::GapCalibration)
+    {
+        mySnapshot.calibrationPhase = nullptr;
+        return;
+    }
+
+    const auto& run = myCalibration.run;
+    mySnapshot.calibrationPhase = toString(run.phase());
+    mySnapshot.calibrationFailure = toString(run.failure());
+    mySnapshot.calibrationDutyIndex = run.dutyIndex();
+    mySnapshot.calibrationDutyCount = ford::calibration::DutyCount;
+    mySnapshot.calibrationSamples = run.samples();
+    mySnapshot.calibrationRevolutions = ford::calibration::Revolutions;
+    mySnapshot.calibrationStored = run.isStored();
+    mySnapshot.calibrationStoreFailed = myCalibration.storeFailed;
+    // The guard is off when the sensor is missing or failed, and the operator is told.
+    mySnapshot.calibrationOverheatGuard = std::isfinite(myMotorTemperatureC);
+
+    if (run.hasTable())
+    {
+        mySnapshot.calibrationGaps = run.result().table.fraction;
+        mySnapshot.calibrationGapCount = run.result().table.count;
+        mySnapshot.calibrationSpread = run.result().spread;
+        mySnapshot.calibrationMargin = run.result().margin;
+    }
+    else
+    {
+        mySnapshot.calibrationGaps = nullptr;
+        mySnapshot.calibrationGapCount = 0U;
+        // A disagreement is worth reporting even though it produced no table: the spread
+        // is the evidence, and it is what tells the operator to space the magnets better.
+        const bool disagreed = run.failure() == GapCalibration::Failure::Disagreed;
+        mySnapshot.calibrationSpread =
+            disagreed ? run.result().spread : std::numeric_limits<float>::quiet_NaN();
+        mySnapshot.calibrationMargin = std::numeric_limits<float>::quiet_NaN();
+    }
+}
+
+void FordLogic::storeMeasuredGaps() noexcept
+{
+    if (!myCalibration.run.hasTable())
+    {
+        ESP_LOGW("FORD", "Store refused: no measured gap table is waiting");
+        myCalibration.storeFailed = true;
+        return;
+    }
+
+    // Scoped so the namespace is released again, as loadOdometerGaps() does: the store
+    // owns the namespace for as long as it lives.
+    bool saved{false};
+    {
+        driver::odometer::Store store{myFactory.nvs()};
+        const auto& result = myCalibration.run.result();
+        saved = store.isOpen() && store.save(result.table, result.spread);
+    }
+    myCalibration.storeFailed = !saved;
+    if (!saved)
+    {
+        ESP_LOGE("FORD", "Store write failed; the measured table is still waiting");
+        return;
+    }
+
+    myCalibration.run.markStored();
+    ESP_LOGI("FORD", "GapCalibration: stored. It takes effect on the next restart.");
+}
+
+void FordLogic::executeAction(const std::uint32_t nowMs) noexcept
+{
+    const bool armed = myControl.controlState() == app::runtime::ControlState::Armed;
+
+    MotorState wanted{MotorState::Braked};
+    float duty{0.0F};
+    const auto wantedDirection = myPlannedDrive.duty < 0.0F
+        ? driver::motor::Direction::Backward
+        : driver::motor::Direction::Forward;
+    if (!armed || myActuatorFault) { myBraking = false; }
+    else if (myPlannedDrive.duty == 0.0F) { wanted = MotorState::NoDrive; myBraking = false; }
+    else
+    {
+        // Never reverse a spinning sensorless motor: brake first, then change DIR.
+        const bool reversing = myHasDriven && wantedDirection != myDrivenDirection;
+        if (!reversing) { myBraking = false; }
+        else if (!myBraking) { myBraking = true; myBrakeStartMs = nowMs; }
+        if (myBraking && (nowMs - myBrakeStartMs) < ford::DirectionChangeBrakeMs)
+        { wanted = MotorState::Braking; }
+        else
+        {
+            myBraking = false;
+            wanted = wantedDirection == driver::motor::Direction::Forward
+                ? MotorState::DrivingForward
+                : MotorState::DrivingReverse;
+            duty = std::abs(myPlannedDrive.duty);
+            myDrivenDirection = wantedDirection;
+            myHasDriven = true;
+        }
+    }
+
+    bool outputOk{!myActuatorFault}; // Accumulate motor and servo write results.
+    if (outputOk && (wanted != myAppliedState || duty != myAppliedDuty))
+    {
+        switch (wanted)
+        {
+            case MotorState::Braked:
+            case MotorState::Braking: outputOk = myMotor->stop(driver::motor::StopMode::Brake); break;
+            case MotorState::NoDrive: outputOk = myMotor->stop(driver::motor::StopMode::Coast); break;
+            case MotorState::DrivingForward:
+            case MotorState::DrivingReverse:
+                outputOk = myMotor->setDirection(wantedDirection) && myMotor->setDuty(duty);
+                break;
+        }
+        if (outputOk) { myAppliedState = wanted; myAppliedDuty = duty; }
+    }
+    // Disarmed cars centre the steering; a drive timeout keeps the last command.
+    if (outputOk && myPlannedDrive.steeringCommand != myAppliedSteering)
+    {
+        outputOk = mySteering->setDirection(myPlannedDrive.steeringCommand);
+        if (outputOk) { myAppliedSteering = myPlannedDrive.steeringCommand; }
+    }
+    if (!outputOk && !myActuatorFault)
+    {
+        myMotor->stop(driver::motor::StopMode::Brake);
+        myBrake->write(true);
+        myControl.forceDisarm(app::runtime::StateReason::ActuatorFault);
+        myAppliedState = MotorState::Braked;
+        myAppliedDuty = 0.0F;
+        myActuatorFault = true;
+        ESP_LOGE("FORD", "Actuator error; brake held until reboot");
+    }
+}
+
+void FordLogic::publishState(const std::uint32_t nowMs) noexcept
+{
+    // Echo what the car actually applies, so the page can compare it with its sliders.
+    const bool driving = myAppliedState == MotorState::DrivingForward
+        || myAppliedState == MotorState::DrivingReverse;
+    const bool operatorDriven =
+        myControl.configuration().driveStyle == navigation::DriveStyle::ManualByRemote;
+    mySnapshot.speedCommand =
+        (driving && operatorDriven) ? myManualByRemote.lastDrive.speedCommand : 0.0F;
+    mySnapshot.steeringDegrees = mySteering->getDirection();
+    mySnapshot.forwardDuty = myAppliedState == MotorState::DrivingForward ? myAppliedDuty : 0.0F;
+    mySnapshot.backwardDuty = myAppliedState == MotorState::DrivingReverse ? myAppliedDuty : 0.0F;
+    mySnapshot.motorState = toString(myAppliedState);
+    if (myOdometer)
+    {
+        // An odometer cannot see direction, so tell it what the motor was told. Only
+        // while actually driving: coasting keeps the last known direction, which is
+        // the best guess available, and a standstill discards the phase anyway.
+        if (myAppliedState == MotorState::DrivingForward) { myOdometer->setForward(true); }
+        else if (myAppliedState == MotorState::DrivingReverse) { myOdometer->setForward(false); }
+
+        // Recovers which gap the wheel is in; returns at once if nothing is new.
+        myOdometer->update();
+
+        mySnapshot.measuredSpeedMs = myOdometer->speed();
+        mySnapshot.odometerDistanceM = myOdometer->distance();
+        mySnapshot.measuredSpeedSource = speedSourceName(myOdometer->speedSource());
+        mySnapshot.odometerPhaseLosses = myOdometer->phaseLossCount();
+    }
+    publishCalibrationState();
+    if (myPreviousState != myControl.controlState() || myPreviousMotion != myControl.motionState()
+        || myPreviousReason != myControl.stateReason())
+    { myCommunication->notifyControlStateChanged(); }
+    myPreviousState = myControl.controlState();
+    myPreviousMotion = myControl.motionState();
+    myPreviousReason = myControl.stateReason();
+    myCommunication->publishTelemetry(nowMs, mySnapshot, myControl);
+}
+
+void FordLogic::run(const std::atomic<bool>& stop) noexcept
+{
+    if (!initializeDrivers()) { return; }
+
     ESP_LOGI("FORD", "Ready: ManualByRemote, brake on; waiting for MQTT Start");
     while (!stop.load())
     {
         // Monotonic milliseconds; unsigned subtraction handles tick wraparound.
         const auto now = static_cast<std::uint32_t>(xTaskGetTickCount() * portTICK_PERIOD_MS);
-        communication.process(now, control);
-        // 0/0 while disarmed; speed 0 after a drive timeout.
-        const auto drive = control.remoteDrive(now, DriveTimeoutMs);
-        const bool armed = control.controlState() == app::runtime::ControlState::Armed;
+        myCommunication->process(now, myControl);
 
-        MotorState wanted{MotorState::Braked};
-        float duty{0.0F};
-        const auto wantedDirection = drive.speedCommand < 0.0F ? driver::motor::Direction::Backward
-                                                               : driver::motor::Direction::Forward;
-        if (!armed || actuatorFault) { braking = false; }
-        else if (drive.speedCommand == 0.0F) { wanted = MotorState::NoDrive; braking = false; }
-        else
-        {
-            // Never reverse a spinning sensorless motor: brake first, then change DIR.
-            const bool reversing = hasDriven && wantedDirection != drivenDirection;
-            if (!reversing) { braking = false; }
-            else if (!braking) { braking = true; brakeStartMs = now; }
-            if (braking && (now - brakeStartMs) < DirectionChangeBrakeMs) { wanted = MotorState::Braking; }
-            else
-            {
-                braking = false;
-                wanted = wantedDirection == driver::motor::Direction::Forward ? MotorState::DrivingForward
-                                                                              : MotorState::DrivingReverse;
-                duty = dutyFor(drive.speedCommand);
-                drivenDirection = wantedDirection;
-                hasDriven = true;
-            }
-        }
+        // Confirming a measured table is an operator action, not part of driving, so it is
+        // handled before the pipeline rather than inside a style's decide step.
+        if (myControl.takeStoreGapsRequest()) { storeMeasuredGaps(); }
 
-        bool outputOk{!actuatorFault}; // Accumulate motor and servo write results.
-        if (outputOk && (wanted != appliedState || duty != appliedDuty))
-        {
-            switch (wanted)
-            {
-                case MotorState::Braked:
-                case MotorState::Braking: outputOk = motor->stop(driver::motor::StopMode::Brake); break;
-                case MotorState::NoDrive: outputOk = motor->stop(driver::motor::StopMode::Coast); break;
-                case MotorState::DrivingForward:
-                case MotorState::DrivingReverse:
-                    outputOk = motor->setDirection(wantedDirection) && motor->setSpeed(duty);
-                    break;
-            }
-            if (outputOk) { appliedState = wanted; appliedDuty = duty; }
-        }
-        // Disarmed cars centre the steering; a drive timeout keeps the last command.
-        if (outputOk && drive.steeringCommand != appliedSteering)
-        {
-            outputOk = steering->setDirection(drive.steeringCommand);
-            if (outputOk) { appliedSteering = drive.steeringCommand; }
-        }
-        if (!outputOk && !actuatorFault)
-        {
-            motor->stop(driver::motor::StopMode::Brake);
-            brake->write(true);
-            control.forceDisarm(app::runtime::StateReason::ActuatorFault);
-            appliedState = MotorState::Braked;
-            appliedDuty = 0.0F;
-            actuatorFault = true;
-            ESP_LOGE("FORD", "Actuator error; brake held until reboot");
-        }
+        readSensors(now);
+        decideAction(now);
+        executeAction(now);
+        publishState(now);
 
-        // Echo what the car actually applies, so the page can compare it with its sliders.
-        const bool driving = appliedState == MotorState::DrivingForward
-            || appliedState == MotorState::DrivingReverse;
-        snapshot.speedCommand = driving ? drive.speedCommand : 0.0F;
-        snapshot.steeringDegrees = steering->getDirection();
-        snapshot.forwardDuty = appliedState == MotorState::DrivingForward ? appliedDuty : 0.0F;
-        snapshot.backwardDuty = appliedState == MotorState::DrivingReverse ? appliedDuty : 0.0F;
-        snapshot.motorState = toString(appliedState);
-        if (odometer)
-        {
-            // An odometer cannot see direction, so tell it what the motor was told. Only
-            // while actually driving: coasting keeps the last known direction, which is
-            // the best guess available, and a standstill discards the phase anyway.
-            if (appliedState == MotorState::DrivingForward) { odometer->setForward(true); }
-            else if (appliedState == MotorState::DrivingReverse) { odometer->setForward(false); }
-
-            // Recovers which gap the wheel is in; returns at once if nothing is new.
-            odometer->update();
-
-            snapshot.measuredSpeedMs = odometer->speed();
-            snapshot.odometerDistanceM = odometer->distance();
-            snapshot.measuredSpeedSource = toString(odometer->speedSource());
-            snapshot.odometerPhaseLosses = odometer->phaseLossCount();
-        }
-        if (battery && (!batteryRead || (now - lastBatteryReadMs) >= BatteryReadIntervalMs))
-        {
-            snapshot.batteryVoltage = battery->readVoltage();
-            lastBatteryReadMs = now;
-            batteryRead = true;
-        }
-        if (motorTemp && (!motorTempRead || (now - lastMotorTempReadMs) >= MotorTempReadIntervalMs))
-        {
-            snapshot.motorTemperatureC = motorTemp->readTemperature();
-            lastMotorTempReadMs = now;
-            motorTempRead = true;
-        }
-        if (previousState != control.controlState() || previousMotion != control.motionState()
-            || previousReason != control.stateReason()) { communication.notifyControlStateChanged(); }
-        previousState = control.controlState();
-        previousMotion = control.motionState();
-        previousReason = control.stateReason();
-        communication.publishTelemetry(now, snapshot, control);
         vTaskDelay(std::max<TickType_t>(1U, pdMS_TO_TICKS(10U)));
     }
-    motor->stop(driver::motor::StopMode::Brake);
-    communication.disconnect();
+    myMotor->stop(driver::motor::StopMode::Brake);
+    myCommunication->disconnect();
 }
-} // namespace
 
-namespace app::logic
-{
-void FordLogic::run(const std::atomic<bool>& stop) noexcept
-{
-    runManualByRemote(myFactory, stop);
-}
 } // namespace app::logic

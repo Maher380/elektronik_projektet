@@ -1,8 +1,14 @@
 # Ford: drive from the web page (ManualByRemote)
 
-The Ford has one drive style, **ManualByRemote**: you set the steering command
-(−90 left … +90 right) and the speed command (−100 reverse … +100 forward) with
-two sliders in the web page, and the car follows them over MQTT.
+The Ford has two drive styles. This guide covers **ManualByRemote**: you set the
+steering command (−90 left … +90 right) and the speed command (−100 reverse …
++100 forward) with two sliders in the web page, and the car follows them over MQTT.
+
+The other is **GapCalibration**, which drives a fixed script to measure the
+wheel's magnet gaps instead of following you. Pick a style in the DRIVE STYLE
+panel while the car is stopped, then Start to run it. The car boots on
+ManualByRemote and does not remember a choice, so a power cycle brings it back.
+See [the calibration section](#8-measure-the-magnet-gaps-gapcalibration).
 
 Broker, `.env` and Wi-Fi are set up as in the [MQTT guide](mqtt_steg_for_steg.md).
 This guide only lists what is different for the Ford.
@@ -120,3 +126,45 @@ Run it with the car on the stand, wheels in the air, before driving on the floor
 
 > @todo No automated tests yet for the ManualByRemote rules (firmware) or the
 > drive stream (console). Add them before relying on this beyond bench tests.
+
+## 8. Measure the magnet gaps (GapCalibration)
+
+The odometer's speed is only right if the firmware knows how far apart the
+magnets are. Ford's six are deliberately uneven, so this is measured rather than
+assumed. Until it has been, the car uses the design values.
+
+This used to need the I2C wiring, the `A89301_CONFIG_MODE` build and the `cal`
+command. It does not any more: it runs on the PWM wiring the car already drives
+on. The `cal` command still exists for when the car is already wired for I2C.
+
+1. **Lift the car** so the right rear wheel turns freely. Arming is the only
+   confirmation, so nothing else stops it driving away.
+2. Stop the car if it is armed, then choose **GapCalibration** in the DRIVE STYLE
+   panel. A style can only be chosen while the car is stopped.
+3. Press **Start**. The wheel spins at three speeds for about a minute. The
+   MAGNET GAP CALIBRATION panel shows which speed it is on and how many
+   revolutions it has averaged.
+4. The car stops itself and disarms when it finishes. That is not a fault.
+5. If it says MEASURED, check the spread, then press **Confirm & store**. Nothing
+   is written to flash until you do.
+6. Restart the car. The stored table is read at start-up.
+
+The panel reports the whole reason when a run produces no table, and each one is
+an instruction rather than an error code:
+
+| It says | What to do |
+| --- | --- |
+| A gap changed with speed | The magnets are too even, or the motor's ripple is in the reading. Space them more unevenly and measure again. |
+| The wheel stopped turning | Battery on? Wheel free? |
+| The motor can got too hot | Let it cool, then measure again. |
+| Too evenly spaced | The gaps cannot be told apart at all. Space them more unevenly. |
+| Stopped before it finished | Nothing is stored. A part-measured wheel is not a calibration. |
+
+A run that is stopped, stalls or disagrees stores nothing, and starting a new run
+clears whatever was waiting to be confirmed. There is no way to store a table the
+car refused: a gap that changes with speed is the motor and not the wheel, and a
+table of motor cogging stored as wheel geometry is worse than no table at all.
+
+> Without a motor temperature sensor taped to the can, the run goes ahead with the
+> overheat guard off and the panel says so. The duties are low and the run is
+> bounded, but its safe duration has never been measured on a bare motor.

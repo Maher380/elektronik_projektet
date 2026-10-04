@@ -47,12 +47,12 @@ enum class ParseError : std::uint8_t
     InvalidRevision,
     InvalidSession,
     UnsupportedCommand,
-    InvalidDriverStyle,
+    InvalidDriveStyle,
 };
 
 struct WireTelemetrySnapshot
 {
-    navigation::DriverStyle driverStyle{navigation::DriverStyle::DecideAction};
+    navigation::DriveStyle driveStyle{navigation::DriveStyle::DecideAction};
     std::uint32_t sequence{0U};
     std::uint32_t uptimeMs{0U};
     std::array<float, runtime::IrSensorCount> distancesCm{};
@@ -71,6 +71,20 @@ struct WireTelemetrySnapshot
     const char* measuredSpeedSource{nullptr};
     std::uint32_t odometerPhaseLosses{0U};
     float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+    // GapCalibration; see TelemetrySnapshot for what each one means.
+    const char* calibrationPhase{nullptr};
+    const char* calibrationFailure{nullptr};
+    std::uint8_t calibrationDutyIndex{0U};
+    std::uint8_t calibrationDutyCount{0U};
+    std::uint8_t calibrationSamples{0U};
+    std::uint8_t calibrationRevolutions{0U};
+    const float* calibrationGaps{nullptr};
+    std::uint8_t calibrationGapCount{0U};
+    float calibrationSpread{std::numeric_limits<float>::quiet_NaN()};
+    float calibrationMargin{std::numeric_limits<float>::quiet_NaN()};
+    bool calibrationStored{false};
+    bool calibrationStoreFailed{false};
+    bool calibrationOverheatGuard{false};
     runtime::ControlState controlState{runtime::ControlState::Disarmed};
     runtime::MotionState motionState{runtime::MotionState::Stopped};
     runtime::StateReason reason{runtime::StateReason::Boot};
@@ -83,31 +97,33 @@ const char* toString(runtime::ControlState state) noexcept;
 const char* toString(runtime::MotionState state) noexcept;
 const char* toString(runtime::StateReason reason) noexcept;
 
-const char* toString(navigation::DriverStyle style) noexcept
+const char* toString(navigation::DriveStyle style) noexcept
 {
     switch (style)
     {
-        case navigation::DriverStyle::DecideAction: return "decide_action";
-        case navigation::DriverStyle::SlowLeft: return "slow_left";
-        case navigation::DriverStyle::SlowRight: return "slow_right";
-        case navigation::DriverStyle::GradualSweep: return "gradual_sweep";
-        case navigation::DriverStyle::ManualByRemote: return "manual_by_remote";
+        case navigation::DriveStyle::DecideAction: return "decide_action";
+        case navigation::DriveStyle::SlowLeft: return "slow_left";
+        case navigation::DriveStyle::SlowRight: return "slow_right";
+        case navigation::DriveStyle::GradualSweep: return "gradual_sweep";
+        case navigation::DriveStyle::ManualByRemote: return "manual_by_remote";
+        case navigation::DriveStyle::GapCalibration: return "gap_calibration";
     }
     return "invalid";
 }
 
-bool readDriverStyle(const cJSON* item, navigation::DriverStyle& style, ParseError& error) noexcept
+bool readDriveStyle(const cJSON* item, navigation::DriveStyle& style, ParseError& error) noexcept
 {
     if (!cJSON_IsString(item)) { error = ParseError::InvalidType; return false; }
     // Control decides which of these styles the car can actually run.
-    constexpr navigation::DriverStyle styles[]{navigation::DriverStyle::DecideAction,
-        navigation::DriverStyle::SlowLeft, navigation::DriverStyle::SlowRight,
-        navigation::DriverStyle::GradualSweep, navigation::DriverStyle::ManualByRemote};
+    constexpr navigation::DriveStyle styles[]{navigation::DriveStyle::DecideAction,
+        navigation::DriveStyle::SlowLeft, navigation::DriveStyle::SlowRight,
+        navigation::DriveStyle::GradualSweep, navigation::DriveStyle::ManualByRemote,
+        navigation::DriveStyle::GapCalibration};
     for (const auto candidate : styles)
     {
         if (std::strcmp(item->valuestring, toString(candidate)) == 0) { style = candidate; return true; }
     }
-    error = ParseError::InvalidDriverStyle;
+    error = ParseError::InvalidDriveStyle;
     return false;
 }
 
@@ -257,7 +273,7 @@ bool printAndDelete(cJSON* root,
 
 bool addConfiguration(cJSON* root, const runtime::Configuration& config) noexcept
 {
-    return (cJSON_AddStringToObject(root, "driver_style", toString(config.driverStyle)) != nullptr)
+    return (cJSON_AddStringToObject(root, "drive_style", toString(config.driveStyle)) != nullptr)
         && (cJSON_AddNumberToObject(root, "stop_distance_cm", config.stopDistanceCm) != nullptr)
         && (cJSON_AddNumberToObject(root, "reaction_distance_cm", config.reactionDistanceCm) != nullptr)
         && (cJSON_AddNumberToObject(root, "loop_interval_ms", config.loopIntervalMs) != nullptr)
@@ -267,9 +283,19 @@ bool addConfiguration(cJSON* root, const runtime::Configuration& config) noexcep
                                     config.telemetryIntervalMs)
             != nullptr);
 }
+/**
+ * @brief Parse a config/set payload.
+ *
+ * @param[in] driveStyleOnly Accept nothing but the drive style, as Ford does. Every other
+ *            Ford setting is compiled in, so a payload offering one is a mistake worth
+ *            reporting rather than a value worth applying. The caller seeds the request
+ *            with the car's current configuration, so the untouched fields keep their
+ *            values. See ADR 0009.
+ */
 bool parseConfiguration(const char* payload,
                         runtime::ConfigurationRequest& request,
-                        ParseError& error) noexcept
+                        ParseError& error,
+                        const bool driveStyleOnly = false) noexcept
 {
     error = ParseError::None;
     if (payload == nullptr || !boundedJson(payload))
@@ -291,35 +317,51 @@ bool parseConfiguration(const char* payload,
         "stop_distance_cm",
         "drive_duty",
         "telemetry_interval_ms",
-        "driver_style",
+        "drive_style",
         "reaction_distance_cm",
         "loop_interval_ms",
     };
 
-    bool valid = validateFields(root, Fields, std::size(Fields), error, {"driver_style", "reaction_distance_cm", "loop_interval_ms"})
-        && readSchema(root, error)
-        && readUnsigned(root, "revision", request.revision)
-        && readFloat(root, "stop_distance_cm", request.values.stopDistanceCm)
-        && readFloat(root, "drive_duty", request.values.driveDuty)
-        && readUnsigned(root,
-                        "telemetry_interval_ms",
-                        request.values.telemetryIntervalMs);
+    constexpr const char* StyleOnlyFields[]{"schema_version", "revision", "drive_style"};
 
-    request.hasReactionDistance = cJSON_HasObjectItem(root, "reaction_distance_cm");
-    request.hasLoopInterval = cJSON_HasObjectItem(root, "loop_interval_ms");
-    if (valid && request.hasReactionDistance)
+    bool valid{false};
+    if (driveStyleOnly)
     {
-        valid = readFloat(root, "reaction_distance_cm", request.values.reactionDistanceCm);
+        // Nothing is optional here: a narrowed payload carries the style and no more.
+        valid = validateFields(root, StyleOnlyFields, std::size(StyleOnlyFields), error)
+            && readSchema(root, error)
+            && readUnsigned(root, "revision", request.revision);
+        // The caller seeded these from the live configuration; keep them.
+        request.hasReactionDistance = false;
+        request.hasLoopInterval = false;
     }
-    if (valid && request.hasLoopInterval)
+    else
     {
-        valid = readUnsigned(root, "loop_interval_ms", request.values.loopIntervalMs);
+        valid = validateFields(root, Fields, std::size(Fields), error, {"drive_style", "reaction_distance_cm", "loop_interval_ms"})
+            && readSchema(root, error)
+            && readUnsigned(root, "revision", request.revision)
+            && readFloat(root, "stop_distance_cm", request.values.stopDistanceCm)
+            && readFloat(root, "drive_duty", request.values.driveDuty)
+            && readUnsigned(root,
+                            "telemetry_interval_ms",
+                            request.values.telemetryIntervalMs);
+
+        request.hasReactionDistance = cJSON_HasObjectItem(root, "reaction_distance_cm");
+        request.hasLoopInterval = cJSON_HasObjectItem(root, "loop_interval_ms");
+        if (valid && request.hasReactionDistance)
+        {
+            valid = readFloat(root, "reaction_distance_cm", request.values.reactionDistanceCm);
+        }
+        if (valid && request.hasLoopInterval)
+        {
+            valid = readUnsigned(root, "loop_interval_ms", request.values.loopIntervalMs);
+        }
     }
-    const cJSON* style = cJSON_GetObjectItemCaseSensitive(root, "driver_style");
-    request.hasDriverStyle = style != nullptr;
-    if (valid && request.hasDriverStyle)
+    const cJSON* style = cJSON_GetObjectItemCaseSensitive(root, "drive_style");
+    request.hasDriveStyle = style != nullptr;
+    if (valid && request.hasDriveStyle)
     {
-        valid = readDriverStyle(style, request.values.driverStyle, error);
+        valid = readDriveStyle(style, request.values.driveStyle, error);
     }
 
     if (valid && (request.revision == 0U))
@@ -433,6 +475,10 @@ bool parseCommand(const char* payload,
         {
             command.type = runtime::CommandType::Stop;
         }
+        else if (std::strcmp(commandItem->valuestring, "store_gaps") == 0)
+        {
+            command.type = runtime::CommandType::StoreGaps;
+        }
         else
         {
             error = ParseError::UnsupportedCommand;
@@ -489,7 +535,7 @@ bool writeCommandState(char* destination,
         && (cJSON_AddBoolToObject(root, "servo_test", control.isServoTest()) != nullptr)
         && (cJSON_AddNumberToObject(root, "servo_angle_deg", control.servoAngleDegrees()) != nullptr)
         && (cJSON_AddStringToObject(root, "session_id", control.activeSessionId()) != nullptr)
-        && (cJSON_AddStringToObject(root, "driver_style", toString(control.configuration().driverStyle)) != nullptr)
+        && (cJSON_AddStringToObject(root, "drive_style", toString(control.configuration().driveStyle)) != nullptr)
         && (cJSON_AddStringToObject(root, "result", result) != nullptr)
         && (cJSON_AddStringToObject(root,
                                     "control_state",
@@ -589,7 +635,7 @@ bool writeTelemetry(char* destination,
     }
 
     valid = valid
-        && (cJSON_AddStringToObject(root, "driver_style", toString(snapshot.driverStyle)) != nullptr)
+        && (cJSON_AddStringToObject(root, "drive_style", toString(snapshot.driveStyle)) != nullptr)
         && (cJSON_AddNumberToObject(root, "steering_deg", snapshot.steeringDegrees) != nullptr)
         && (cJSON_AddNumberToObject(motor, "speed_command", snapshot.speedCommand) != nullptr)
         && (cJSON_AddNumberToObject(motor, "forward_duty", snapshot.forwardDuty) != nullptr)
@@ -624,6 +670,56 @@ bool writeTelemetry(char* destination,
             != nullptr)
         && (cJSON_AddStringToObject(root, "reason", toString(snapshot.reason)) != nullptr);
 
+    // GapCalibration's progress and result, nested and present only while that style is
+    // selected. Absent means "not this style", the same way every optional field here
+    // means "not available" by being missing rather than by being sent empty.
+    if (valid && (snapshot.calibrationPhase != nullptr))
+    {
+        cJSON* calibration = cJSON_AddObjectToObject(root, "calibration");
+        valid = (calibration != nullptr)
+            && (cJSON_AddStringToObject(calibration, "phase", snapshot.calibrationPhase) != nullptr)
+            && (cJSON_AddNumberToObject(calibration, "duty_index",
+                                        snapshot.calibrationDutyIndex) != nullptr)
+            && (cJSON_AddNumberToObject(calibration, "duty_count",
+                                        snapshot.calibrationDutyCount) != nullptr)
+            && (cJSON_AddNumberToObject(calibration, "revolutions",
+                                        snapshot.calibrationSamples) != nullptr)
+            && (cJSON_AddNumberToObject(calibration, "revolutions_wanted",
+                                        snapshot.calibrationRevolutions) != nullptr)
+            && (cJSON_AddBoolToObject(calibration, "stored",
+                                      snapshot.calibrationStored) != nullptr)
+            && (cJSON_AddBoolToObject(calibration, "store_failed",
+                                      snapshot.calibrationStoreFailed) != nullptr)
+            && (cJSON_AddBoolToObject(calibration, "overheat_guard",
+                                      snapshot.calibrationOverheatGuard) != nullptr);
+        if (valid && (snapshot.calibrationFailure != nullptr))
+        {
+            valid = cJSON_AddStringToObject(calibration, "failure",
+                                            snapshot.calibrationFailure) != nullptr;
+        }
+        if (valid && std::isfinite(snapshot.calibrationSpread))
+        {
+            valid = cJSON_AddNumberToObject(calibration, "spread",
+                                            snapshot.calibrationSpread) != nullptr;
+        }
+        if (valid && std::isfinite(snapshot.calibrationMargin))
+        {
+            valid = cJSON_AddNumberToObject(calibration, "phase_margin",
+                                            snapshot.calibrationMargin) != nullptr;
+        }
+        if (valid && (snapshot.calibrationGaps != nullptr) && (snapshot.calibrationGapCount > 0U))
+        {
+            cJSON* gaps = cJSON_AddArrayToObject(calibration, "gaps");
+            valid = gaps != nullptr;
+            for (std::uint8_t index{0U}; valid && (index < snapshot.calibrationGapCount); ++index)
+            {
+                cJSON* value = cJSON_CreateNumber(snapshot.calibrationGaps[index]);
+                valid = (value != nullptr);
+                if (valid) { cJSON_AddItemToArray(gaps, value); }
+            }
+        }
+    }
+
     if (!valid)
     {
         cJSON_Delete(root);
@@ -646,7 +742,7 @@ const char* toString(ParseError error) noexcept
         case ParseError::InvalidRevision: return "invalid_revision";
         case ParseError::InvalidSession: return "invalid_session";
         case ParseError::UnsupportedCommand: return "unsupported_command";
-        case ParseError::InvalidDriverStyle: return "invalid_driver_style";
+        case ParseError::InvalidDriveStyle: return "invalid_drive_style";
     }
     return "unknown_error";
 }
@@ -667,8 +763,8 @@ const char* toString(runtime::ConfigurationResult result) noexcept
         case runtime::ConfigurationResult::TelemetryIntervalOutOfRange:
             return "telemetry_interval_out_of_range";
         case runtime::ConfigurationResult::StaleRevision: return "stale_revision";
-        case runtime::ConfigurationResult::InvalidDriverStyle: return "invalid_driver_style";
-        case runtime::ConfigurationResult::DriverStyleRequiresDisarmed: return "driver_style_requires_disarmed";
+        case runtime::ConfigurationResult::InvalidDriveStyle: return "invalid_drive_style";
+        case runtime::ConfigurationResult::DriveStyleRequiresDisarmed: return "drive_style_requires_disarmed";
     }
     return "unknown_error";
 }
@@ -717,6 +813,7 @@ const char* toString(runtime::StateReason reason) noexcept
         case runtime::StateReason::MqttDisconnected: return "mqtt_disconnected";
         case runtime::StateReason::MessageOverflow: return "message_overflow";
         case runtime::StateReason::DriveTimeout: return "drive_timeout";
+        case runtime::StateReason::DriveStyleFinished: return "drive_style_finished";
         case runtime::StateReason::None: return "none";
     }
     return "none";
@@ -906,7 +1003,7 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     myLastTelemetryMs = nowMs;
 
     WireTelemetrySnapshot wireSnapshot{};
-    wireSnapshot.driverStyle = control.configuration().driverStyle;
+    wireSnapshot.driveStyle = control.configuration().driveStyle;
     wireSnapshot.sequence = myTelemetrySequence + 1U;
     wireSnapshot.uptimeMs = nowMs;
     wireSnapshot.distancesCm = snapshot.distancesCm;
@@ -925,6 +1022,19 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.measuredSpeedSource = snapshot.measuredSpeedSource;
     wireSnapshot.odometerPhaseLosses = snapshot.odometerPhaseLosses;
     wireSnapshot.motorTemperatureC = snapshot.motorTemperatureC;
+    wireSnapshot.calibrationPhase = snapshot.calibrationPhase;
+    wireSnapshot.calibrationFailure = snapshot.calibrationFailure;
+    wireSnapshot.calibrationDutyIndex = snapshot.calibrationDutyIndex;
+    wireSnapshot.calibrationDutyCount = snapshot.calibrationDutyCount;
+    wireSnapshot.calibrationSamples = snapshot.calibrationSamples;
+    wireSnapshot.calibrationRevolutions = snapshot.calibrationRevolutions;
+    wireSnapshot.calibrationGaps = snapshot.calibrationGaps;
+    wireSnapshot.calibrationGapCount = snapshot.calibrationGapCount;
+    wireSnapshot.calibrationSpread = snapshot.calibrationSpread;
+    wireSnapshot.calibrationMargin = snapshot.calibrationMargin;
+    wireSnapshot.calibrationStored = snapshot.calibrationStored;
+    wireSnapshot.calibrationStoreFailed = snapshot.calibrationStoreFailed;
+    wireSnapshot.calibrationOverheatGuard = snapshot.calibrationOverheatGuard;
     wireSnapshot.controlState = control.controlState();
     wireSnapshot.motionState = control.motionState();
     wireSnapshot.reason = control.stateReason();
@@ -991,16 +1101,20 @@ void Manager::processMqttMessage(const driver::mqtt::Message& message,
         && (std::strcmp(message.topic.data(), myTopics.subscribe.configSet) == 0))
     {
         runtime::ConfigurationRequest request{};
+        // A remote-driven car accepts the drive style and nothing else, so the request
+        // starts from what is already live and only the style can move.
+        const bool driveStyleOnly{control.isRemoteDrivenCar()};
+        if (driveStyleOnly) { request.values = control.configuration(); }
         ParseError parseError{};
-        if (!parseConfiguration(message.payload.data(), request, parseError))
+        if (!parseConfiguration(message.payload.data(), request, parseError, driveStyleOnly))
         {
             publishConfigurationState(request.revision, toString(parseError), control);
             return;
         }
 
-        const auto previousStyle = control.configuration().driverStyle;
+        const auto previousStyle = control.configuration().driveStyle;
         const auto result = control.applyConfiguration(request);
-        if (previousStyle != control.configuration().driverStyle) { notifyControlStateChanged(); }
+        if (previousStyle != control.configuration().driveStyle) { notifyControlStateChanged(); }
         const bool applied = (result == runtime::ConfigurationResult::Applied)
             || (result == runtime::ConfigurationResult::Duplicate);
         publishConfigurationState(request.revision,

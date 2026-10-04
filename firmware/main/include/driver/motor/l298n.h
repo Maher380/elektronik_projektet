@@ -70,13 +70,13 @@ public:
     bool setDirection(Direction direction) noexcept override;
 
     /**
-     * @brief Set normalized motor speed.
+     * @brief Set the motor drive duty.
      *
-     * @param[in] speed Speed in range 0.0f - 1.0f, where 1.0f is full output.
+     * @param[in] duty Duty in range 0.0f - 1.0f, where 1.0f is full output.
      * @param[in] mode Stop behavior to apply when reducing motor drive.
-     * @return True if the speed was applied, false otherwise.
+     * @return True if the duty was applied, false otherwise.
      */
-    bool setSpeed(float speed, StopMode mode = StopMode::Coast) noexcept override;
+    bool setDuty(float duty, StopMode mode = StopMode::Coast) noexcept override;
 
     /**
      * @brief Stop the motor.
@@ -117,8 +117,8 @@ private:
     /** Current motor direction. */
     Direction myDirection;
 
-    /** Current speed in range 0.0f - 1.0f. */
-    float mySpeed;
+    /** Current duty in range 0.0f - 1.0f. */
+    float myDuty;
 };
 
 } // namespace driver::motor

@@ -25,8 +25,8 @@ test('isolated real Mosquitto: subscribe, retained state, car ACK, config, heart
   const settings = { host: '127.0.0.1', port, username: 'isolated-test', password: 'not-a-real-secret' };
   const transport = new MosquittoTransport(settings), control = new ConsoleControl(transport);
   t.after(() => { control.cancel('test finished'); transport.close(); });
-  const cfg = { schema_version: 1, revision: 0, result: 'defaults', stop_distance_cm: 30, drive_duty: .5, telemetry_interval_ms: 200, driver_style: 'decide_action' };
-  const state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', driver_style: 'decide_action' };
+  const cfg = { schema_version: 1, revision: 0, result: 'defaults', stop_distance_cm: 30, drive_duty: .5, telemetry_interval_ms: 200, drive_style: 'decide_action' };
+  const state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', drive_style: 'decide_action' };
   const commands = [];
   const carSub = transport.child('mosquitto_sub', ['-t', TOPIC + '/command', '-t', TOPIC + '/config/set', '-q', '1', '-F', '%j', '-d']);
   let carReady = false, buffer = '', errors = [];
@@ -65,7 +65,7 @@ test('isolated real Mosquitto: subscribe, retained state, car ACK, config, heart
   const telemetry = () => transport.publish(TOPIC + '/telemetry', { ...state, sequence: ++sequence, uptime_ms: sequence * 200, distance_cm: { left: 45, center: 65, right: 35 }, steering_deg: 0, motor: { speed_command: state.control_state === 'armed' ? cfg.drive_duty : 0 } }, 0, false);
   await telemetry(); await until(() => control.fresh() && control.config && control.command, 'fresh car data');
   assert.equal(commands.length, 0, 'monitoring must never send commands');
-  await control.configure('test-tab', { stop_distance_cm: 35, drive_duty: 1, telemetry_interval_ms: 200, driver_style: 'gradual_sweep' });
+  await control.configure('test-tab', { stop_distance_cm: 35, drive_duty: 1, telemetry_interval_ms: 200, drive_style: 'gradual_sweep' });
   assert.equal(control.config.drive_duty, 1);
   await control.start('test-tab'); assert.equal(control.owner.armed, true);
   await control.tick(); await until(() => commands.some(c => c.command === 'heartbeat'), 'heartbeat');

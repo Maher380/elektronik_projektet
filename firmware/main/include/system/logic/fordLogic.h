@@ -1,18 +1,233 @@
+/**
+ * @file fordLogic.h
+ * @brief Declaration of Ford's application logic and its drive styles.
+ */
+
 #pragma once
 
 #include <atomic>
+#include <cstdint>
+#include <limits>
+#include <memory>
+
+#include "driver/adc/interface.h"
+#include "driver/gpio/interface.h"
+#include "driver/motor/interface.h"
+#include "driver/odometer/interface.h"
+#include "driver/pwm/interface.h"
+#include "driver/servo/interface.h"
+#include "driver/temperature_sensor/interface.h"
+#include "driver/voltage_meter/interface.h"
+#include "system/communication/manager.h"
+#include "system/logic/gapCalibration.h"
+#include "system/navigation/types.h"
+#include "system/runtime/control.h"
 
 namespace driver::factory { class Interface; }
 
 namespace app::logic
 {
+
+/**
+ * @brief What a Ford drive style asks the car to do next.
+ *
+ * A drive style fills this in and nothing else. Everything safety-bearing - the arm gate,
+ * the direction-change brake, the actuator-fault latch - is applied below every style, so
+ * no style can reach past it. See ADR 0009.
+ *
+ * The currency is a signed motor duty, not a Speed command. ADR 0009 originally chose a
+ * speed command and the implementation disproved it: `dutyFor()` deliberately maps the
+ * whole operator range onto ford::StartDuty to ford::TopSpeedDuty, 0.08 to 0.15, because
+ * that is the band the car is driveable in. The gap calibration's recipe measures at
+ * 0.10, 0.15 and 0.20, so its top duty cannot be expressed as a speed command at all.
+ * A speed command is therefore what ManualByRemote is *given*, and the duty it maps to is
+ * what every style *asks for*. ADR 0006's Speed target will sit above this, not replace it.
+ */
+struct PlannedDrive
+{
+    /** Signed motor duty: -1 full reverse, 0 no drive, +1 full forward. */
+    float duty{0.0F};
+    /** -90 full left, 0 straight ahead, +90 full right. */
+    float steeringCommand{0.0F};
+};
+
+/**
+ * @brief Ford's system logic: one loop, one drive style at a time.
+ *
+ * Drivers are owned as members and the loop is a fixed pipeline, so adding a drive style
+ * means adding a decide step and nothing else. Member declaration order is load-bearing:
+ * the motor and servo wrappers hold references to the GPIO and PWM drivers above them,
+ * and reverse-order destruction is what keeps those alive for as long as the wrappers are.
+ */
 class FordLogic final
 {
 public:
-    explicit FordLogic(driver::factory::Interface& factory) noexcept : myFactory{factory} {}
+    explicit FordLogic(driver::factory::Interface& factory) noexcept;
+    ~FordLogic() noexcept;
+
     void run(const std::atomic<bool>& stop) noexcept;
 
+    FordLogic(const FordLogic&) = delete;
+    FordLogic& operator=(const FordLogic&) = delete;
+    FordLogic(FordLogic&&) = delete;
+    FordLogic& operator=(FordLogic&&) = delete;
+
 private:
+    /** What the motor is doing, reported in telemetry as motor.state. */
+    enum class MotorState : std::uint8_t
+    {
+        Braked,
+        NoDrive,
+        Braking,
+        DrivingForward,
+        DrivingReverse,
+    };
+
+    /** Name for the motor state, reported in telemetry as motor.state. */
+    static const char* toString(MotorState state) noexcept;
+
+    /** Name for a calibration phase, reported in telemetry as calibration.phase. */
+    static const char* toString(GapCalibration::Phase phase) noexcept;
+
+    /** Name for a calibration failure; nullptr when there was none, which omits the field. */
+    static const char* toString(GapCalibration::Failure failure) noexcept;
+
+    /** Fill in the nested calibration object, or leave it out for any other style. */
+    void publishCalibrationState() noexcept;
+
+    /**
+     * @brief Construct and initialize every driver, brake first.
+     *
+     * @return False if a required driver failed; the brake is held in that case.
+     */
+    bool initializeDrivers() noexcept;
+
+    /** Hand the odometer a measured gap table if one is stored, the design values if not. */
+    void loadOdometerGaps() noexcept;
+
+    /**
+     * @brief Read what the car can sense, before any style decides on it.
+     *
+     * Ford's equivalent of Vagrant's getEnvironmentPicture(): the battery and the motor can
+     * are sampled here so that a drive style reads one value rather than deciding when to
+     * take one. The Odometer is deliberately not here - it is told the direction the motor
+     * was actually given, so it is updated after executeAction().
+     */
+    void readSensors(std::uint32_t nowMs) noexcept;
+
+    /** Dispatch to the decide step of whichever drive style is selected. */
+    void decideAction(std::uint32_t nowMs) noexcept;
+
+    /** ManualByRemote: follow the operator's latest drive commands. */
+    void decideManualByRemoteAction(std::uint32_t nowMs) noexcept;
+
+    /** GapCalibration: drive the measurement's own script and report what it found. */
+    void decideGapCalibrationAction(std::uint32_t nowMs) noexcept;
+
+    /** Store a measured gap table when the operator confirms it. */
+    void storeMeasuredGaps() noexcept;
+
+    /** Apply myPlannedDrive through the arm gate, the brake interlock and the outputs. */
+    void executeAction(std::uint32_t nowMs) noexcept;
+
+    /** Fill in the telemetry snapshot from what was actually applied, and publish it. */
+    void publishState(std::uint32_t nowMs) noexcept;
+
     driver::factory::Interface& myFactory;
+
+    // Declaration order is construction order; see the class comment.
+    std::unique_ptr<driver::gpio::Interface> myBrake;
+    std::unique_ptr<driver::gpio::Interface> myDirection;
+    std::unique_ptr<driver::pwm::Interface> mySpeedPwm;
+    std::unique_ptr<driver::pwm::Interface> mySteeringPwm;
+    std::unique_ptr<driver::motor::Interface> myMotor;
+    std::unique_ptr<driver::servo::Interface> mySteering;
+    std::unique_ptr<driver::adc::Interface> myBatteryAdc;
+    std::unique_ptr<driver::voltage_meter::Interface> myBattery;
+    std::unique_ptr<driver::gpio::Interface> myOdometerGpio;
+    std::unique_ptr<driver::odometer::Interface> myOdometer;
+    std::unique_ptr<driver::adc::Interface> myMotorTempAdc;
+    std::unique_ptr<driver::temperature_sensor::Interface> myMotorTemp;
+
+    /**
+     * @brief Wi-Fi and MQTT lifecycle, constructed only once the brake is on.
+     *
+     * A unique_ptr rather than a plain member on purpose: the Manager's constructor
+     * allocates the Wi-Fi and MQTT drivers, and the wheels must not be able to spin while
+     * those start. Constructing it in initializeDrivers() keeps that ordering visible
+     * instead of leaving it to depend on where this line sits.
+     */
+    std::unique_ptr<app::communication::Manager> myCommunication;
+
+    /** Ford is a remote-driven car: no obstacle distances, so no autonomous drive styles. */
+    app::runtime::Control myControl{false, true};
+
+    /** No distance sensors, so those snapshot fields stay null. */
+    app::communication::TelemetrySnapshot mySnapshot{};
+
+    /** What the selected drive style last asked for. */
+    PlannedDrive myPlannedDrive{};
+
+    /**
+     * @brief ManualByRemote's own state.
+     *
+     * Only the operator's last commands, kept so telemetry can echo the speed command the
+     * operator asked for rather than the duty it mapped to.
+     */
+    struct ManualByRemoteState
+    {
+        app::runtime::RemoteDrive lastDrive{};
+    };
+    ManualByRemoteState myManualByRemote{};
+
+    /**
+     * @brief GapCalibration's own state.
+     *
+     * Grouped rather than spread across the class: the measurement carries about ten
+     * fields of its own, and nothing in ManualByRemote has any business reading them.
+     */
+    struct GapCalibrationState
+    {
+        /** The measurement itself. */
+        GapCalibration run{};
+        /**
+         * @brief Whether the car was armed on the previous tick.
+         *
+         * Arming is what starts a run, and the edge is what matters rather than the level:
+         * a finished run disarms the car, so testing the level would start it again forever.
+         */
+        bool wasArmed{false};
+        /** Whether the last store attempt failed, so the page can say so. */
+        bool storeFailed{false};
+    };
+    GapCalibrationState myCalibration{};
+
+    /** Last motor can temperature, or NaN when there is no sensor. Read by readSensors(). */
+    float myMotorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+
+    // Last published state, so a transition is reported without waiting for telemetry.
+    app::runtime::ControlState myPreviousState{};
+    app::runtime::MotionState myPreviousMotion{};
+    app::runtime::StateReason myPreviousReason{};
+
+    // Applied outputs; the motor is braked after start-up.
+    MotorState myAppliedState{MotorState::Braked};
+    float myAppliedDuty{0.0F};
+    float myAppliedSteering{std::numeric_limits<float>::quiet_NaN()};
+
+    /** Direction-change brake: the last driven direction and when the brake started. */
+    driver::motor::Direction myDrivenDirection{driver::motor::Direction::Forward};
+    bool myHasDriven{false};
+    bool myBraking{false};
+    std::uint32_t myBrakeStartMs{0U};
+
+    /** Latched output failure; a restart is required to drive again. */
+    bool myActuatorFault{false};
+
+    bool myBatteryRead{false};
+    std::uint32_t myLastBatteryReadMs{0U};
+    bool myMotorTempRead{false};
+    std::uint32_t myLastMotorTempReadMs{0U};
 };
+
 } // namespace app::logic

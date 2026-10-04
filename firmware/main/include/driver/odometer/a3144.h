@@ -153,19 +153,8 @@ public:
      */
     std::uint32_t phaseLossCount() const noexcept override;
 
-    /**
-     * @brief Read the gap fractions of the revolution that just completed.
-     *
-     * Indexed so that out[i] is always the same physical gap for as long as no pulse is
-     * missed, which is what lets a calibration session average over many revolutions.
-     * The indices are arbitrary - nothing on the car can say which magnet is which - but
-     * they are consistent, and a consistent cyclic order is all a gap table needs.
-     *
-     * @param[out] out Buffer for count fractions.
-     * @param[in] count Must equal the configured magnet count.
-     * @return False if no whole revolution has been measured yet, or on a bad size.
-     */
-    bool observedGaps(float* out, std::uint8_t count) const noexcept;
+    /** @copydoc Interface::observedGaps */
+    bool observedGaps(float* out, std::uint8_t count) const noexcept override;
 
     /**
      * @brief Magnets the driver was configured with, after clamping.

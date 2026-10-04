@@ -10,14 +10,14 @@ namespace driver::motor
 namespace
 {
 /**
- * @brief Check if a normalized speed value is valid.
+ * @brief Check if a duty value is valid.
  *
- * @param[in] speed Speed value to validate.
- * @return True if speed is in range 0.0f - 1.0f.
+ * @param[in] duty Duty value to validate.
+ * @return True if the duty is in range 0.0f - 1.0f.
  */
-bool isSpeedValid(const float speed) noexcept
+bool isDutyValid(const float duty) noexcept
 {
-    return (speed >= 0.0F) && (speed <= 1.0F);
+    return (duty >= 0.0F) && (duty <= 1.0F);
 }
 
 /**
@@ -78,7 +78,7 @@ L298n::L298n(driver::pwm::Interface& enablePwm,
     , myIsInitialized{false}
     , myPwmInitializedByDriver{false}
     , myDirection{Direction::Forward}
-    , mySpeed{0.0F}
+    , myDuty{0.0F}
 {}
 
 bool L298n::init() noexcept
@@ -111,7 +111,7 @@ bool L298n::init() noexcept
 
     writeCoast(myInput1, myInput2);
     myDirection = Direction::Forward;
-    mySpeed = 0.0F;
+    myDuty = 0.0F;
     myIsInitialized = true;
     return true;
 }
@@ -133,7 +133,7 @@ bool L298n::deinit() noexcept
     }
 
     myIsInitialized = false;
-    mySpeed = 0.0F;
+    myDuty = 0.0F;
     return stopped && pwmDeinitialized;
 }
 
@@ -149,7 +149,7 @@ bool L298n::setDirection(const Direction direction) noexcept
         return false;
     }
 
-    const float previousSpeed = mySpeed;
+    const float previousSpeed = myDuty;
     if ((previousSpeed > 0.0F) && !myEnablePwm.setDuty(0.0F))
     {
         return false;
@@ -160,26 +160,26 @@ bool L298n::setDirection(const Direction direction) noexcept
 
     if ((previousSpeed > 0.0F) && !myEnablePwm.setDuty(previousSpeed))
     {
-        mySpeed = 0.0F;
+        myDuty = 0.0F;
         return false;
     }
 
     return true;
 }
 
-bool L298n::setSpeed(const float speed, const StopMode mode) noexcept
+bool L298n::setDuty(const float duty, const StopMode mode) noexcept
 {
-    if (!myIsInitialized || !isSpeedValid(speed))
+    if (!myIsInitialized || !isDutyValid(duty))
     {
         return false;
     }
 
-    if (speed <= 0.0F)
+    if (duty <= 0.0F)
     {
         return stop(mode);
     }
 
-    if ((speed < mySpeed) && (mode == StopMode::Brake))
+    if ((duty < myDuty) && (mode == StopMode::Brake))
     {
         if (!stop(StopMode::Brake))
         {
@@ -189,12 +189,12 @@ bool L298n::setSpeed(const float speed, const StopMode mode) noexcept
 
     writeDirection(myInput1, myInput2, myDirection);
 
-    if (!myEnablePwm.setDuty(speed))
+    if (!myEnablePwm.setDuty(duty))
     {
         return false;
     }
 
-    mySpeed = speed;
+    myDuty = duty;
     return true;
 }
 
@@ -220,7 +220,7 @@ bool L298n::stop(const StopMode mode) noexcept
 
     if (success)
     {
-        mySpeed = 0.0F;
+        myDuty = 0.0F;
     }
 
     return success;

@@ -55,7 +55,7 @@ public:
         }
 
         myIsInitialized = false;
-        mySpeed = 0.0F;
+        myDuty = 0.0F;
         return true;
     }
 
@@ -87,21 +87,21 @@ public:
     }
 
     /**
-     * @brief Store a simulated normalized motor speed.
+     * @brief Store a simulated motor drive duty.
      *
-     * @param[in] speed Speed in range 0.0f - 1.0f.
-     * @param[in] mode Stop behavior to store if speed is zero.
-     * @return True if initialized and speed is valid, false otherwise.
+     * @param[in] duty Duty in range 0.0f - 1.0f.
+     * @param[in] mode Stop behavior to store if the duty is zero.
+     * @return True if initialized and the duty is valid, false otherwise.
      */
-    bool setSpeed(float speed, StopMode mode = StopMode::Coast) noexcept override
+    bool setDuty(float duty, StopMode mode = StopMode::Coast) noexcept override
     {
-        if (!myIsInitialized || !isSpeedValid(speed))
+        if (!myIsInitialized || !isDutyValid(duty))
         {
             return false;
         }
 
-        mySpeed = speed;
-        if (speed <= 0.0F)
+        myDuty = duty;
+        if (duty <= 0.0F)
         {
             myStopMode = mode;
         }
@@ -122,7 +122,7 @@ public:
             return false;
         }
 
-        mySpeed = 0.0F;
+        myDuty = 0.0F;
         myStopMode = mode;
         return true;
     }
@@ -138,13 +138,13 @@ public:
     }
 
     /**
-     * @brief Read stored speed.
+     * @brief Read the stored duty.
      *
-     * @return Stored speed in range 0.0f - 1.0f.
+     * @return Stored duty in range 0.0f - 1.0f.
      */
-    float speed() const noexcept
+    float duty() const noexcept
     {
-        return mySpeed;
+        return myDuty;
     }
 
     /**
@@ -164,14 +164,14 @@ public:
 
 private:
     /**
-     * @brief Check if a speed value is inside the supported range.
+     * @brief Check if a duty value is inside the supported range.
      *
-     * @param[in] speed Speed value to validate.
-     * @return True if speed is between 0.0f and 1.0f.
+     * @param[in] duty Duty value to validate.
+     * @return True if the duty is between 0.0f and 1.0f.
      */
-    static bool isSpeedValid(float speed) noexcept
+    static bool isDutyValid(float duty) noexcept
     {
-        return (speed >= 0.0F) && (speed <= 1.0F);
+        return (duty >= 0.0F) && (duty <= 1.0F);
     }
 
     /** True if the simulated motor driver is initialized. */
@@ -183,8 +183,8 @@ private:
     /** Simulated stop behavior. */
     StopMode myStopMode{StopMode::Coast};
 
-    /** Simulated motor speed in range 0.0f - 1.0f. */
-    float mySpeed{0.0F};
+    /** Simulated motor drive duty in range 0.0f - 1.0f. */
+    float myDuty{0.0F};
 };
 
 } // namespace driver::motor

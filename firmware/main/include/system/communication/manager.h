@@ -82,6 +82,38 @@ struct TelemetrySnapshot
     std::uint32_t odometerPhaseLosses{0U};
     /** Ford: motor can temperature in degrees Celsius; NaN leaves it out. */
     float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+
+    // GapCalibration. These travel as a nested "calibration" object, present only while
+    // that drive style is selected, which is how the payload already treats optional
+    // groups. See ADR 0009.
+    /** Where the run has got to, e.g. "sampling". nullptr leaves the whole object out. */
+    const char* calibrationPhase{nullptr};
+    /** Why the last run produced no table, e.g. "stalled"; nullptr leaves it out. */
+    const char* calibrationFailure{nullptr};
+    /** Which duty of the recipe is being measured, and how many there are. */
+    std::uint8_t calibrationDutyIndex{0U};
+    std::uint8_t calibrationDutyCount{0U};
+    /** Revolutions averaged at this duty so far, and how many are wanted. */
+    std::uint8_t calibrationSamples{0U};
+    std::uint8_t calibrationRevolutions{0U};
+    /** Measured gap fractions, or nullptr when no table is waiting to be confirmed. */
+    const float* calibrationGaps{nullptr};
+    std::uint8_t calibrationGapCount{0U};
+    /** Largest disagreement between speeds; NaN leaves it out. */
+    float calibrationSpread{std::numeric_limits<float>::quiet_NaN()};
+    /** Distance to the next-best rotation; NaN leaves it out. */
+    float calibrationMargin{std::numeric_limits<float>::quiet_NaN()};
+    /** Whether the operator has had the measured table written to NVS. */
+    bool calibrationStored{false};
+    /** Whether a store was attempted and failed. */
+    bool calibrationStoreFailed{false};
+    /**
+     * @brief Whether the motor overheat guard is active during a run.
+     *
+     * False means the temperature sensor is absent or failed and the run is going ahead
+     * without that guard, which ADR 0009 accepts deliberately. The operator is told.
+     */
+    bool calibrationOverheatGuard{false};
     /** Raw counts used for these distances; -1 means unavailable. */
     std::array<std::int32_t, runtime::IrSensorCount> adcRaw{-1, -1, -1};
 };
