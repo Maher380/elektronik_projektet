@@ -15,6 +15,7 @@ namespace driver::nvs
 enum class Namespace : std::uint8_t
 {
     Test, ///< Used by host tests only.
+    Odometer, ///< One wheel's measured magnet gap table. Owner: driver::odometer::Store.
     Count ///< Number of namespaces, not a namespace.
 };
 
@@ -24,6 +25,7 @@ enum class Namespace : std::uint8_t
  */
 inline constexpr const char* NamespaceNames[]{
     "test",
+    "odo",
 };
 
 static_assert(sizeof(NamespaceNames) / sizeof(NamespaceNames[0]) == static_cast<std::size_t>(Namespace::Count),

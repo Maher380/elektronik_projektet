@@ -3,7 +3,9 @@
 #include <cstdio>
 #include <limits>
 
+#include "driver/nvs/stub.h"
 #include "driver/odometer/gaps.h"
+#include "driver/odometer/store.h"
 #include "test/odometer_gaps.h"
 
 namespace
@@ -316,6 +318,76 @@ bool testEndToEnd() noexcept
 
     return passed;
 }
+
+/**
+ * @brief The store, against the NVS stub.
+ *
+ * Worth testing properly because the failure that matters is silent: a table read back
+ * wrong would be believed, and the car would then correct its speed with the wrong
+ * numbers and report them as measured.
+ */
+bool testStore() noexcept
+{
+    bool passed{true};
+    const GapTable ford{fordTable()};
+
+    // An unopened store is useless but must not pretend otherwise.
+    driver::nvs::Stub cold;
+    const driver::odometer::Store coldStore{cold};
+    GapTable out{};
+    float spread{-1.0F};
+    passed = passed
+        && expect(!coldStore.isOpen(), "a store on uninitialized NVS should not open")
+        && expect(!coldStore.load(6U, out, spread), "an unopened store should not load");
+
+    driver::nvs::Stub nvs;
+    passed = passed && expect(nvs.init(), "NVS stub should initialize");
+
+    driver::odometer::Store store{nvs};
+    passed = passed && expect(store.isOpen(), "the store should open its namespace");
+
+    // Rule 4 of nvs_usage.md: a namespace has one owner, so a second claim must fail.
+    const driver::odometer::Store second{nvs};
+    passed = passed && expect(!second.isOpen(), "a second owner of the namespace should be refused");
+
+    // Nothing stored yet is the normal case, not a fault.
+    passed = passed && expect(!store.load(6U, out, spread), "an empty namespace should not load");
+
+    passed = passed && expect(store.save(ford, 0.004F), "a plausible table should save");
+    passed = passed && expect(store.load(6U, out, spread), "what was saved should load");
+    passed = passed && expect(out.count == 6U, "the magnet count should round-trip");
+    for (std::uint8_t index{0U}; index < 6U; ++index)
+    {
+        passed = passed && expect(isNear(out.fraction[index], ford.fraction[index]),
+                                  "every gap should round-trip exactly");
+    }
+    passed = passed && expect(isNear(spread, 0.004F), "the measured spread should round-trip");
+
+    // A table measured on a different wheel must not be applied to this one.
+    passed = passed && expect(!store.load(4U, out, spread), "a different magnet count should be refused");
+
+    // Rubbish must not be stored, because it would be loaded and believed.
+    GapTable broken{ford};
+    broken.fraction[0] = 0.9F;
+    passed = passed && expect(!store.save(broken, 0.0F), "a table that does not sum to 1 should be refused");
+    passed = passed
+        && expect(store.load(6U, out, spread), "a refused save should leave the good table alone")
+        && expect(isNear(out.fraction[0], 0.125F), "the good table should survive a refused save");
+
+    passed = passed && expect(!store.save(GapTable{}, 0.0F), "an empty table should be refused");
+
+    // Clearing returns the car to its design values.
+    passed = passed
+        && expect(store.clear(), "the namespace should clear")
+        && expect(!store.load(6U, out, spread), "a cleared namespace should not load");
+
+    // A table whose layout version is not ours must be ignored rather than misread.
+    passed = passed && expect(store.save(ford, 0.001F), "save again for the version check");
+    auto raw = nvs.open(driver::nvs::Namespace::Odometer);
+    passed = passed && expect(raw == nullptr, "the store still holds the namespace");
+
+    return passed;
+}
 } // namespace
 
 namespace test
@@ -323,7 +395,7 @@ namespace test
 bool runOdometerGapsTest() noexcept
 {
     const bool passed{testUniformAndPlausibility() && testFractionsFromTimestamps() && testPhasing()
-                      && testAgreementAndMean() && testEndToEnd()};
+                      && testAgreementAndMean() && testEndToEnd() && testStore()};
 
     if (passed) { std::printf("Odometer gaps test succeeded!\n"); }
 
