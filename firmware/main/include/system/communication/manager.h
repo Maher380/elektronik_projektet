@@ -80,6 +80,8 @@ struct TelemetrySnapshot
     const char* measuredSpeedSource{nullptr};
     /** Ford: times the Odometer has given up a recovered magnet phase. */
     std::uint32_t odometerPhaseLosses{0U};
+    /** Ford: motor can temperature in degrees Celsius; NaN leaves it out. */
+    float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     /** Raw counts used for these distances; -1 means unavailable. */
     std::array<std::int32_t, runtime::IrSensorCount> adcRaw{-1, -1, -1};
 };

@@ -70,6 +70,7 @@ struct WireTelemetrySnapshot
     float odometerDistanceM{std::numeric_limits<float>::quiet_NaN()};
     const char* measuredSpeedSource{nullptr};
     std::uint32_t odometerPhaseLosses{0U};
+    float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     runtime::ControlState controlState{runtime::ControlState::Disarmed};
     runtime::MotionState motionState{runtime::MotionState::Stopped};
     runtime::StateReason reason{runtime::StateReason::Boot};
@@ -611,6 +612,8 @@ bool writeTelemetry(char* destination,
                                         "odometer_phase_losses",
                                         static_cast<double>(snapshot.odometerPhaseLosses))
                 != nullptr))
+        && (!std::isfinite(snapshot.motorTemperatureC)
+            || (cJSON_AddNumberToObject(root, "motor_temp_c", snapshot.motorTemperatureC) != nullptr))
         && (cJSON_AddStringToObject(root,
                                     "control_state",
                                     toString(snapshot.controlState))
@@ -921,6 +924,7 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.odometerDistanceM = snapshot.odometerDistanceM;
     wireSnapshot.measuredSpeedSource = snapshot.measuredSpeedSource;
     wireSnapshot.odometerPhaseLosses = snapshot.odometerPhaseLosses;
+    wireSnapshot.motorTemperatureC = snapshot.motorTemperatureC;
     wireSnapshot.controlState = control.controlState();
     wireSnapshot.motionState = control.motionState();
     wireSnapshot.reason = control.stateReason();

@@ -19,6 +19,7 @@
 #include "driver/pwm/stub.h"
 #include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
+#include "driver/temperature_sensor/stub.h"
 #include "driver/timer/stub.h"
 #include "driver/voltage_meter/stub.h"
 #include "driver/wifi/stub.h"
@@ -185,6 +186,18 @@ public:
         (void)r1Ohm;
         (void)r2Ohm;
         return std::make_unique<driver::voltage_meter::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated temperature sensor stub instance.
+     *
+     * @param[in] adc Reference to the ADC driver connected to the TMP36 output (unused).
+     * @return A unique pointer to the created simulated temperature sensor interface instance.
+     */
+    std::unique_ptr<temperature_sensor::Interface> temperatureSensor(adc::Interface& adc) noexcept override
+    {
+        (void)adc;
+        return std::make_unique<driver::temperature_sensor::Stub>();
     }
 
     /**

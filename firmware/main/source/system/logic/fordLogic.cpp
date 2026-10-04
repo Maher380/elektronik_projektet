@@ -18,6 +18,7 @@
 #include "driver/odometer/store.h"
 #include "driver/pwm/interface.h"
 #include "driver/servo/interface.h"
+#include "driver/temperature_sensor/interface.h"
 #include "driver/voltage_meter/interface.h"
 #include "system/communication/manager.h"
 #include "system/runtime/control.h"
@@ -35,6 +36,7 @@ constexpr std::uint8_t SpeedPin{8U};     // D5 -> A89301 SPD, 20 kHz PWM
 constexpr std::uint8_t SteeringPin{9U};  // D6 -> steering servo
 constexpr std::uint8_t BatteryAdcPin{4U}; // A3 <- drive battery divider joint
 constexpr std::uint8_t OdometerPin{18U};  // D9 <- A3144 wheel sensor, active low
+constexpr std::uint8_t MotorTempAdcPin{1U}; // A0 <- TMP36 on the motor can
 constexpr std::uint32_t SteeringPwmFrequencyHz{50U};
 
 // Odometer geometry. Six magnets on the wheel, deliberately uneven: four gaps of about
@@ -94,6 +96,8 @@ constexpr float BatteryR1Ohm{101240.0F};
 constexpr float BatteryR2Ohm{32990.0F};
 /** Battery read period; the meter averages its last 16 reads, so about 1.6 s. */
 constexpr std::uint32_t BatteryReadIntervalMs{100U};
+/** Motor temperature read period; the sensor averages its last 16 reads, so about 1.6 s. */
+constexpr std::uint32_t MotorTempReadIntervalMs{100U};
 
 // Publication and command channels shared with the operator console.
 // No config/set subscription: every Ford setting is compiled in.
@@ -213,6 +217,12 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
             ESP_LOGI("FORD", "Odometer: %u magnets, gaps from %s", OdometerMagnets, gapSource);
         }
     }
+    // The motor temperature sensor is optional too; it is reported, not acted on.
+    auto motorTempAdc = factory.adc(MotorTempAdcPin);
+    std::unique_ptr<driver::temperature_sensor::Interface> motorTemp{};
+    if (motorTempAdc) { motorTemp = factory.temperatureSensor(*motorTempAdc); }
+    if (!motorTemp || !motorTempAdc->init() || !motorTemp->isInitialized())
+    { ESP_LOGW("FORD", "Motor temperature sensor failed; motor temperature not reported"); }
 
     app::runtime::Control control{false, true}; // ManualByRemote is Ford's only drive style.
     app::communication::Manager communication{factory, Topics, Network}; // Wi-Fi/MQTT lifecycle.
@@ -233,6 +243,8 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
     bool actuatorFault{false}; // Latched output failure; restart required to drive again.
     bool batteryRead{false};
     std::uint32_t lastBatteryReadMs{0U};
+    bool motorTempRead{false};
+    std::uint32_t lastMotorTempReadMs{0U};
     ESP_LOGI("FORD", "Ready: ManualByRemote, brake on; waiting for MQTT Start");
     while (!stop.load())
     {
@@ -328,6 +340,12 @@ void runManualByRemote(driver::factory::Interface& factory, const std::atomic<bo
             snapshot.batteryVoltage = battery->readVoltage();
             lastBatteryReadMs = now;
             batteryRead = true;
+        }
+        if (motorTemp && (!motorTempRead || (now - lastMotorTempReadMs) >= MotorTempReadIntervalMs))
+        {
+            snapshot.motorTemperatureC = motorTemp->readTemperature();
+            lastMotorTempReadMs = now;
+            motorTempRead = true;
         }
         if (previousState != control.controlState() || previousMotion != control.motionState()
             || previousReason != control.stateReason()) { communication.notifyControlStateChanged(); }

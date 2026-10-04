@@ -265,3 +265,12 @@ test('Ford demo reports a drive battery voltage', async () => {
   assert.ok(sample);
   assert.ok(Number.isFinite(sample.data.battery_v) && sample.data.battery_v >= 5 && sample.data.battery_v <= 9);
 });
+
+test('Ford demo reports a motor temperature', async () => {
+  const demo = new FordDemoTransport(), seen = [];
+  demo.on('message', (topic, data) => seen.push({ topic, data }));
+  demo.start(); await new Promise(resolve => setTimeout(resolve, 300)); demo.close();
+  const sample = seen.find(m => m.topic === 'cnb/ford/telemetry');
+  assert.ok(sample);
+  assert.ok(Number.isFinite(sample.data.motor_temp_c) && sample.data.motor_temp_c >= 20 && sample.data.motor_temp_c <= 60);
+});

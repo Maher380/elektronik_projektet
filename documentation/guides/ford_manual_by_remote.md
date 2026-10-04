@@ -63,6 +63,14 @@ Holding a key repeats at the keyboard's repeat rate. The value stays where it is
 when you let go; press the **0** key, the 0 button, double-click the slider or
 panic stop to stop.
 
+## Motor temperature
+
+The **MOTOR TEMP** tile shows the TMP36 on the motor can (A0), averaged over
+about 1.6 s. It turns amber at 40 °C (WARM · ease off) and red at 45 °C
+(HOT · stop and let it cool). The car does not stop by itself: the operator
+does. "No temperature reading" means the sensor is missing or reads outside
+−40…125 °C, which is usually a loose wire.
+
 ## What the Raspberry Pi measures
 
 When the Pi publishes (see [the Pi telemetry contract](../design_documents/ford_pi_telemetry.md)),

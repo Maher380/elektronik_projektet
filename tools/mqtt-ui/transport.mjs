@@ -255,7 +255,7 @@ export class FordDemoTransport extends EventEmitter {
       driver_style: 'manual_by_remote', steering_deg: steering,
       motor: { speed_command: speed, forward_duty: speed > 0 ? duty : 0, backward_duty: speed < 0 ? duty : 0, state },
       control_state: this.state.control_state, motion_state: this.state.motion_state, reason: this.state.reason,
-      battery_v: this.battery(now, speed),
+      battery_v: this.battery(now, speed), motor_temp_c: this.motorTemp(now, speed),
     });
   }
   // Fake drive battery: drains from 8.4 V to 6.2 V every two minutes, then starts full again,
@@ -263,6 +263,12 @@ export class FordDemoTransport extends EventEmitter {
   battery(now, speed) {
     const t = (now - this.born) / 1000;
     return Math.round((8.4 - 2.2 * (t % 120) / 120 - 0.3 * Math.abs(speed) / 100) * 100) / 100;
+  }
+  // Fake motor can temperature: warms from 25 °C to 50 °C every three minutes, then starts cool again,
+  // and runs warmer while driving, so all temperature colours appear.
+  motorTemp(now, speed) {
+    const t = (now - this.born) / 1000;
+    return Math.round((25 + 25 * (t % 180) / 180 + 5 * Math.abs(speed) / 100) * 10) / 10;
   }
   async publish(topic, data) {
     if (data.command === 'heartbeat' || data.command === 'drive') {

@@ -18,6 +18,7 @@ namespace driver::nvs { class Interface; }
 namespace driver::pwm { struct Config; class Interface; }
 namespace driver::servo { class Interface; }
 namespace driver::serial { class Interface; }
+namespace driver::temperature_sensor { class Interface; }
 namespace driver::timer { class Interface; }
 namespace driver::voltage_meter { class Interface; }
 namespace driver::wifi { class Interface; }
@@ -140,6 +141,14 @@ public:
     virtual std::unique_ptr<voltage_meter::Interface> voltageMeter(adc::Interface& adc,
                                                                    float r1Ohm,
                                                                    float r2Ohm) noexcept = 0;
+
+    /**
+     * @brief Create a TMP36 analog temperature sensor.
+     *
+     * @param[in] adc Reference to the ADC driver connected to the TMP36 output.
+     * @return A unique pointer to the created temperature sensor interface instance.
+     */
+    virtual std::unique_ptr<temperature_sensor::Interface> temperatureSensor(adc::Interface& adc) noexcept = 0;
 
     /**
      * @brief Create a motor driver instance.
