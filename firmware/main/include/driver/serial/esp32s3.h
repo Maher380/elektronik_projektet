@@ -49,12 +49,14 @@ public:
 
 private:
     static constexpr int QueueDepth{10};
-    static constexpr std::uint16_t LineBufSize{64U};
+    // Room for "wifi pass " and a 63-character WPA2 passphrase.
+    static constexpr std::uint16_t LineBufSize{96U};
 
     // Reads any pending USB-JTAG bytes non-blocking, echoing each one back to
     // the sender, and accumulates them into myLineBuf, setting myLineReady
-    // once a full line has arrived. Must run before isDataAvailable() can
-    // report true, since nothing else drives RX.
+    // once a full line has arrived. A line too long for myLineBuf is dropped
+    // whole at its newline, rather than cut short and acted on. Must run
+    // before isDataAvailable() can report true, since nothing else drives RX.
     void readAndEchoLine() const noexcept;
 
     Config myConfig;
@@ -63,5 +65,6 @@ private:
     mutable char myLineBuf[LineBufSize];
     mutable std::uint16_t myLineLen;
     mutable bool myLineReady{false};
+    mutable bool myLineOverflow{false};
 };
 } // namespace driver::serial

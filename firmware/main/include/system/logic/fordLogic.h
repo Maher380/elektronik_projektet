@@ -15,9 +15,11 @@
 #include "driver/motor/interface.h"
 #include "driver/odometer/interface.h"
 #include "driver/pwm/interface.h"
+#include "driver/serial/interface.h"
 #include "driver/servo/interface.h"
 #include "driver/temperature_sensor/interface.h"
 #include "driver/voltage_meter/interface.h"
+#include "driver/wifi/store.h"
 #include "system/communication/manager.h"
 #include "system/logic/gapCalibration.h"
 #include "system/navigation/types.h"
@@ -105,6 +107,19 @@ private:
     /** Hand the odometer a measured gap table if one is stored, the design values if not. */
     void loadOdometerGaps() noexcept;
 
+    /** Join the network stored over serial if there is one, the compiled-in one if not. */
+    void loadWifiNetwork() noexcept;
+
+    /** Handle one serial line if one has arrived. Only network settings, never motion. */
+    void processSerialCommand() noexcept;
+
+    /**
+     * @brief Handle the arguments of a `wifi` command.
+     *
+     * @param[in] args Everything after "wifi", leading spaces removed. Values keep their case.
+     */
+    void handleWifiCommand(const char* args) noexcept;
+
     /**
      * @brief Read what the car can sense, before any style decides on it.
      *
@@ -148,6 +163,31 @@ private:
     std::unique_ptr<driver::odometer::Interface> myOdometer;
     std::unique_ptr<driver::adc::Interface> myMotorTempAdc;
     std::unique_ptr<driver::temperature_sensor::Interface> myMotorTemp;
+
+    /** USB serial console, for setting the Wi-Fi network. Optional: the car drives without it. */
+    std::unique_ptr<driver::serial::Interface> mySerial;
+
+    /**
+     * @brief The network the Manager joins, and the stored credentials it points into.
+     *
+     * Declared before myCommunication on purpose: the Manager keeps these pointers, so they
+     * must be destroyed after it.
+     */
+    char myWifiSsid[driver::wifi::SsidMaxLength + 1U]{};
+    char myWifiPassword[driver::wifi::PasswordMaxLength + 1U]{};
+    app::communication::NetworkSettings myNetwork{};
+    /** True if myNetwork came from NVS rather than the firmware. */
+    bool myWifiFromStore{false};
+
+    /** Network typed over serial, waiting for `wifi save`. */
+    struct PendingWifi
+    {
+        char ssid[driver::wifi::SsidMaxLength + 1U]{};
+        char password[driver::wifi::PasswordMaxLength + 1U]{};
+        bool hasSsid{false};
+        bool hasPassword{false};
+    };
+    PendingWifi myPendingWifi{};
 
     /**
      * @brief Wi-Fi and MQTT lifecycle, constructed only once the brake is on.

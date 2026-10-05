@@ -14,6 +14,7 @@
 #include "test/servo.h"
 #include "test/temperature_sensor.h"
 #include "test/voltage_meter.h"
+#include "test/wifi_store.h"
 
 #include "driver/adc/stub.h"
 #include "driver/factory/stub.h"
@@ -39,6 +40,7 @@ int main()
 
     driver::nvs::Stub testNvs;
     if (!test::runNvsTest(testNvs)) { return -1; }
+    if (!test::runWifiStoreTest()) { return -1; }
 
     driver::adc::Stub testAdc;
     driver::distance_sensor::GP2Y0A21YK testSensor{testAdc};

@@ -29,8 +29,9 @@ last drive style, and known Wi-Fi networks and MQTT servers.
 | Namespace | Owner | Status |
 |---|---|---|
 | `test` | Host tests | In use |
+| `odo` | `driver::odometer::Store`: one wheel's magnet gap table | In use |
 | `car` | Car settings (which car, last drive style) | Planned |
-| `wifi` | Known Wi-Fi networks | Planned |
+| `wifi` | `driver::wifi::Store`: one Wi-Fi network, set with the Ford's `wifi` serial command | In use |
 | `mqtt` | Known MQTT servers per Wi-Fi network | Planned |
 | `phy`, `nvs.net80211` | ESP-IDF itself | Reserved, never use |
 

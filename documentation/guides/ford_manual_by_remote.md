@@ -28,8 +28,27 @@ This guide only lists what is different for the Ford.
 
 In `idf.py menuconfig`, choose **Target car → Ford**. The MQTT client ID and
 username become `cnb-ford`; a Ford build with another client ID does not compile.
-Set Wi-Fi, broker URI and the `cnb-ford` password as for Vagrant, then build and
-flash.
+Then build and flash. Unlike Vagrant, the Ford ignores the Wi-Fi and broker
+settings in menuconfig: it joins `cnb-net` and the broker at `192.168.137.1`,
+both compiled into `fordLogic.cpp`.
+
+### Join another Wi-Fi network over serial
+
+To use another network without rebuilding, open `idf.py monitor` and type:
+
+```text
+wifi ssid <network name>
+wifi pass <password>
+wifi save
+```
+
+Then press reset. The network is stored in NVS and survives reflashing. Leave out
+the password (`wifi pass` alone) for an open network. `wifi` shows the network in
+use, and `wifi clear` goes back to `cnb-net`. The broker address does not change,
+so the new network must still reach a broker at `192.168.137.1`.
+
+The serial commands only change network settings, never the motor, and they work
+whether the car is armed or not. The network only changes at the next restart.
 
 ## 3. Start the page
 

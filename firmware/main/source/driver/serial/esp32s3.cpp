@@ -182,7 +182,7 @@ void Esp32s3::readAndEchoLine() const noexcept
     if (myLineReady) { return; }
 
     const std::uint16_t limit{static_cast<std::uint16_t>(LineBufSize - 1U)};
-    while (myLineLen < limit)
+    while (true)
     {
         std::uint8_t ch{};
         if (usb_serial_jtag_read_bytes(&ch, 1U, 0) <= 0) { break; }
@@ -193,11 +193,21 @@ void Esp32s3::readAndEchoLine() const noexcept
             // otherwise the command's response can overwrite this line.
             constexpr std::uint8_t crlf[2]{'\r', '\n'};
             usb_serial_jtag_write_bytes(crlf, 2U, pdMS_TO_TICKS(10U));
+            if (myLineOverflow)
+            {
+                // A truncated command could act on the wrong value, e.g. store half a password.
+                constexpr char dropped[]{"Line too long, ignored\r\n"};
+                usb_serial_jtag_write_bytes(dropped, sizeof(dropped) - 1U, pdMS_TO_TICKS(10U));
+                myLineOverflow = false;
+                myLineLen = 0U;
+                continue;
+            }
             myLineReady = true;
             break;
         }
         usb_serial_jtag_write_bytes(&ch, 1U, pdMS_TO_TICKS(10U)); // echo so the sender's terminal shows what was typed.
-        myLineBuf[myLineLen++] = static_cast<char>(ch);
+        if (myLineLen < limit) { myLineBuf[myLineLen++] = static_cast<char>(ch); }
+        else { myLineOverflow = true; }
     }
 }
 

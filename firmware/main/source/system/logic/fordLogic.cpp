@@ -11,8 +11,12 @@
 
 #include <algorithm>
 #include <atomic>
+#include <cctype>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 #include <limits>
 #include <memory>
 
@@ -20,6 +24,7 @@
 #include "driver/nvs/interface.h"
 #include "driver/odometer/gaps.h"
 #include "driver/odometer/store.h"
+#include "driver/wifi/store.h"
 #include "system/ford.h"
 
 #include "freertos/FreeRTOS.h"
@@ -67,10 +72,58 @@ constexpr app::communication::Topics Topics{
     {"cnb/ford/config/set", "cnb/ford/command"}};
 
 // Car network: the operator laptop's hotspot, so the broker is always at 192.168.137.1.
-// Compiled in, passwords included, until it moves to NVS (see nvs_usage.md).
+// Compiled in, passwords included. The Wi-Fi network can be replaced over serial with the
+// `wifi` command, which stores it in NVS; the broker stays compiled in.
 constexpr app::communication::NetworkSettings Network{
     "cnb-net", "cnbrules",
     "mqtt://192.168.137.1:1883", "cnb-ford", "cnb-ford", "cnb"};
+
+/** USB serial console speed. The USB-JTAG link ignores it, but the factory asks for one. */
+constexpr std::uint32_t SerialBaudRate{115200U};
+
+constexpr const char* SerialHelpText{
+    "Serial commands:\n"
+    "  wifi              show the network in use and any unsaved changes\n"
+    "  wifi ssid <name>  set the network name (spaces allowed)\n"
+    "  wifi pass <pass>  set the password; leave it out for an open network\n"
+    "  wifi save         store the new network; it is used after a restart\n"
+    "  wifi clear        forget the stored network, back to the built-in one\n"
+    "  help              this text\n"};
+
+/**
+ * @brief Match a command word at the start of a line, ignoring case.
+ *
+ * @param[in] line Line to test.
+ * @param[in] word Lower-case command word.
+ * @return The text after the word with leading spaces skipped, or nullptr if the line does
+ *         not start with the whole word.
+ */
+const char* afterWord(const char* line, const char* word) noexcept
+{
+    while (*word != '\0')
+    {
+        if (std::tolower(static_cast<unsigned char>(*line)) != *word) { return nullptr; }
+        ++line;
+        ++word;
+    }
+    if ((*line != '\0') && (*line != ' ')) { return nullptr; }
+    while (*line == ' ') { ++line; }
+    return line;
+}
+
+/**
+ * @brief Copy a value typed over serial, refusing one that does not fit.
+ *
+ * @return True if copied, false if too long.
+ */
+template <std::size_t Size>
+bool copyValue(char (&dst)[Size], const char* src) noexcept
+{
+    const std::size_t length{std::strlen(src)};
+    if (length >= Size) { return false; }
+    std::memcpy(dst, src, length + 1U);
+    return true;
+}
 
 /**
  * @brief Turn a speed command into motor duty, skipping the duty band where the motor does not start.
@@ -162,9 +215,18 @@ bool FordLogic::initializeDrivers() noexcept
     if (!myMotorTemp || !myMotorTempAdc->init() || !myMotorTemp->isInitialized())
     { ESP_LOGW("FORD", "Motor temperature sensor failed; motor temperature not reported"); }
 
+    // The serial console is optional too; without it the car joins whatever network it has.
+    mySerial = myFactory.serial(SerialBaudRate);
+    if (!mySerial || !mySerial->connect())
+    {
+        mySerial = nullptr;
+        ESP_LOGW("FORD", "Serial console failed; the Wi-Fi network cannot be changed over serial");
+    }
+    loadWifiNetwork();
+
     // Only now that the brake is on: the Manager's constructor allocates the Wi-Fi and
     // MQTT drivers, and the wheels must not be able to spin while those start.
-    myCommunication = std::make_unique<app::communication::Manager>(myFactory, Topics, Network);
+    myCommunication = std::make_unique<app::communication::Manager>(myFactory, Topics, myNetwork);
     return myCommunication != nullptr;
 }
 
@@ -196,6 +258,139 @@ void FordLogic::loadOdometerGaps() noexcept
     {
         ESP_LOGI("FORD", "Odometer: %u magnets, gaps from %s", ford::OdometerMagnets, gapSource);
     }
+}
+
+void FordLogic::loadWifiNetwork() noexcept
+{
+    myNetwork = Network;
+    myWifiFromStore = false;
+    {
+        // Scoped so the namespace is released again for `wifi save` and `wifi clear`.
+        const driver::wifi::Store store{myFactory.nvs()};
+        if (store.load(myWifiSsid, myWifiPassword))
+        {
+            myNetwork.wifiSsid = myWifiSsid;
+            myNetwork.wifiPassword = myWifiPassword;
+            myWifiFromStore = true;
+        }
+    }
+    ESP_LOGI("FORD", "Wi-Fi: joining \"%s\" (%s)", myNetwork.wifiSsid,
+             myWifiFromStore ? "set over serial" : "built in");
+}
+
+void FordLogic::processSerialCommand() noexcept
+{
+    if (!mySerial || !mySerial->isDataAvailable()) { return; }
+
+    char line[128]{};
+    if (mySerial->read(line, sizeof(line)) == 0U) { return; }
+
+    // Trailing spaces would otherwise end up in an SSID or password, invisibly.
+    std::size_t length{std::strlen(line)};
+    while ((length > 0U) && (line[length - 1U] == ' ')) { line[--length] = '\0'; }
+
+    const char* start{line};
+    while (*start == ' ') { ++start; }
+
+    if (const char* args{afterWord(start, "wifi")}) { handleWifiCommand(args); }
+    else if (afterWord(start, "help") != nullptr) { mySerial->write(SerialHelpText); }
+    else if (*start != '\0') { mySerial->write("Unknown command. Type help.\n"); }
+}
+
+void FordLogic::handleWifiCommand(const char* args) noexcept
+{
+    char out[160]{};
+
+    if (*args == '\0')
+    {
+        std::snprintf(out, sizeof(out), "Network in use: \"%s\" (%s), %s\n", myNetwork.wifiSsid,
+                      myWifiFromStore ? "set over serial" : "built in",
+                      ((myNetwork.wifiPassword != nullptr) && (*myNetwork.wifiPassword != '\0'))
+                          ? "password set" : "open network");
+        mySerial->write(out);
+        if (myPendingWifi.hasSsid || myPendingWifi.hasPassword)
+        {
+            std::snprintf(out, sizeof(out), "Unsaved: name \"%s\", password %s. Type wifi save.\n",
+                          myPendingWifi.hasSsid ? myPendingWifi.ssid : "(not set)",
+                          !myPendingWifi.hasPassword ? "(not set)"
+                              : ((*myPendingWifi.password == '\0') ? "none (open)" : "set"));
+            mySerial->write(out);
+        }
+        return;
+    }
+
+    if (const char* value{afterWord(args, "ssid")})
+    {
+        if ((*value == '\0') || !copyValue(myPendingWifi.ssid, value))
+        {
+            mySerial->write("The network name must be 1 to 32 characters.\n");
+            return;
+        }
+        myPendingWifi.hasSsid = true;
+        std::snprintf(out, sizeof(out), "Name set to \"%s\". Now wifi pass <password>, then wifi save.\n",
+                      myPendingWifi.ssid);
+        mySerial->write(out);
+        return;
+    }
+
+    if (const char* value{afterWord(args, "pass")})
+    {
+        const std::size_t length{std::strlen(value)};
+        if (((length > 0U) && (length < 8U)) || !copyValue(myPendingWifi.password, value))
+        {
+            mySerial->write("The password must be 8 to 63 characters, or left out for an open network.\n");
+            return;
+        }
+        myPendingWifi.hasPassword = true;
+        mySerial->write((length == 0U) ? "Open network, no password. Now wifi save.\n"
+                                       : "Password set. Now wifi save.\n");
+        return;
+    }
+
+    if (afterWord(args, "save") != nullptr)
+    {
+        if (!myPendingWifi.hasSsid || !myPendingWifi.hasPassword)
+        {
+            mySerial->write("Set both first: wifi ssid <name> and wifi pass <password>.\n");
+            return;
+        }
+        bool saved{false};
+        {
+            driver::wifi::Store store{myFactory.nvs()};
+            saved = store.save(myPendingWifi.ssid, myPendingWifi.password);
+        }
+        if (!saved)
+        {
+            mySerial->write("Saving failed. Nothing was changed.\n");
+            ESP_LOGE("FORD", "Wi-Fi store write failed");
+            return;
+        }
+        std::snprintf(out, sizeof(out), "Saved \"%s\". Press reset to join it.\n", myPendingWifi.ssid);
+        mySerial->write(out);
+        ESP_LOGI("FORD", "Wi-Fi: \"%s\" stored; used after the next restart", myPendingWifi.ssid);
+        myPendingWifi = PendingWifi{};
+        return;
+    }
+
+    if (afterWord(args, "clear") != nullptr)
+    {
+        bool cleared{false};
+        {
+            driver::wifi::Store store{myFactory.nvs()};
+            cleared = store.clear();
+        }
+        myPendingWifi = PendingWifi{};
+        if (cleared)
+        {
+            std::snprintf(out, sizeof(out), "Stored network forgotten. After a restart: \"%s\".\n",
+                          Network.wifiSsid);
+            mySerial->write(out);
+        }
+        else { mySerial->write("Clearing failed.\n"); }
+        return;
+    }
+
+    mySerial->write("Unknown wifi command. Type help.\n");
 }
 
 void FordLogic::readSensors(const std::uint32_t nowMs) noexcept
@@ -504,11 +699,13 @@ void FordLogic::run(const std::atomic<bool>& stop) noexcept
     if (!initializeDrivers()) { return; }
 
     ESP_LOGI("FORD", "Ready: ManualByRemote, brake on; waiting for MQTT Start");
+    if (mySerial) { mySerial->write(SerialHelpText); }
     while (!stop.load())
     {
         // Monotonic milliseconds; unsigned subtraction handles tick wraparound.
         const auto now = static_cast<std::uint32_t>(xTaskGetTickCount() * portTICK_PERIOD_MS);
         myCommunication->process(now, myControl);
+        processSerialCommand();
 
         // Confirming a measured table is an operator action, not part of driving, so it is
         // handled before the pipeline rather than inside a style's decide step.
