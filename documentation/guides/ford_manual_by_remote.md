@@ -148,9 +148,18 @@ Run it with the car on the stand, wheels in the air, before driving on the floor
 
 ## 8. Measure the magnet gaps (GapCalibration)
 
-The odometer's speed is only right if the firmware knows how far apart the
-magnets are. Ford's six are deliberately uneven, so this is measured rather than
-assumed. Until it has been, the car uses the design values.
+> **Skip this on Ford's current wheel.** Its two magnets are evenly spaced, so the
+> odometer is exact without a gap table and this run always fails, with "A gap
+> changed with speed" or "Too evenly spaced". See
+> [ford_odometer.md](../design_documents/ford_odometer.md). The steps below are for a
+> wheel with unevenly spaced magnets.
+
+The odometer's per-gap speed is only right if the firmware knows how far apart
+unevenly spaced magnets are, so this is measured rather than assumed. Until it has
+been, the car uses the design values.
+
+Every run also logs each revolution on the serial monitor, on lines tagged `CAL`.
+When a run fails, those lines show what the sensor actually saw.
 
 This used to need the I2C wiring, the `A89301_CONFIG_MODE` build and the `cal`
 command. It does not any more: it runs on the PWM wiring the car already drives

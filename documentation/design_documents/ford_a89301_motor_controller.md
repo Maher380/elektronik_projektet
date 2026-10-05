@@ -39,7 +39,7 @@ with gains `PID_P` and `PID_I`. These parameters must fit the motor.
 | DIR | D4 / GPIO7 | High = forward in the test apps |
 | BRAKE | D2 / GPIO5 | High = brake. **Fit a 10–12 kΩ pull-up to 2V8**, see Safety |
 | FLT | not connected | Open drain, pulled up to IOREF |
-| – | D9 / GPIO18 | A3144 wheel odometer, 6 magnets on the right rear wheel |
+| – | D9 / GPIO18 | A3144 wheel odometer, 2 magnets on the right rear wheel |
 | – | A0 / GPIO1 | TMP36 on the motor can (ADC1) |
 
 ### PWM wiring, used by the Ford car app and `MOTOR_TEST_MODE`
