@@ -30,6 +30,7 @@ void GapCalibration::start(const std::uint32_t nowMs, const std::uint8_t magnets
     myStored = false;
     myMagnets = magnets;
     myDutyIndex = 0U;
+    myLastSample = {};
 
     for (auto& table : myMeasured) { table = {}; }
 
@@ -116,8 +117,13 @@ float GapCalibration::update(const std::uint32_t nowMs,
             for (std::uint8_t gap{0U}; gap < myMagnets; ++gap)
             {
                 mySums[gap] += static_cast<double>(gaps[gap]);
+                myLastSample.gaps[gap] = gaps[gap];
             }
             ++mySamples;
+            ++myLastSample.serial;
+            myLastSample.dutyIndex = myDutyIndex;
+            myLastSample.pulseStep = pulses - myLastPulses;
+            myLastSample.intervalMs = nowMs - myLastSampleMs;
         }
         // Reset whether or not the gaps could be read: a revolution did pass, so the wheel
         // is turning and the stall timer has been answered.

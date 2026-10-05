@@ -139,6 +139,9 @@ private:
     /** GapCalibration: drive the measurement's own script and report what it found. */
     void decideGapCalibrationAction(std::uint32_t nowMs) noexcept;
 
+    /** Log each new revolution, each finished duty and the result, for analysis offline. */
+    void logCalibration() noexcept;
+
     /** Store a measured gap table when the operator confirms it. */
     void storeMeasuredGaps() noexcept;
 
@@ -239,6 +242,10 @@ private:
         bool wasArmed{false};
         /** Whether the last store attempt failed, so the page can say so. */
         bool storeFailed{false};
+        /** Serial of the last revolution logged, so each is logged once. */
+        std::uint32_t loggedSerial{0U};
+        /** Duties whose averaged table has been logged. */
+        std::uint8_t loggedDuties{0U};
     };
     GapCalibrationState myCalibration{};
 

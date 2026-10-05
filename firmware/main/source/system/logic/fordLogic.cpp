@@ -51,6 +51,20 @@ driver::odometer::GapTable fordDesignGaps() noexcept
     return table;
 }
 
+/** Write values as "a,b,c" with four decimals, for the CAL log lines. Truncates if full. */
+void formatValues(const float* values, const std::uint8_t count, char* out, const std::size_t size) noexcept
+{
+    std::size_t used{0U};
+    out[0] = '\0';
+    for (std::uint8_t index{0U}; (index < count) && (used < size); ++index)
+    {
+        const int written = std::snprintf(out + used, size - used, index == 0U ? "%.4f" : ",%.4f",
+                                          static_cast<double>(values[index]));
+        if (written < 0) { break; }
+        used += static_cast<std::size_t>(written);
+    }
+}
+
 /** Name for the speed source, so the operator can see which reading they are looking at. */
 const char* speedSourceName(driver::odometer::SpeedSource source) noexcept
 {
@@ -463,7 +477,15 @@ void FordLogic::decideGapCalibrationAction(const std::uint32_t nowMs) noexcept
     {
         myCalibration.run.start(nowMs, ford::OdometerMagnets);
         myCalibration.storeFailed = false;
+        myCalibration.loggedSerial = 0U;
+        myCalibration.loggedDuties = 0U;
         ESP_LOGI("FORD", "GapCalibration: starting, %u magnets", ford::OdometerMagnets);
+        char duties[64];
+        formatValues(ford::calibration::Duties, ford::calibration::DutyCount, duties, sizeof(duties));
+        ESP_LOGI("CAL", "start magnets=%u duties=%s settle_ms=%lu revolutions=%u",
+                 ford::OdometerMagnets, duties,
+                 static_cast<unsigned long>(ford::calibration::SettleMs),
+                 ford::calibration::Revolutions);
     }
     myCalibration.wasArmed = armed;
 
@@ -471,6 +493,7 @@ void FordLogic::decideGapCalibrationAction(const std::uint32_t nowMs) noexcept
 
     myPlannedDrive.duty =
         myCalibration.run.update(nowMs, armed, myMotorTemperatureC, myOdometer.get());
+    logCalibration();
 
     // A run that has just ended disarms the car, so Start triggers the next one. Finishing
     // is not a fault, so it does not go through the fail-safe disarm.
@@ -490,6 +513,55 @@ void FordLogic::decideGapCalibrationAction(const std::uint32_t nowMs) noexcept
                      static_cast<unsigned>(myCalibration.run.failure()));
         }
     }
+}
+
+void FordLogic::logCalibration() noexcept
+{
+    // Tag CAL, one line per event, so a serial capture can be filtered with grep and the
+    // run analysed offline: every revolution, each duty's average, then the verdict.
+    namespace odo = driver::odometer;
+    const auto& run = myCalibration.run;
+    char values[96];
+
+    const auto& sample = run.lastSample();
+    if (sample.serial != myCalibration.loggedSerial)
+    {
+        myCalibration.loggedSerial = sample.serial;
+        formatValues(sample.gaps, ford::OdometerMagnets, values, sizeof(values));
+        ESP_LOGI("CAL", "rev n=%lu duty=%u pulses=%lu ms=%lu gaps=%s",
+                 static_cast<unsigned long>(sample.serial), sample.dutyIndex,
+                 static_cast<unsigned long>(sample.pulseStep),
+                 static_cast<unsigned long>(sample.intervalMs), values);
+    }
+
+    while ((myCalibration.loggedDuties < ford::calibration::DutyCount)
+           && (run.measured(myCalibration.loggedDuties).count > 0U))
+    {
+        const auto& table = run.measured(myCalibration.loggedDuties);
+        float margin{0.0F};
+        (void)odo::bestRotation(table.fraction, table, margin);
+        formatValues(table.fraction, table.count, values, sizeof(values));
+        ESP_LOGI("CAL", "duty %u avg=%s margin=%.4f",
+                 myCalibration.loggedDuties, values, static_cast<double>(margin));
+        ++myCalibration.loggedDuties;
+    }
+
+    if (run.isRunning()) { return; }
+
+    const auto& result = run.result();
+    if (result.table.count > 0U)
+    {
+        formatValues(result.table.fraction, result.table.count, values, sizeof(values));
+    }
+    else
+    {
+        std::snprintf(values, sizeof(values), "none");
+    }
+    const char* failure = toString(run.failure());
+    ESP_LOGI("CAL", "result phase=%s failure=%s mean=%s spread=%.4f worst_gap=%u margin=%.4f (need >= %.2f)",
+             toString(run.phase()), (failure != nullptr) ? failure : "none", values,
+             static_cast<double>(result.spread), result.worstGap,
+             static_cast<double>(result.margin), static_cast<double>(odo::MinPhaseMargin));
 }
 
 const char* FordLogic::toString(const GapCalibration::Phase phase) noexcept

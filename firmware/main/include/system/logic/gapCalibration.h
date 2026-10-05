@@ -144,6 +144,30 @@ public:
     /** Revolutions averaged at the current duty so far. */
     std::uint8_t samples() const noexcept { return mySamples; }
 
+    /** One sampled revolution, kept so the caller can log the raw data behind a result. */
+    struct Sample
+    {
+        /** Counts samples since start(); a new value means a new revolution was sampled. */
+        std::uint32_t serial{0U};
+        /** Which duty of the recipe it was sampled at. */
+        std::uint8_t dutyIndex{0U};
+        /** Pulses counted since the previous sample; a whole revolution is the magnet count. */
+        std::uint32_t pulseStep{0U};
+        /** Milliseconds since the previous sample. */
+        std::uint32_t intervalMs{0U};
+        /** The revolution's gap fractions, by slot. */
+        float gaps[driver::odometer::MaxPulsesPerRevolution]{};
+    };
+
+    /** The latest sampled revolution. Its serial is 0 until the first one. */
+    const Sample& lastSample() const noexcept { return myLastSample; }
+
+    /** The averaged table of one duty; empty (count 0) until that duty is finished. */
+    const driver::odometer::GapTable& measured(const std::uint8_t duty) const noexcept
+    {
+        return myMeasured[(duty < app::ford::calibration::DutyCount) ? duty : 0U];
+    }
+
     /** Whether the operator has had the measured table stored. */
     bool isStored() const noexcept { return myStored; }
 
@@ -185,6 +209,9 @@ private:
 
     /** When the last revolution was sampled, for the stall timer. */
     std::uint32_t myLastSampleMs{0U};
+
+    /** The latest sampled revolution, for logging. */
+    Sample myLastSample{};
 
     /** One measured table per duty of the recipe, compared against each other at the end. */
     driver::odometer::GapTable myMeasured[app::ford::calibration::DutyCount]{};
