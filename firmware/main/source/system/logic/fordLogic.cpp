@@ -496,11 +496,13 @@ void FordLogic::decideGapCalibrationAction(const std::uint32_t nowMs) noexcept
     logCalibration();
 
     // A run that has just ended disarms the car, so Start triggers the next one. Finishing
-    // is not a fault, so it does not go through the fail-safe disarm.
+    // is not a fault, so it does not go through the fail-safe disarm. A run ended by a
+    // disarm (a stop, a lost connection, a stale heartbeat) is already disarmed with the
+    // real reason, and disarming again would overwrite it with "finished".
     if (!myCalibration.run.isRunning())
     {
         myPlannedDrive.duty = 0.0F;
-        myControl.finishDriveStyle();
+        if (armed) { myControl.finishDriveStyle(); }
         myCalibration.wasArmed = false;
         if (myCalibration.run.hasTable())
         {
