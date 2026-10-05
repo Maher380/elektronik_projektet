@@ -19,7 +19,8 @@ TEST_FILES := \
 	$(TEST_SRC_DIR)/test/pin_manager.cpp \
 	$(TEST_SRC_DIR)/test/servo.cpp \
 	$(TEST_SRC_DIR)/test/temperature_sensor.cpp \
-	$(TEST_SRC_DIR)/test/voltage_meter.cpp \n	$(TEST_SRC_DIR)/test/wifi_store.cpp
+	$(TEST_SRC_DIR)/test/voltage_meter.cpp \
+	$(TEST_SRC_DIR)/test/wifi_store.cpp
 
 SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/system/pin_manager/esp32s3.cpp \
