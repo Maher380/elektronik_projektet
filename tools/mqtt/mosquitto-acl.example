@@ -14,6 +14,7 @@ topic read cnb/vagrant/config/state
 topic read cnb/vagrant/command/state
 topic read cnb/vagrant/status
 topic write cnb/ford/command
+topic write cnb/ford/config/set
 topic read cnb/ford/telemetry
 topic read cnb/ford/config/state
 topic read cnb/ford/command/state
@@ -23,6 +24,7 @@ topic read cnb/ford/pi/status
 
 user cnb-ford
 topic read cnb/ford/command
+topic read cnb/ford/config/set
 topic write cnb/ford/telemetry
 topic write cnb/ford/config/state
 topic write cnb/ford/command/state
