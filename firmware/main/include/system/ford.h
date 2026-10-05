@@ -62,8 +62,13 @@ constexpr std::uint8_t Sda{11U};
 constexpr std::uint8_t Scl{12U};
 } // namespace pin
 
-/** Magnets fitted to the measured wheel. */
-constexpr std::uint8_t OdometerMagnets{6U};
+/**
+ * @brief Magnets the Hall sensor sees on the measured wheel.
+ *
+ * A calibration log showed that of five glued on, only two passed close enough to trigger
+ * the A3144, so the wheel now carries two, set opposite each other.
+ */
+constexpr std::uint8_t OdometerMagnets{2U};
 
 /**
  * @brief Rear wheel diameter in metres, 34 mm from ford-build.md.
@@ -79,14 +84,13 @@ constexpr double WheelCircumferenceM{3.14159265 * WheelDiameterM};
 /**
  * @brief Ford's magnet gaps as the wheel was built, as fractions of a revolution.
  *
- * Two larger magnets sit at the midpoints of the two gaps either side of one original,
- * so four gaps are an eighth of a turn and two are a quarter. Treating them as equal
- * sixths instead would make a per-gap speed wrong by a third; these design values get
- * that down to roughly a tenth with no calibration at all, which is why they are worth
- * compiling in. Used until a calibration session measures the real ones. See ADR 0008.
+ * Two magnets set opposite each other; a calibration log measured them at 0.49 and 0.51,
+ * so equal halves are right to about 1.4 %. Being even, the magnets cannot be told apart:
+ * the odometer never phase-locks and measures speed over whole revolutions, and the gap
+ * calibration always fails on this wheel (it disagrees or reports a thin margin). That is
+ * expected; this wheel needs no calibration. See ADR 0008.
  */
-constexpr float DesignGapFractions[OdometerMagnets]{
-    0.125F, 0.125F, 0.25F, 0.25F, 0.125F, 0.125F};
+constexpr float DesignGapFractions[OdometerMagnets]{0.5F, 0.5F};
 
 /** True if DIR low drives the car forward with this motor's phase wiring. */
 constexpr bool InvertMotorDirection{false};

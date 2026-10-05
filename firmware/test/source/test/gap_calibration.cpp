@@ -24,7 +24,11 @@ namespace cal = app::ford::calibration;
 using app::logic::GapCalibration;
 using driver::odometer::Stub;
 
-constexpr std::uint8_t Magnets{ford::OdometerMagnets};
+// A simulated wheel of its own rather than Ford's: the state machine is the same for any
+// wheel, and Ford's current magnets are evenly spaced, which can never be calibrated. This
+// is Ford's earlier six-magnet layout, uneven enough to phase.
+constexpr std::uint8_t Magnets{6U};
+constexpr float Wheel[Magnets]{0.125F, 0.125F, 0.25F, 0.25F, 0.125F, 0.125F};
 constexpr float NoSensor{std::numeric_limits<float>::quiet_NaN()};
 
 bool fail(const char* what) noexcept
@@ -105,7 +109,7 @@ bool aCleanRunMeasuresTheWheel() noexcept
         if (asked != cal::Duties[duty]) { return fail("the wrong duty was asked for while settling"); }
 
         if (!settle(calibration, odometer, nowMs)) { return fail("the run never left settling"); }
-        if (!sampleOneDuty(calibration, odometer, ford::DesignGapFractions, nowMs))
+        if (!sampleOneDuty(calibration, odometer, Wheel, nowMs))
         {
             return fail("sampling a duty failed");
         }
@@ -126,7 +130,7 @@ bool aCleanRunMeasuresTheWheel() noexcept
     if (result.table.count != Magnets) { return fail("the table should cover every magnet"); }
     for (std::uint8_t gap{0U}; gap < Magnets; ++gap)
     {
-        if (std::fabs(result.table.fraction[gap] - ford::DesignGapFractions[gap]) > 0.0005F)
+        if (std::fabs(result.table.fraction[gap] - Wheel[gap]) > 0.0005F)
         {
             return fail("the measured table should match the wheel it measured");
         }
@@ -156,7 +160,7 @@ bool aStalledWheelIsRefused() noexcept
     // A few good revolutions, then the wheel stops while the motor is still driven.
     for (std::uint8_t turn{0U}; turn < 3U; ++turn)
     {
-        revolution(odometer, ford::DesignGapFractions);
+        revolution(odometer, Wheel);
         nowMs += 10U;
         calibration.update(nowMs, true, NoSensor, &odometer);
     }
@@ -223,7 +227,7 @@ bool disarmingMidRunLeavesNothing() noexcept
     // Two whole duties' worth of good revolutions would still not be a calibration.
     for (std::uint8_t turn{0U}; turn < cal::Revolutions; ++turn)
     {
-        revolution(odometer, ford::DesignGapFractions);
+        revolution(odometer, Wheel);
         nowMs += 10U;
         calibration.update(nowMs, true, NoSensor, &odometer);
     }
@@ -261,7 +265,7 @@ bool gapsThatMoveWithSpeedAreRefused() noexcept
     // The third speed sees two gaps shifted well past the tolerance, in opposite
     // directions so the table still sums to one and stays plausible on its own.
     float drifted[driver::odometer::MaxPulsesPerRevolution]{};
-    for (std::uint8_t gap{0U}; gap < Magnets; ++gap) { drifted[gap] = ford::DesignGapFractions[gap]; }
+    for (std::uint8_t gap{0U}; gap < Magnets; ++gap) { drifted[gap] = Wheel[gap]; }
     drifted[0] += cal::Tolerance * 4.0F;
     drifted[1] -= cal::Tolerance * 4.0F;
 
@@ -272,7 +276,7 @@ bool gapsThatMoveWithSpeedAreRefused() noexcept
     for (std::uint8_t duty{0U}; duty < cal::DutyCount; ++duty)
     {
         if (!settle(calibration, odometer, nowMs)) { return fail("the run never left settling"); }
-        const float* gaps = (duty + 1U == cal::DutyCount) ? drifted : ford::DesignGapFractions;
+        const float* gaps = (duty + 1U == cal::DutyCount) ? drifted : Wheel;
         if (!sampleOneDuty(calibration, odometer, gaps, nowMs)) { return fail("sampling failed"); }
     }
 
@@ -304,7 +308,7 @@ bool startingARunClearsThePendingTable() noexcept
     for (std::uint8_t duty{0U}; duty < cal::DutyCount; ++duty)
     {
         if (!settle(calibration, odometer, nowMs)) { return fail("the run never left settling"); }
-        if (!sampleOneDuty(calibration, odometer, ford::DesignGapFractions, nowMs))
+        if (!sampleOneDuty(calibration, odometer, Wheel, nowMs))
         {
             return fail("sampling failed");
         }
@@ -357,7 +361,7 @@ bool withoutAnOdometerThereIsNothingToMeasure() noexcept
 bool theDesignGapsDescribeAWholeWheel() noexcept
 {
     float sum{0.0F};
-    for (std::uint8_t gap{0U}; gap < Magnets; ++gap)
+    for (std::uint8_t gap{0U}; gap < ford::OdometerMagnets; ++gap)
     {
         if (ford::DesignGapFractions[gap] <= 0.0F) { return fail("a design gap should be positive"); }
         sum += ford::DesignGapFractions[gap];

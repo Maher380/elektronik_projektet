@@ -716,7 +716,7 @@ void runA89301ConfigTest() noexcept
     bool monitor{false};
     TickType_t lastMonitor{xTaskGetTickCount()};
     // Measure the magnet gaps at several wheel speeds, and store them only if they agree.
-    // ADR 0008: Ford turns 12 motor commutations per wheel revolution against 6 magnets, so
+    // ADR 0008: Ford turns 12 motor commutations per wheel revolution against its magnets, so
     // the motor's roughness falls at the same wheel angles on every revolution and averaging
     // more revolutions cannot remove it. A single-speed measurement cannot tell the wheel's
     // shape from the motor's behaviour; three speeds can, because geometry does not change
