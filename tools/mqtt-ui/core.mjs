@@ -305,6 +305,9 @@ export class ConsoleControl extends EventEmitter {
     const owner = this.owner;
     if (!owner?.armed || owner.client !== client) return false;
     owner.lastSeen = this.now();
+    // Any other style drives its own script and the car refuses drive commands, so a
+    // refused one renews nothing. Send none, and tick()'s heartbeat keeps the lease.
+    if (this.config?.drive_style !== 'manual_by_remote') return false;
     // Drop rather than queue: the next slider sample follows within 100 ms.
     if (this.driveBusy) return false;
     this.driveBusy = true;

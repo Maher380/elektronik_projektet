@@ -344,6 +344,30 @@ test('a measured gap table is stored only once the operator confirms it', async 
   assert.match(measured.control.snapshot().notice, /stored/i);
 });
 
+test('during gap calibration the console sends heartbeats, not refused drive commands', async () => {
+  // The car refuses drive commands outside ManualByRemote and a refused one renews no
+  // lease, so streaming them would starve the heartbeat and time out the run at 3 s.
+  for (const style of ['gap_calibration', 'manual_by_remote']) {
+    const f = fordStyleSetup(style);
+    const streamed = [];
+    f.transport.stream = async (topic, data) => { streamed.push(data); };
+    const ack = f.transport.callback;
+    f.transport.callback = async (topic, data) => {
+      await ack(topic, data);
+      if (data.command === 'start') f.receive('command/state', { ...command, last_request_id: data.request_id, result: 'accepted', control_state: 'armed', session_id: data.session_id });
+    };
+    await f.control.start('owner');
+    const sent = await f.control.drive('owner', 0, 0);
+    f.advance(1000); await f.control.tick();
+    const heartbeat = f.transport.sent.at(-1).data.command === 'heartbeat';
+    if (style === 'gap_calibration') {
+      assert.equal(sent, false); assert.equal(streamed.length, 0); assert.equal(heartbeat, true);
+    } else {
+      assert.equal(sent, true); assert.equal(streamed[0].command, 'drive');
+    }
+  }
+});
+
 test('the gap calibration style is not offered on the Vagrant console', async () => {
   const f = setup();
   await assert.rejects(f.control.selectDriveStyle('tab', 'gap_calibration'), /for the Ford only/);
