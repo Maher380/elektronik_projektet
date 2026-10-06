@@ -40,9 +40,9 @@ namespace app::logic
  *
  * The currency is a signed motor duty, not a Speed command. ADR 0009 originally chose a
  * speed command and the implementation disproved it: `dutyFor()` deliberately maps the
- * whole operator range onto ford::StartDuty to ford::TopSpeedDuty, 0.08 to 0.15, because
+ * whole operator range onto ford::StartDuty to ford::TopSpeedDuty, 0.08 to 0.30, because
  * that is the band the car is driveable in. The gap calibration's recipe measures at
- * 0.10, 0.15 and 0.20, so its top duty cannot be expressed as a speed command at all.
+ * 0.10, 0.15 and 0.20, and the operator range only reached 0.15 when this was written.
  * A speed command is therefore what ManualByRemote is *given*, and the duty it maps to is
  * what every style *asks for*. ADR 0006's Speed target will sit above this, not replace it.
  */

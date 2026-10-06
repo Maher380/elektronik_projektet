@@ -123,8 +123,9 @@ it has been measured (`FULL_LOCK_DEG` in `tools/mqtt-ui/public/ford.mjs`).
 | No drive command for 500 ms | No drive, still armed; drives on when commands return |
 | Start | Speed stays 0 until you move the speed slider |
 
-Speed command ±1 … ±100 maps to duty 0.08 … 0.15 (about 0.8 … 1.5 m/s
-unloaded). These values are compiled into `fordLogic.cpp` until they move to NVS.
+Speed command ±1 … ±100 maps to duty 0.08 … 0.30. On the floor with the Pi and
+its power bank aboard, the car needs about duty 0.12 (command 19) to start, and
+duty 0.20 (command 55) gave 1.57 m/s. Nothing above 0.20 has been measured yet. These values are compiled into `fordLogic.cpp` until they move to NVS.
 
 ## Bench checklist
 

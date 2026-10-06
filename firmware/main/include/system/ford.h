@@ -108,8 +108,15 @@ constexpr float BatteryR2Ohm{32990.0F};
 // Settings: how Ford is driven. Compiled in until they move to NVS (nvs_usage.md).
 // ---------------------------------------------------------------------------------
 
-/** Duty for speed command +-100: about 1.5 m/s unloaded. Raise only after the load test. */
-constexpr float TopSpeedDuty{0.15F};
+/**
+ * @brief Duty for speed command +-100.
+ *
+ * 0.30 since 2026-10-06, up from 0.15, now that the car carries the Pi and its power bank
+ * (about 100 g more). Above the highest duty driven on the floor so far: 0.20 gave
+ * 1.57 m/s and 0.15 gave 1.22 m/s loaded on the first floor run (see speed_calibration
+ * below), so the top of the slider is unmeasured.
+ */
+constexpr float TopSpeedDuty{0.30F};
 /** Duty for speed command +-1: the lowest demand that starts the motor from standstill. */
 constexpr float StartDuty{0.08F};
 /** How long the car brakes before it drives in the other direction. */
