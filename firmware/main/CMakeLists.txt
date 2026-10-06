@@ -26,6 +26,7 @@ idf_component_register(
         "source/driver/pwm/esp32s3.cpp"
         "source/driver/servo/ford.cpp"
         "source/driver/servo/mg90s.cpp"
+        "source/driver/servo/mg90s.cpp"
         "source/driver/servo/vagrant.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"

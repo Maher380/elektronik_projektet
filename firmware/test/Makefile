@@ -29,6 +29,7 @@ SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/system/logic/gapCalibration.cpp \
 	$(FIRMWARE_SRC_DIR)/system/logic/speedCalibration.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/servo/ford.cpp \
+	$(FIRMWARE_SRC_DIR)/driver/servo/mg90s.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/distance_sensor/gp2y0a21yk.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301_programmer.cpp \
