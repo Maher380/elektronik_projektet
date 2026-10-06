@@ -6,6 +6,7 @@
 
 extern "C" {
 #include "esp_err.h"
+#include "esp_log.h"
 #include "esp_netif.h"
 #include "esp_wifi.h"
 #include "esp_wifi_default.h"
@@ -13,6 +14,8 @@ extern "C" {
 
 namespace
 {
+constexpr const char* LogTag{"WIFI"};
+
 void copyWifiString(std::uint8_t* dst, std::size_t dstSize, const char* src) noexcept
 {
     if ((dst == nullptr) || (dstSize == 0U)) { return; }
@@ -201,21 +204,32 @@ void Esp32s3::eventHandler(void* arg,
                            int32_t eventId,
                            void* eventData)
 {
-    (void)eventData;
-
     auto* self = static_cast<Esp32s3*>(arg);
     if (self == nullptr) { return; }
 
     if ((eventBase == WIFI_EVENT) && (eventId == WIFI_EVENT_STA_START))
     {
+        ESP_LOGI(LogTag, "Joining \"%s\"", self->mySsid);
         esp_wifi_connect();
+    }
+    else if ((eventBase == WIFI_EVENT) && (eventId == WIFI_EVENT_STA_CONNECTED))
+    {
+        ESP_LOGI(LogTag, "Associated with \"%s\", waiting for an IP address", self->mySsid);
     }
     else if ((eventBase == WIFI_EVENT) && (eventId == WIFI_EVENT_STA_DISCONNECTED))
     {
+        // 201 = network not found (off, out of range or 5 GHz only),
+        // 15/204/205 = wrong password, 2/4/202 = auth rejected (e.g. WPA3-only hotspot).
+        const auto* info = static_cast<const wifi_event_sta_disconnected_t*>(eventData);
+        ESP_LOGW(LogTag, "Could not join \"%s\": reason %d, rssi %d", self->mySsid,
+                 (info != nullptr) ? static_cast<int>(info->reason) : -1,
+                 (info != nullptr) ? static_cast<int>(info->rssi) : 0);
         self->myConnected.store(false);
     }
     else if ((eventBase == IP_EVENT) && (eventId == IP_EVENT_STA_GOT_IP))
     {
+        const auto* info = static_cast<const ip_event_got_ip_t*>(eventData);
+        if (info != nullptr) { ESP_LOGI(LogTag, "Got IP " IPSTR, IP2STR(&info->ip_info.ip)); }
         self->myConnected.store(true);
     }
 }

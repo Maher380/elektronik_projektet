@@ -4,7 +4,7 @@ param(
     [Parameter(Mandatory)][ValidateRange(200, 5000)][uint32]$TelemetryIntervalMs,
     [ValidateRange(1.0, 200.0)][double]$ReactionDistanceCm,
     [ValidateRange(20, 1000)][uint32]$LoopIntervalMs,
-    [ValidateSet('DecideAction', 'SlowLeft', 'SlowRight', 'GradualSweep')][string]$DriverStyle
+    [ValidateSet('DecideAction', 'SlowLeft', 'SlowRight', 'GradualSweep')][string]$DriveStyle
 )
 
 . (Join-Path $PSScriptRoot 'common.ps1')
@@ -19,9 +19,9 @@ $payload = [ordered]@{
     telemetry_interval_ms = $TelemetryIntervalMs
 }
 # Omission preserves the car's active RAM style and supports legacy commands.
-if ($PSBoundParameters.ContainsKey('DriverStyle')) {
+if ($PSBoundParameters.ContainsKey('DriveStyle')) {
     $styles = @{ DecideAction = 'decide_action'; SlowLeft = 'slow_left'; SlowRight = 'slow_right'; GradualSweep = 'gradual_sweep' }
-    $payload.driver_style = $styles[$DriverStyle]
+    $payload.drive_style = $styles[$DriveStyle]
 }
 if ($PSBoundParameters.ContainsKey('ReactionDistanceCm')) {
     if ($ReactionDistanceCm -le $StopDistanceCm) { throw 'ReactionDistanceCm must be greater than StopDistanceCm.' }

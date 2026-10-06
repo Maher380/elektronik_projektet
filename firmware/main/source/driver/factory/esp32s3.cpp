@@ -10,7 +10,7 @@
 #include "driver/odometer/a3144.h"
 #include "driver/mqtt/esp32s3.h"
 #include "driver/pwm/esp32s3.h"
-#include "driver/servo/ford.h"
+#include "driver/servo/mg90s.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/esp32s3.h"
 #include "driver/temperature_sensor/tmp36.h"
@@ -81,7 +81,8 @@ std::unique_ptr<servo::Interface> Esp32s3::vagrantServo(driver::pwm::Interface& 
 }
 
 std::unique_ptr<servo::Interface> Esp32s3::fordServo(driver::pwm::Interface& pwm) noexcept {
-    return std::make_unique<driver::servo::Ford>(pwm);
+    // Ford now steers with an MG90S; the old Carisma servo (servo::Ford) burned out.
+    return std::make_unique<driver::servo::Mg90s>(pwm);
 }
 
 std::unique_ptr<motor::Interface> Esp32s3::fordMotor(driver::pwm::Interface& speedPwm,

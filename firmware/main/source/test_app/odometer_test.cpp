@@ -30,9 +30,11 @@ void runOdometerTest() noexcept
         "Commands: r = reset count, i = init, d = deinit, h = help\n"
         "Pin level is 1 with no magnet and 0 while a magnet is at the sensor.\n"};
 
+    // Ford's rear wheel, which is what is wired to D9. Vagrant has 2 magnets on a 31 mm
+    // wheel; change these two numbers when testing that car instead.
     const driver::odometer::Config config{
-        .pulsesPerRevolution = 2U,   // 2 magnets per wheel
-        .wheelDiameterM = 0.031F,    // 31 mm wheel
+        .pulsesPerRevolution = 2U,   // 2 magnets per wheel, set opposite each other
+        .wheelDiameterM = 0.034F,    // 34 mm wheel
     };
 
     driver::serial::Esp32s3 serial(driver::serial::Config{

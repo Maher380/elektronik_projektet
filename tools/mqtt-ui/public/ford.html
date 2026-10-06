@@ -19,11 +19,69 @@
     <div><span class="eyebrow">MOTOR</span><strong id="motor-state">—</strong><small id="duty">Duty —</small></div>
     <div><span class="eyebrow">BATTERY</span><strong id="battery" class="mono">—</strong><div class="battery-bar" aria-hidden="true"><i id="battery-fill"></i><b id="battery-low-mark"></b><b id="battery-critical-mark"></b></div><small id="battery-detail">Waiting for telemetry</small></div>
     <div><span class="eyebrow">MOTOR TEMP</span><strong id="motor-temp" class="mono">—</strong><small id="motor-temp-detail">Waiting for telemetry</small></div>
-    <div><span class="eyebrow">DRIVE STYLE</span><strong id="current-style">—</strong><small>Operator drives live</small></div>
+    <div><span class="eyebrow">SERVO TEMP</span><strong id="servo-temp" class="mono">—</strong><small id="servo-temp-detail">Waiting for telemetry</small></div>
+    <div><span class="eyebrow">DRIVE STYLE</span><strong id="current-style">—</strong><small id="style-detail">Operator drives live</small></div>
     <div><span class="eyebrow">UPTIME</span><strong id="uptime" class="mono">—</strong><small>Since car boot</small></div>
     <div><span class="eyebrow">ACTIVE SESSION</span><strong id="session" class="mono session">—</strong><small id="ownership">Monitoring only</small></div>
     <div><span class="eyebrow">HEARTBEAT</span><strong id="heartbeat">INACTIVE</strong><small id="heartbeat-detail">Sent only while controlling</small></div>
     <div><span class="eyebrow">PI · SLAM</span><strong id="pi-state">WAITING</strong><small id="pi-temp">CPU —</small></div>
+  </section>
+  <section class="style-panel" aria-label="Drive style">
+    <article class="drive-card">
+      <div class="card-top"><h3>DRIVE STYLE</h3><span id="style-lock" class="legend">Stop the car to change it</span></div>
+      <div class="style-row">
+        <select id="style-select" aria-label="Drive style">
+          <option value="manual_by_remote">ManualByRemote · you drive</option>
+          <option value="gap_calibration">GapCalibration · measure the magnet gaps</option>
+          <option value="speed_calibration">SpeedCalibration · speed per duty, on the floor</option>
+        </select>
+        <button type="button" id="style-apply" class="button" disabled>Select</button>
+      </div>
+      <p id="style-note">ManualByRemote is what the car boots on. GapCalibration spins the measured
+        wheel under power for about a minute: <strong>lift the car</strong> before starting it.
+        SpeedCalibration drives the car <strong>on the floor</strong>, 5 m forward and 5 m back,
+        twelve times: give it a straight, clear run of 5 m plus about 0.5 m at each end.</p>
+    </article>
+  </section>
+  <section class="calibration-panel" id="calibration-panel" aria-label="Magnet gap calibration" hidden>
+    <article class="drive-card">
+      <div class="card-top"><h3>MAGNET GAP CALIBRATION</h3><span id="cal-phase" class="chip neutral">IDLE</span></div>
+      <div class="readout">
+        <span>SPEED <strong id="cal-duty" class="mono">—</strong></span>
+        <span>REVOLUTIONS <strong id="cal-turns" class="mono">—</strong></span>
+        <span>SPREAD <strong id="cal-spread" class="mono">—</strong></span>
+        <span>PHASE MARGIN <strong id="cal-margin" class="mono">—</strong></span>
+      </div>
+      <small id="cal-detail" class="measured-detail">Press Start with the car lifted to measure.</small>
+      <div id="cal-gaps" class="cal-gaps mono" aria-label="Measured gap fractions"></div>
+      <div class="style-row">
+        <button type="button" id="cal-store" class="button" disabled>Confirm &amp; store</button>
+        <small id="cal-store-note">Nothing is written until you confirm it.</small>
+      </div>
+    </article>
+  </section>
+  <section class="calibration-panel" id="speed-panel" aria-label="Speed calibration" hidden>
+    <article class="drive-card">
+      <div class="card-top"><h3>SPEED CALIBRATION · ON THE FLOOR</h3><span id="spd-phase" class="chip neutral">IDLE</span></div>
+      <div class="readout">
+        <span>LEG <strong id="spd-leg" class="mono">—</strong></span>
+        <span>TARGET <strong id="spd-target" class="mono">—</strong></span>
+        <span>DIRECTION <strong id="spd-dir" class="mono">—</strong></span>
+        <span class="odometer">STOP FACTOR k <strong id="spd-k" class="mono">—</strong></span>
+      </div>
+      <small id="spd-detail" class="measured-detail">Put the car on the start mark, then press Start.</small>
+      <div class="speed-table-wrap">
+        <table class="speed-table mono" aria-label="Speed calibration legs">
+          <thead><tr><th>LEG</th><th>TARGET m/s</th><th>DIR</th><th>RESULT</th><th>SPEED m/s</th><th>DUTY</th><th>RISE s</th><th>OVERSHOOT</th><th>STOP m</th><th>OFF MARK</th></tr></thead>
+          <tbody id="spd-rows"><tr><td colspan="10">No legs yet</td></tr></tbody>
+        </table>
+      </div>
+      <small class="measured-detail">SPEED and DUTY are the steady values once the target was held. RISE is from the
+        wheel turning (or the speed step) to within 5 % of the target. STOP is the braking distance, OFF MARK how far
+        from the 5 m mark the car stopped. On the lowest-speed legs, DUTY is the lowest that kept the car rolling.</small>
+      <small id="spd-file" class="measured-detail"></small>
+      <label class="spd-csv">CSV · select and copy<textarea id="spd-csv" class="mono" rows="6" readonly></textarea></label>
+    </article>
   </section>
   <section class="drive-panel" aria-label="Drive controls">
     <article class="drive-card steering-card">
@@ -35,7 +93,8 @@
     </article>
     <article class="drive-card speed-card">
       <div class="card-top"><h3>SPEED COMMAND</h3><button type="button" class="zero" id="speed-zero">0</button></div>
-      <div class="readout"><span>SLIDER <strong id="speed-slider-value" class="mono">0</strong></span><span class="echo">CAR <strong id="speed-car-value" class="mono">—</strong></span><span class="measured">MEASURED · SLAM <strong id="measured-speed" class="mono">—</strong></span></div>
+      <div class="readout"><span>SLIDER <strong id="speed-slider-value" class="mono">0</strong></span><span class="echo">CAR <strong id="speed-car-value" class="mono">—</strong></span><span class="measured">MEASURED · SLAM <strong id="measured-speed" class="mono">—</strong></span><span class="odometer">ODOMETER <strong id="odometer-speed" class="mono">—</strong></span></div>
+      <small id="odometer-detail" class="measured-detail">Odometer: waiting for telemetry</small>
       <div class="speed-row">
         <input id="speed" type="range" min="-100" max="100" step="1" value="0" aria-label="Speed command, −100 full reverse to +100 full forward">
         <div class="scale vertical"><span>+100 FWD</span><span>0</span><span>REV −100</span></div>
@@ -55,7 +114,8 @@
         <button type="button" class="pad-down" data-pad="down" aria-label="Reverse">▼</button>
         <button type="button" class="pad-right" data-pad="right" aria-label="Right">▶</button>
       </div>
-      <p>↑ ↓ change the speed by 1, ← → change the steering by 10°. Hold a key to repeat. The 0 key sets the speed to 0.</p>
+      <label class="step-field">STEERING STEP<input id="steer-step" type="number" min="1" max="45" step="1" value="10" class="mono" aria-label="Steering change per arrow key press, 1 to 45"></label>
+      <p>↑ ↓ change the speed by 1, ← → change the steering by the step (1–45). Hold a key to repeat. The 0 key sets the speed to 0.</p>
     </article>
   </section>
   <section class="ford-charts" aria-label="Command beside measured, last 30 seconds">
@@ -64,7 +124,7 @@
       <div class="plot"><canvas id="steering-chart" role="img"></canvas><div class="empty">No steering data yet</div></div>
     </article>
     <article class="chart-card">
-      <div class="card-top"><h3>SPEED</h3><span class="legend"><i class="command"></i>COMMAND (−100…+100) <i class="measured"></i>MEASURED (SLAM, m/s)</span></div>
+      <div class="card-top"><h3>SPEED</h3><span class="legend"><i class="command"></i>COMMAND (−100…+100) <i class="measured"></i>MEASURED (SLAM, m/s) <i class="odometer"></i>ODOMETER (m/s, no direction)</span></div>
       <div class="plot"><canvas id="speed-chart" role="img"></canvas><div class="empty">No speed data yet</div></div>
     </article>
   </section>

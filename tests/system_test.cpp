@@ -148,7 +148,7 @@ struct Factory final : driver::factory::Interface {
     void config(const char* style, float stopDistance = 30, float duty = .5F, unsigned rev = 1) {
         char payload[250];
         std::snprintf(payload, sizeof(payload),
-            "{\"schema_version\":1,\"revision\":%u,\"stop_distance_cm\":%.2f,\"drive_duty\":%.2f,\"telemetry_interval_ms\":200,\"driver_style\":\"%s\"}",
+            "{\"schema_version\":1,\"revision\":%u,\"stop_distance_cm\":%.2f,\"drive_duty\":%.2f,\"telemetry_interval_ms\":200,\"drive_style\":\"%s\"}",
             rev, stopDistance, duty, style);
         check(broker->simulateIncoming("cnb/vagrant/config/set", payload,
             driver::mqtt::Qos::AtLeastOnce, true), "queue config");
@@ -186,12 +186,12 @@ int main() {
     {
         FaultPwm forward, backward;
         driver::motor::MP6550 motor{forward, backward};
-        check(motor.init() && motor.setSpeed(.5F), "motor initializes and drives");
+        check(motor.init() && motor.setDuty(.5F), "motor initializes and drives");
         const auto writes = forward.writes + backward.writes;
-        check(motor.setSpeed(.5F) && forward.writes + backward.writes == writes, "unchanged motor duty is not rewritten");
-        check(!motor.setSpeed(nan) && !motor.setSpeed(1.1F), "invalid duty rejected");
+        check(motor.setDuty(.5F) && forward.writes + backward.writes == writes, "unchanged motor duty is not rewritten");
+        check(!motor.setDuty(nan) && !motor.setDuty(1.1F), "invalid duty rejected");
         forward.fail = true;
-        check(!motor.setSpeed(.7F), "drive propagates PWM failure");
+        check(!motor.setDuty(.7F), "drive propagates PWM failure");
         check(!motor.stop(driver::motor::StopMode::Brake), "brake propagates PWM failure");
         check(backward.duty() == 1, "second PWM is attempted even when first fails");
         forward.fail = false;
@@ -249,8 +249,8 @@ int main() {
     check(runtime.applyConfiguration(request) == ConfigurationResult::LoopIntervalOutOfRange, "reject slow loop");
     check(runtime.configurationRevision() == 1, "rejected config is atomic");
     request.values.loopIntervalMs = 250;
-    request.values.driverStyle = app::navigation::DriverStyle::SlowLeft;
-    check(runtime.applyConfiguration(request) == ConfigurationResult::InvalidDriverStyle, "system mode cannot silently ignore legacy styles");
+    request.values.driveStyle = app::navigation::DriveStyle::SlowLeft;
+    check(runtime.applyConfiguration(request) == ConfigurationResult::InvalidDriveStyle, "system mode cannot silently ignore legacy styles");
 
     Factory f; std::atomic<bool> stop{false}; host::ticks = 0;
     unsigned ticks = 0, telemetryCount = 0;

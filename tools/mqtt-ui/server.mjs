@@ -1,13 +1,20 @@
 import http from 'node:http';
 import os from 'node:os';
 import { readFile } from 'node:fs/promises';
+import { appendFileSync, mkdirSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { randomBytes } from 'node:crypto';
-import { CARS, ConsoleControl, SUBSCRIPTIONS, topicFor } from './core.mjs';
+import { CARS, ConsoleControl, SpeedLog, SUBSCRIPTIONS, topicFor } from './core.mjs';
 import { MosquittoTransport, DemoTransport, FordDemoTransport, readSettings } from './transport.mjs';
 
 const directory = path.dirname(fileURLToPath(import.meta.url));
+// Ford speed calibration results, one CSV per run. tools/mqtt/logs is ignored by git.
+export const SPEED_LOG_DIRECTORY = path.join(directory, '..', 'mqtt', 'logs');
+export function appendSpeedLog(file, text, logDirectory = SPEED_LOG_DIRECTORY) {
+  mkdirSync(logDirectory, { recursive: true });
+  appendFileSync(path.join(logDirectory, file), text);
+}
 const shared = [['/style.css', ['style.css', 'text/css; charset=utf-8']], ['/lan.mjs', ['lan.mjs', 'text/javascript; charset=utf-8']]];
 const pages = {
   vagrant: new Map([...shared,
@@ -28,8 +35,8 @@ export function lanAddresses() {
     .filter(i => i && i.family === 'IPv4' && !i.internal && privateAddress(i.address)).map(i => i.address);
 }
 
-export function createConsole(transport, port = 8765, car = 'vagrant', { addresses = lanAddresses } = {}) {
-  const control = new ConsoleControl(transport, { car });
+export function createConsole(transport, port = 8765, car = 'vagrant', { addresses = lanAddresses, writeSpeedLog = appendSpeedLog } = {}) {
+  const control = new ConsoleControl(transport, { car, speedLog: car === 'ford' ? new SpeedLog({ write: writeSpeedLog }) : null });
   const assets = pages[car];
   const csrf = randomBytes(24).toString('hex');
   const streams = new Set();
@@ -105,6 +112,10 @@ export function createConsole(transport, port = 8765, car = 'vagrant', { address
         case '/api/stop': await control.stop(); break;
         case '/api/servo': await control.servo(data.client, data.angle); break;
         case '/api/config': await control.configure(data.client, data.config); break;
+        // Ford only: its config/set is narrowed to the drive style, and a measured
+        // gap table is stored only when the operator confirms it.
+        case '/api/drive-style': await control.selectDriveStyle(data.client, data.style); break;
+        case '/api/store-gaps': await control.storeGaps(); break;
         case '/api/release': await control.release(data.client); break;
         default: json(res, 404, { error: 'Not found.' }); return;
       }

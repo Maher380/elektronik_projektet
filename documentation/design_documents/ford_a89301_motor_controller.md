@@ -39,15 +39,50 @@ with gains `PID_P` and `PID_I`. These parameters must fit the motor.
 | DIR | D4 / GPIO7 | High = forward in the test apps |
 | BRAKE | D2 / GPIO5 | High = brake. **Fit a 10–12 kΩ pull-up to 2V8**, see Safety |
 | FLT | not connected | Open drain, pulled up to IOREF |
-| – | D9 / GPIO18 | A3144 wheel odometer, 1 magnet per revolution |
+| – | D9 / GPIO18 | A3144 wheel odometer, 2 magnets on the right rear wheel |
 | – | A0 / GPIO1 | TMP36 on the motor can (ADC1) |
 
-### PWM wiring, used by `MOTOR_TEST_MODE`
+### PWM wiring, used by the Ford car app and `MOTOR_TEST_MODE`
 
 Same as above, but SPD is driven with 20 kHz PWM from **D5 / GPIO8** instead of
 the I2C bus: **move the SPD/SCL wire from A5 to D5**. The A89301 EEPROM is
 configured for PWM speed input (`SPD_MODE` 0, `CLOCK_PWM` 0, `PWMIN_RANGE` 0 =
 PWM above 2.8 kHz).
+
+### Switching between the two wirings
+
+The A89301 has one pin for both jobs: SPD (PWM speed input) and SCL (I2C clock).
+SCL needs a pull-up and SPD needs a pull-down (R2, see Safety), and both cannot
+sit on the same wire: together they hold a floating SPD at about 2.2 V, which is
+full speed. So the wire moves, and each resistor stays at its own Nano pin:
+
+- the 4.7 kΩ pull-up from **A5** to 3V3,
+- R2 (10–12 kΩ) from **D5** to GND.
+
+Only the SPD/SCL wire moves. DIR, BRAKE, FG/SDA (A4), the odometer (D9), the
+TMP36 (A0) and the battery divider (A3) stay where they are in both wirings.
+
+**Car → config app** (for example `cal`, the magnet gap calibration):
+
+1. Battery off.
+2. Move the SPD/SCL wire from **D5** to **A5**.
+3. In `firmware/main/source/main.cpp`, uncomment `#define A89301_CONFIG_MODE`.
+   Build and flash.
+4. Start the ESP32, then switch the battery on.
+
+**Config app → car:**
+
+1. Type `stop`, then switch the battery off. The battery must go off: the I2C
+   speed mode bit (`spd`, `cal`, `sweep`, `run`, `profile`) lives in a working
+   register, and only a power cycle of the A89301 clears it. An ESP32 reset or
+   reflash does not. If it is still set, the chip ignores the PWM on SPD and the
+   car does not respond to speed commands.
+2. Move the SPD/SCL wire from **A5** back to **D5**.
+3. Comment `A89301_CONFIG_MODE` out again. Build and flash.
+4. Switch the battery on.
+
+The gap table from `cal` is stored in NVS (`odo` namespace) and survives
+reflashing; only `idf.py erase-flash` removes it.
 
 The motor test app does not use FG/SDA (A4), FLT, the odometer (D9) or the
 TMP36 (A0). They may stay connected.
@@ -164,8 +199,8 @@ matched the odometer where the odometer was reliable.
     ESP32 does not drive BRAKE (reset, flashing, crash, Nano unpowered). 2V8 is
     the A89301's own 2.8 V output, made for pull-ups (max 10 mA).
   - **R2** makes a floating SPD read as 0 % speed.
-  - **Remove the 4.7 kΩ SCL pull-up** from the I2C wiring when SPD moves to D5:
-    it turns a floating SPD into full speed.
+  - **Keep the 4.7 kΩ SCL pull-up on A5**, never on D5 or the SPD wire: on SPD
+    it turns a floating SPD into full speed. See Switching between the two wirings.
   - **R3** only stops the servo twitching during flashing.
   - Do not connect 2V8 or VM (battery voltage) to the Nano.
   - **Check** with the Nano unplugged and the battery on: BRAKE ≈ 2.8 V,

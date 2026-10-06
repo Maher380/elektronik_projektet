@@ -18,8 +18,12 @@
 #include "driver/gpio/esp32s3.h"
 #include "driver/i2c/esp32s3.h"
 #include "driver/motor/a89301_programmer.h"
+#include "driver/nvs/esp32s3.h"
 #include "driver/odometer/a3144.h"
+#include "driver/odometer/gaps.h"
+#include "driver/odometer/store.h"
 #include "driver/serial/esp32s3.h"
+#include "system/ford.h"
 #include "esp_rom_sys.h"
 #include "esp_timer.h"
 #include "freertos/FreeRTOS.h"
@@ -37,17 +41,17 @@ void runA89301ConfigTest() noexcept
     // Safety: spd runs and sweeps stop above maxMotorTempC or when the chip drives a wheel that does not turn.
     namespace a89301 = driver::motor::a89301;
 
-    constexpr std::uint8_t sdaPin{11U};       // A4 / GPIO11 -> FG/SDA
-    constexpr std::uint8_t sclPin{12U};       // A5 / GPIO12 -> SPD/SCL
-    constexpr std::uint8_t directionPin{7U};  // D4 / GPIO7 -> DIR
-    constexpr std::uint8_t brakePin{5U};      // D2 / GPIO5 -> BRAKE
-    constexpr std::uint8_t odometerPin{18U};  // D9 / GPIO18 <- A3144 wheel sensor
-    constexpr std::uint8_t wheelPulsesPerRev{1U};
-    constexpr std::uint8_t motorTempPin{1U};  // A0 / GPIO1 <- TMP36 taped to the motor can
-    // Temporarily lowered (60 -> 45, 40 -> 32) because the TMP36 sits on two layers of electrical tape,
-    // so it reads low and late. Raise again when the sensor has direct contact with the motor can.
-    constexpr float maxMotorTempC{45.0F};     // Motor is stopped above this can temperature.
-    constexpr float coolMotorTempC{32.0F};    // Sweep waits until the can is below this temperature.
+    // Pins, geometry and limits come from system/ford.h, shared with fordLogic.cpp so the
+    // car app and this app cannot disagree about the wheel they are measuring (ADR 0009).
+    constexpr std::uint8_t sdaPin{app::ford::pin::Sda};
+    constexpr std::uint8_t sclPin{app::ford::pin::Scl};
+    constexpr std::uint8_t directionPin{app::ford::pin::Direction};
+    constexpr std::uint8_t brakePin{app::ford::pin::Brake};
+    constexpr std::uint8_t odometerPin{app::ford::pin::Odometer};
+    constexpr std::uint8_t wheelPulsesPerRev{app::ford::OdometerMagnets};
+    constexpr std::uint8_t motorTempPin{app::ford::pin::MotorTempAdc};
+    constexpr float maxMotorTempC{app::ford::MaxMotorTempC};
+    constexpr float coolMotorTempC{app::ford::CoolMotorTempC};
     constexpr double stallMinSpeedHz{50.0};   // Chip estimate above which the wheel must turn.
     constexpr std::int64_t stallTimeoutUs{1'000'000}; // No wheel pulse for this long = stalled.
     constexpr std::uint32_t safetyPeriodMs{100U};
@@ -65,6 +69,7 @@ void runA89301ConfigTest() noexcept
         "  f / b            direction pin forward / backward\n"
         "  save             show working registers that differ from EEPROM\n"
         "  save yes         program those differences into EEPROM (keep VIN on!)\n"
+        "  cal [yes]        measure the magnet gaps and store them (lift the car)\n"
         "  sweep [speed] [seconds] [list]\n"
         "                   test PID_P/PID_I combinations, defaults 0.3, 5 s, list 1\n"
         "                   (list 2 = refined PID, list 3 = PID with MOTOR_INDUCTANCE 1,\n"
@@ -79,7 +84,7 @@ void runA89301ConfigTest() noexcept
 
     // Measured on ford: chip electrical Hz per wheel revolution per second (1 pole pair, gear ~12).
     constexpr double estHzPerWheelRps{12.0};
-    constexpr double wheelCircumferenceM{3.14159265 * 0.034}; // 34 mm wheel.
+    constexpr double wheelCircumferenceM{app::ford::WheelCircumferenceM};
     constexpr double estLimitHz{1000.0};                      // Stay below the A89301 limit of about 1085 Hz.
     constexpr std::uint32_t profileSampleMs{250U};
     constexpr float profileUpDemands[]{0.12F, 0.15F, 0.20F, 0.25F, 0.30F, 0.35F, 0.40F,
@@ -148,7 +153,10 @@ void runA89301ConfigTest() noexcept
     a89301::Programmer programmer(i2c, [](const std::uint32_t ms) { esp_rom_delay_us(ms * 1000U); });
 
     driver::gpio::Esp32s3 odometerGpio(odometerPin, driver::gpio::Direction::InputPullup);
-    driver::odometer::A3144 odometer(odometerGpio, driver::odometer::Config{.pulsesPerRevolution = wheelPulsesPerRev});
+    driver::odometer::A3144 odometer(odometerGpio, driver::odometer::Config{
+        .pulsesPerRevolution = wheelPulsesPerRev,
+        .wheelDiameterM = 0.034F,
+    });
 
     char buf[200]{'\0'};
     serial.write("\nA89301 config: SDA GPIO11 (A4), SCL GPIO12 (A5), DIR GPIO7 (D4), BRAKE GPIO5 (D2), "
@@ -707,6 +715,183 @@ void runA89301ConfigTest() noexcept
 
     bool monitor{false};
     TickType_t lastMonitor{xTaskGetTickCount()};
+    // Measure the magnet gaps at several wheel speeds, and store them only if they agree.
+    // ADR 0008: Ford turns 12 motor commutations per wheel revolution against its magnets, so
+    // the motor's roughness falls at the same wheel angles on every revolution and averaging
+    // more revolutions cannot remove it. A single-speed measurement cannot tell the wheel's
+    // shape from the motor's behaviour; three speeds can, because geometry does not change
+    // with speed and the effect of torque ripple does.
+    auto runCalibration = [&]() {
+        namespace odo = driver::odometer;
+
+        // The recipe lives in system/ford.h, shared with the car app's GapCalibration drive
+        // style. These four values decide whether two stored tables are comparable, so one
+        // definition is the point: see ADR 0009.
+        namespace cal = app::ford::calibration;
+        constexpr const float* calDuties{cal::Duties};
+        constexpr std::uint8_t calDutyCount{cal::DutyCount};
+        constexpr std::uint32_t calSettleMs{cal::SettleMs};
+        constexpr std::uint8_t calRevolutions{cal::Revolutions};
+        constexpr std::uint32_t calStallMs{cal::StallMs};
+        constexpr float calTolerance{cal::Tolerance};
+
+        driver::nvs::Esp32s3 nvs;
+        if (!nvs.init()) { serial.write("NVS init failed; nothing could be stored\n"); return; }
+
+        odo::Store store{nvs};
+        if (!store.isOpen()) { serial.write("Could not open the odo namespace\n"); return; }
+
+        if (!odometer.isInitialized()) { serial.write("Odometer not initialized\n"); return; }
+
+        const std::uint8_t magnets{odometer.magnets()};
+        odo::GapTable measured[calDutyCount]{};
+        directionGpio.write(true); // Forward: the table describes the gaps in forward order.
+
+        for (std::uint8_t duty{0U}; duty < calDutyCount; ++duty)
+        {
+            const auto demand{
+                static_cast<std::uint16_t>(calDuties[duty] * a89301::SpeedDemandMax + 0.5F)};
+            if (!programmer.setSpeedDemand(demand))
+            {
+                serial.write("I2C write failed\n");
+                stopMotor();
+                return;
+            }
+
+            brakeGpio.write(false);
+            std::snprintf(buf, sizeof(buf), "Duty %.2f: settling %lu ms...\n",
+                          static_cast<double>(calDuties[duty]), calSettleMs);
+            serial.write(buf);
+            if (waitOrAbort(calSettleMs))
+            {
+                serial.write("Aborted\n");
+                stopMotor();
+                return;
+            }
+
+            double sums[odo::MaxPulsesPerRevolution]{};
+            std::uint8_t samples{0U};
+            std::uint32_t lastPulses{odometer.pulseCount()};
+            std::uint32_t sinceSampleMs{0U};
+
+            while (samples < calRevolutions)
+            {
+                vTaskDelay(pdMS_TO_TICKS(pollPeriodMs));
+                sinceSampleMs += pollPeriodMs;
+
+                const float tempC{motorTempC()};
+                if (!std::isnan(tempC) && (tempC > maxMotorTempC))
+                {
+                    serial.write("Motor too hot; stopped, nothing stored\n");
+                    stopMotor();
+                    return;
+                }
+
+                if (serial.isDataAvailable())
+                {
+                    char discard[64]{'\0'};
+                    serial.read(discard, sizeof(discard));
+                    serial.write("Aborted\n");
+                    stopMotor();
+                    return;
+                }
+
+                if (sinceSampleMs > calStallMs)
+                {
+                    serial.write("Wheel is not turning. Is VIN on and the wheel free?\n");
+                    stopMotor();
+                    return;
+                }
+
+                // One sample per whole revolution. The driver's window slides by one magnet
+                // per pulse, so sampling faster would average overlapping windows and only
+                // look like more data than it is.
+                const std::uint32_t pulses{odometer.pulseCount()};
+                if ((pulses - lastPulses) < magnets) { continue; }
+
+                float gaps[odo::MaxPulsesPerRevolution]{};
+                if (odometer.observedGaps(gaps, magnets))
+                {
+                    for (std::uint8_t gap{0U}; gap < magnets; ++gap) { sums[gap] += gaps[gap]; }
+                    ++samples;
+                }
+
+                lastPulses    = pulses;
+                sinceSampleMs = 0U;
+            }
+
+            measured[duty].count = magnets;
+            for (std::uint8_t gap{0U}; gap < magnets; ++gap)
+            {
+                measured[duty].fraction[gap] = static_cast<float>(sums[gap] / samples);
+            }
+
+            std::snprintf(buf, sizeof(buf), "  %u revolutions:", samples);
+            serial.write(buf);
+            for (std::uint8_t gap{0U}; gap < magnets; ++gap)
+            {
+                std::snprintf(buf, sizeof(buf), " %.4f",
+                              static_cast<double>(measured[duty].fraction[gap]));
+                serial.write(buf);
+            }
+            serial.write("\n");
+        }
+
+        stopMotor();
+        serial.write("Stopped, brake on.\n");
+
+        std::uint8_t worstGap{0U};
+        float worstSpread{0.0F};
+        if (!odo::tablesAgree(measured, calDutyCount, calTolerance, worstGap, worstSpread))
+        {
+            std::snprintf(buf, sizeof(buf),
+                          "REFUSED: gap %u moved by %.4f between speeds, limit %.4f.\n"
+                          "A gap that changes with speed is the motor, not the wheel.\n"
+                          "Nothing was stored; any previous table is untouched.\n",
+                          worstGap, static_cast<double>(worstSpread),
+                          static_cast<double>(calTolerance));
+            serial.write(buf);
+            return;
+        }
+
+        odo::GapTable mean{};
+        if (!odo::meanTable(measured, calDutyCount, mean))
+        {
+            serial.write("REFUSED: the averaged table is not plausible. Nothing stored.\n");
+            return;
+        }
+
+        // Can this wheel be phased at all? Matching the table against itself gives the
+        // distance to the next-best rotation, which is exactly what the driver has to clear
+        // at run time. Magnets too close to evenly spaced score 0 and can never be placed, so
+        // the table would be stored and then never used.
+        float margin{0.0F};
+        (void)odo::bestRotation(mean.fraction, mean, margin);
+        if (margin < odo::MinPhaseMargin)
+        {
+            std::snprintf(buf, sizeof(buf),
+                          "REFUSED: phase margin %.4f, needs %.4f.\n"
+                          "These magnets are too evenly spaced to tell one gap from another,\n"
+                          "so the table could never be used. Space them more unevenly.\n",
+                          static_cast<double>(margin),
+                          static_cast<double>(odo::MinPhaseMargin));
+            serial.write(buf);
+            return;
+        }
+
+        if (!store.save(mean, worstSpread)) { serial.write("Store write failed\n"); return; }
+
+        serial.write("STORED:");
+        for (std::uint8_t gap{0U}; gap < magnets; ++gap)
+        {
+            std::snprintf(buf, sizeof(buf), " %.4f", static_cast<double>(mean.fraction[gap]));
+            serial.write(buf);
+        }
+        std::snprintf(buf, sizeof(buf), "\n  spread %.4f, phase margin %.4f\n",
+                      static_cast<double>(worstSpread), static_cast<double>(margin));
+        serial.write(buf);
+    };
+
     std::int64_t startUs{esp_timer_get_time()}; // Time reference for the monitor, reset by spd.
 
     // Safety supervision of manual spd runs: overtemperature and stalled wheel.
@@ -912,6 +1097,16 @@ void runA89301ConfigTest() noexcept
                 }
                 else { serial.write("I2C write failed\n"); }
             }
+        }
+        else if (std::strcmp(cmd, "cal") == 0)
+        {
+            const bool confirmed{(arg1 != nullptr) && (std::strcmp(arg1, "yes") == 0)};
+            if (!confirmed)
+            {
+                serial.write("cal spins the wheel under power at three duties, about a minute.\n"
+                             "LIFT THE CAR so the measured wheel turns freely, then: cal yes\n");
+            }
+            else { runCalibration(); }
         }
         else if (std::strcmp(cmd, "sweep") == 0)
         {

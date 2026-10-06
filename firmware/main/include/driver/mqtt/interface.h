@@ -13,7 +13,7 @@ namespace driver::mqtt
 {
 
 inline constexpr std::size_t TopicSize{96U};
-// Includes full-precision telemetry, raw ADC counts, runtime state and driver style.
+// Includes full-precision telemetry, raw ADC counts, runtime state and drive style.
 inline constexpr std::size_t PayloadSize{1024U};
 
 /** MQTT quality-of-service levels used by this project. */

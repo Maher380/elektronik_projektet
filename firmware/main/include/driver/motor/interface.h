@@ -69,13 +69,24 @@ public:
     virtual bool setDirection(Direction direction) noexcept = 0;
 
     /**
-     * @brief Set normalized motor speed.
+     * @brief Set the motor drive duty.
      *
-     * @param[in] speed Speed in range 0.0f - 1.0f, where 1.0f is full output.
+     * A share of full output, not a speed: nothing holds a duty to any particular speed,
+     * and the same duty gives a different speed on a different floor, battery or load.
+     * This was called setSpeed, which collided with the three quantities the project does
+     * call speeds - a Speed command, a Speed target and a measured speed - while being
+     * none of them.
+     *
+     * A motor driver cannot offer a speed in m/s: it has nothing to measure one with.
+     * Closing a loop around one needs the Odometer, which is a separate driver, so the
+     * speed loop of ADR 0006 belongs in the logic layer above this interface rather than
+     * as a second method here.
+     *
+     * @param[in] duty Duty in range 0.0f - 1.0f, where 1.0f is full output.
      * @param[in] mode Stop behavior to apply when reducing motor drive.
-     * @return True if the speed was accepted, false otherwise.
+     * @return True if the duty was accepted, false otherwise.
      */
-    virtual bool setSpeed(float speed, StopMode mode = StopMode::Coast) noexcept = 0;
+    virtual bool setDuty(float duty, StopMode mode = StopMode::Coast) noexcept = 0;
 
     /**
      * @brief Stop the motor.

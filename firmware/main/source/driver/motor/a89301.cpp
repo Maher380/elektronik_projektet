@@ -10,14 +10,14 @@ namespace driver::motor
 namespace
 {
 /**
- * @brief Check if a normalized speed value is valid.
+ * @brief Check if a duty value is valid.
  *
- * @param[in] speed Speed value to validate.
- * @return True if speed is in range 0.0f - 1.0f.
+ * @param[in] duty Duty value to validate.
+ * @return True if the duty is in range 0.0f - 1.0f.
  */
-bool isSpeedValid(const float speed) noexcept
+bool isDutyValid(const float duty) noexcept
 {
-    return (speed >= 0.0F) && (speed <= 1.0F);
+    return (duty >= 0.0F) && (duty <= 1.0F);
 }
 } // namespace
 
@@ -32,7 +32,7 @@ A89301::A89301(driver::pwm::Interface& speedPwm,
     , myIsInitialized{false}
     , myPwmInitializedByDriver{false}
     , myDirection{Direction::Forward}
-    , mySpeed{0.0F}
+    , myDuty{0.0F}
 {}
 
 bool A89301::init() noexcept
@@ -65,7 +65,7 @@ bool A89301::init() noexcept
 
     myBrakePin.write(false);
     myIsInitialized = true;
-    mySpeed = 0.0F;
+    myDuty = 0.0F;
     return setDirection(Direction::Forward);
 }
 
@@ -86,7 +86,7 @@ bool A89301::deinit() noexcept
     }
 
     myIsInitialized = false;
-    mySpeed = 0.0F;
+    myDuty = 0.0F;
     return stopped && pwmDeinitialized;
 }
 
@@ -109,14 +109,14 @@ bool A89301::setDirection(const Direction direction) noexcept
     return true;
 }
 
-bool A89301::setSpeed(const float speed, const StopMode mode) noexcept
+bool A89301::setDuty(const float duty, const StopMode mode) noexcept
 {
-    if (!myIsInitialized || !isSpeedValid(speed))
+    if (!myIsInitialized || !isDutyValid(duty))
     {
         return false;
     }
 
-    if (speed <= 0.0F)
+    if (duty <= 0.0F)
     {
         return stop(mode);
     }
@@ -124,12 +124,12 @@ bool A89301::setSpeed(const float speed, const StopMode mode) noexcept
     // BRAKE overrides the speed input, so it must be released before driving.
     myBrakePin.write(false);
 
-    if (!mySpeedPwm.setDuty(speed))
+    if (!mySpeedPwm.setDuty(duty))
     {
         return false;
     }
 
-    mySpeed = speed;
+    myDuty = duty;
     return true;
 }
 
@@ -145,7 +145,7 @@ bool A89301::stop(const StopMode mode) noexcept
 
     if (success)
     {
-        mySpeed = 0.0F;
+        myDuty = 0.0F;
     }
 
     return success;

@@ -45,7 +45,15 @@ Power connections do not use driver factory calls:
 | `factory.pwm(8)` | `~D5` | 〰️ PWM output, 20 kHz | A89301 SPD/SCL (speed) | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo (pulse width) | 🔵 Used |
 | `factory.adc(4)` | `A3 / ~D20` | 📈 ADC1_CH3 | Drive battery voltage divider: R1 101.24 kΩ from battery + (after the switch), R2 32.99 kΩ and 154 nF to `GND` | 🔵 Used |
+| `factory.gpioInputPullup(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor, 2 magnets set opposite each other on the right rear wheel. Open-collector and active low, so the internal pull-up is required and no external one is | 🔵 Used |
 | `factory.adc(1)` | `A0 / ~D17` | 📈 ADC1_CH0 | TMP36 on the motor can, sent as `motor_temp_c`; 100 kΩ to `GND` so a missing sensor reads 0 V, not a floating value | 🔵 Used |
+| `factory.adc(2)` | `A1 / ~D18` | 📈 ADC1_CH1 | TMP36 on the steering servo, sent as `servo_temp_c` | 🔵 Used |
+
+The A89301 configuration app (`A89301_CONFIG_MODE`) talks I2C instead: SDA on
+`A4` (GPIO11, A89301 FG/SDA) and SCL on `A5` (GPIO12, with a 4.7 kΩ pull-up to
+3V3). The A89301 SPD/SCL wire moves from `~D5` to `A5` for it, and back again
+for the car. See "Switching between the two wirings" in
+`ford_a89301_motor_controller.md`.
 
 ## Code Value To Board Pin
 
@@ -82,8 +90,8 @@ Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,
 | `13` | `A6 / ~D23` | ⚠️ ADC2_CH2 | ✅ | Analog / digital | 🟢 Available |
 | `14` | `A7 / ~D24` | ⚠️ ADC2_CH3 | ✅ | Analog / digital | 🟢 Available |
 | `17` | `~D8` | ⚠️ ADC2_CH6 | ✅ | Digital / PWM | 🔵 SRF05 Trigger |
-| `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🔵 Odometer (A3144 Hall sensor) |
-| `21` | `~D10` | - | ✅ | Digital / PWM | 🟢 Available |
+| `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🔵 Odometer, right rear (A3144 Hall sensor) |
+| `21` | `~D10` | - | ✅ | Digital / PWM | 🟢 Available, reserved for a second odometer (left rear) |
 | `38` | `~D11` | - | ✅ | SPI COPI | 🟡 Shared function |
 | `43` | `~D1 / TX0` | - | ✅ | UART transmit | 🟡 Shared function |
 | `44` | `~D0 / RX0` | - | ✅ | UART receive | 🟡 Shared function |

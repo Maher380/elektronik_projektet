@@ -42,9 +42,12 @@ private:
     static constexpr float MaxAngleDegrees{90.0F};
     // Measured on the bench with experiment/steering-test. The end stops are at about
     // 900-1000 us (left) and 2000-2100 us (right); these stay just inside them.
-    static constexpr float LeftPulseUs{1000.0F};
-    static constexpr float CenterPulseUs{1500.0F};
-    static constexpr float RightPulseUs{2000.0F};
+    static constexpr float LeftPulseUs{1182.0F};
+    // Trimmed on the floor: with 1530 us here the car drove straight at steering +10, which
+    // gave 1530 + 10/90 * (2000 - 1530) = 1582 us. The end stops are unchanged, so a right
+    // command now spans fewer microseconds than the same left command.
+    static constexpr float CenterPulseUs{1582.0F};
+    static constexpr float RightPulseUs{1982.0F};
 
     pwm::Interface& myPwm;
     float myDirection{0.0F};

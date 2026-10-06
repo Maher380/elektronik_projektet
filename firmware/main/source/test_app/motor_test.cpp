@@ -80,7 +80,7 @@ void runMotorTest() noexcept
 
         if ((end != line) && (*end == '\0'))
         {
-            if (!motor.setSpeed(value))
+            if (!motor.setDuty(value))
             {
                 serial.write("Speed must be in range 0.0 - 1.0\n");
                 continue;

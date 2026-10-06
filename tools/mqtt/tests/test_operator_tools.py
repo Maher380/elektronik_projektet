@@ -58,20 +58,20 @@ try:
  config_command=['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-File',str(scratch/'set-config.ps1'),'-StopDistanceCm','35','-DriveDuty','0','-TelemetryIntervalMs','200']
  last_revision=0
  for name,wire in [('SlowLeft','slow_left'),('SlowRight','slow_right'),('GradualSweep','gradual_sweep'),('DecideAction','decide_action'),(None,None)]:
-  args=config_command+(['-DriverStyle',name] if name else [])
+  args=config_command+(['-DriveStyle',name] if name else [])
   result=subprocess.run(args,text=True,capture_output=True,creationflags=flags,timeout=8)
   assert result.returncode==0,(result.stdout,result.stderr)
   payload=configurations.get(timeout=3)
-  assert payload.get('driver_style')==wire,payload
-  assert ('driver_style' in payload)==(name is not None),payload
+  assert payload.get('drive_style')==wire,payload
+  assert ('drive_style' in payload)==(name is not None),payload
   assert payload['drive_duty']==0 and payload['stop_distance_cm']==35 and payload['telemetry_interval_ms']==200,payload
   assert payload['revision']>last_revision,payload
   last_revision=payload['revision']
   retained=subprocess.run([str(mosq/'mosquitto_sub.exe'),'-h','127.0.0.1','-p',str(port),'-t','cnb/vagrant/config/set','-C','1','-W','2'],text=True,capture_output=True,creationflags=flags,timeout=3)
   assert retained.returncode==0 and json.loads(retained.stdout)==payload,retained.stderr
- invalid=subprocess.run(config_command+['-DriverStyle','unknown'],text=True,capture_output=True,creationflags=flags,timeout=5)
+ invalid=subprocess.run(config_command+['-DriveStyle','unknown'],text=True,capture_output=True,creationflags=flags,timeout=5)
  assert invalid.returncode!=0 and configurations.empty(),invalid.stdout
- print('PASS driver style mapping, retained configuration, optional omission and invalid style',flush=True)
+ print('PASS drive style mapping, retained configuration, optional omission and invalid style',flush=True)
  # Future stored revision must not go backwards when wall clock is behind it.
  (scratch/'.revision').write_text('4000000000')
  result=subprocess.run(['powershell.exe','-NoProfile','-ExecutionPolicy','Bypass','-Command',f". '{scratch/'common.ps1'}'; Get-CnbNextRevision"],text=True,capture_output=True,creationflags=flags,timeout=5)

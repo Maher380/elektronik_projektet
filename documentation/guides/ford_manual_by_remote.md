@@ -1,8 +1,16 @@
 # Ford: drive from the web page (ManualByRemote)
 
-The Ford has one drive style, **ManualByRemote**: you set the steering command
-(−90 left … +90 right) and the speed command (−100 reverse … +100 forward) with
-two sliders in the web page, and the car follows them over MQTT.
+The Ford has three drive styles. This guide covers **ManualByRemote**: you set the
+steering command (−90 left … +90 right) and the speed command (−100 reverse …
++100 forward) with two sliders in the web page, and the car follows them over MQTT.
+
+The other two drive a fixed script instead of following you: **GapCalibration**
+measures the wheel's magnet gaps, and **SpeedCalibration** learns the duty for
+each speed and how far the car needs to stop. Pick a style in the DRIVE STYLE
+panel while the car is stopped, then Start to run it. The car boots on
+ManualByRemote and does not remember a choice, so a power cycle brings it back.
+See [the gap calibration](#8-measure-the-magnet-gaps-gapcalibration) and
+[the speed calibration](#9-calibrate-speed-on-the-floor-speedcalibration).
 
 Broker, `.env` and Wi-Fi are set up as in the [MQTT guide](mqtt_steg_for_steg.md).
 This guide only lists what is different for the Ford.
@@ -22,8 +30,27 @@ This guide only lists what is different for the Ford.
 
 In `idf.py menuconfig`, choose **Target car → Ford**. The MQTT client ID and
 username become `cnb-ford`; a Ford build with another client ID does not compile.
-Set Wi-Fi, broker URI and the `cnb-ford` password as for Vagrant, then build and
-flash.
+Then build and flash. Unlike Vagrant, the Ford ignores the Wi-Fi and broker
+settings in menuconfig: it joins `cnb-net` and the broker at `192.168.137.1`,
+both compiled into `fordLogic.cpp`.
+
+### Join another Wi-Fi network over serial
+
+To use another network without rebuilding, open `idf.py monitor` and type:
+
+```text
+wifi ssid <network name>
+wifi pass <password>
+wifi save
+```
+
+Then press reset. The network is stored in NVS and survives reflashing. Leave out
+the password (`wifi pass` alone) for an open network. `wifi` shows the network in
+use, and `wifi clear` goes back to `cnb-net`. The broker address does not change,
+so the new network must still reach a broker at `192.168.137.1`.
+
+The serial commands only change network settings, never the motor, and they work
+whether the car is armed or not. The network only changes at the next restart.
 
 ## 3. Start the page
 
@@ -120,3 +147,116 @@ Run it with the car on the stand, wheels in the air, before driving on the floor
 
 > @todo No automated tests yet for the ManualByRemote rules (firmware) or the
 > drive stream (console). Add them before relying on this beyond bench tests.
+
+## 8. Measure the magnet gaps (GapCalibration)
+
+> **Skip this on Ford's current wheel.** Its two magnets are evenly spaced, so the
+> odometer is exact without a gap table and this run always fails, with "A gap
+> changed with speed" or "Too evenly spaced". See
+> [ford_odometer.md](../design_documents/ford_odometer.md). The steps below are for a
+> wheel with unevenly spaced magnets.
+
+The odometer's per-gap speed is only right if the firmware knows how far apart
+unevenly spaced magnets are, so this is measured rather than assumed. Until it has
+been, the car uses the design values.
+
+Every run also logs each revolution on the serial monitor, on lines tagged `CAL`.
+When a run fails, those lines show what the sensor actually saw.
+
+This used to need the I2C wiring, the `A89301_CONFIG_MODE` build and the `cal`
+command. It does not any more: it runs on the PWM wiring the car already drives
+on. The `cal` command still exists for when the car is already wired for I2C.
+
+1. **Lift the car** so the right rear wheel turns freely. Arming is the only
+   confirmation, so nothing else stops it driving away.
+2. Stop the car if it is armed, then choose **GapCalibration** in the DRIVE STYLE
+   panel. A style can only be chosen while the car is stopped.
+3. Press **Start**. The wheel spins at three speeds for about a minute. The
+   MAGNET GAP CALIBRATION panel shows which speed it is on and how many
+   revolutions it has averaged.
+4. The car stops itself and disarms when it finishes. That is not a fault.
+5. If it says MEASURED, check the spread, then press **Confirm & store**. Nothing
+   is written to flash until you do.
+6. Restart the car. The stored table is read at start-up.
+
+The panel reports the whole reason when a run produces no table, and each one is
+an instruction rather than an error code:
+
+| It says | What to do |
+| --- | --- |
+| A gap changed with speed | The magnets are too even, or the motor's ripple is in the reading. Space them more unevenly and measure again. |
+| The wheel stopped turning | Battery on? Wheel free? |
+| The motor can got too hot | Let it cool, then measure again. |
+| Too evenly spaced | The gaps cannot be told apart at all. Space them more unevenly. |
+| Stopped before it finished | Nothing is stored. A part-measured wheel is not a calibration. |
+
+A run that is stopped, stalls or disagrees stores nothing, and starting a new run
+clears whatever was waiting to be confirmed. There is no way to store a table the
+car refused: a gap that changes with speed is the motor and not the wheel, and a
+table of motor cogging stored as wheel geometry is worse than no table at all.
+
+> Without a motor temperature sensor taped to the can, the run goes ahead with the
+> overheat guard off and the panel says so. The duties are low and the run is
+> bounded, but its safe duration has never been measured on a bare motor.
+
+## 9. Calibrate speed on the floor (SpeedCalibration)
+
+This learns what Ford needs to drive at a given speed, and how far it needs to
+stop, with the car **on the floor** and the odometer as the reference. The
+results are the starting point for a speed loop that drives in m/s instead of
+duty.
+
+Every leg is 5 m from start to standstill, and the legs alternate forward and
+back, so the car shuttles between the same two marks. A run has twelve legs:
+
+| Legs | What it does |
+| --- | --- |
+| 1–8 | 0.8, 1.0, 1.2 and 1.4 m/s from standstill, each forward then back |
+| 9–10 | A speed step: 0.8 → 1.4 m/s forward, 1.4 → 0.8 m/s back |
+| 11–12 | Lowest speed: start at duty 0.12, then step the duty down once a second until the wheel stalls |
+
+On the speed legs the car holds the target with a feed-forward duty plus a small
+PI loop on the odometer speed. It brakes when the distance left equals its
+predicted stopping distance, k · v², so it stops on the mark. After every leg it
+learns: the duty that held a speed becomes that speed's feed-forward, and k is
+updated from the stopping distance it actually needed. The first legs therefore
+stop further from the mark than the later ones. What it has learned is kept
+until the car restarts, so a second run starts where the first left off.
+
+The lowest-speed legs end where the wheel stalls, not on the mark. They are the
+last two, and the back leg stalls about as far out as the forward one.
+
+1. Mark a start point with 5 m of straight, clear floor ahead and about 0.5 m
+   spare at each end. Put the car on the mark, facing along the run.
+2. Stop the car if it is armed, then choose **SpeedCalibration** in the DRIVE
+   STYLE panel.
+3. Press **Start**. Stay ready on **PANIC STOP**: the steering does not correct,
+   so nothing but you stops the car if it drifts.
+4. The SPEED CALIBRATION panel adds a row per leg as it finishes. The car stops
+   itself and disarms when it is done. That is not a fault.
+5. The console server collects the legs, so the page can be closed and opened
+   again. It also writes each run to
+   `tools/mqtt/logs/speed_calibration-<date and time>.csv`; the panel names the
+   file. The table is also there as CSV to copy.
+
+| Column | Meaning |
+| --- | --- |
+| SPEED, DUTY | Steady speed and the mean duty that held it. On a lowest-speed leg, the lowest duty that kept the car rolling and its speed. |
+| RISE | Time from the wheel turning (or the speed step) to within 5 % of the target. |
+| OVERSHOOT | How far past the target the speed went, in m/s. |
+| STOP | Braking distance. |
+| OFF MARK | How far from the 5 m mark the car stopped. |
+
+| Result | Meaning |
+| --- | --- |
+| reached | The target was held and measured. |
+| held briefly | Reached, but too briefly to measure a steady speed. |
+| not reached | The car had to brake before it reached the target. SPEED is its speed at braking. |
+| stalled below | Lowest-speed leg: the wheel stalled at the next step down. |
+| rolled at every step | Lowest-speed leg: even the lowest step kept it rolling. |
+| no start / stalled | The wheel did not turn, or stopped before anything was measured. |
+
+The recipe and the loop gains are `app::ford::speed_calibration` in
+`system/ford.h`. Its starting values come from the first floor run: no start at
+duty 0.08, a stall at 0.10, 0.82 m/s at 0.12, and nothing steady below about
+0.8 m/s.

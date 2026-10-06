@@ -65,13 +65,13 @@ public:
     bool setDirection(Direction direction) noexcept override;
 
     /**
-     * @brief Set normalized motor speed.
+     * @brief Set the motor drive duty.
      *
-     * @param[in] speed Speed in range 0.0f - 1.0f, where 1.0f is full output.
+     * @param[in] duty Duty in range 0.0f - 1.0f, where 1.0f is full output.
      * @param[in] mode Stop behavior to apply.
-     * @return True if both PWM outputs accepted the finite speed in [0, 1].
+     * @return True if both PWM outputs accepted the finite duty in [0, 1].
      */
-    bool setSpeed(float speed, StopMode mode = StopMode::Coast) noexcept override;
+    bool setDuty(float duty, StopMode mode = StopMode::Coast) noexcept override;
 
     /**
      * @brief Stop the motor.
@@ -89,7 +89,7 @@ private:
     driver::pwm::Interface& myBackwardPwmDriver;
 
     Direction myDirection;
-    float mySpeed;
+    float myDuty;
 
     bool myInitialized;
 

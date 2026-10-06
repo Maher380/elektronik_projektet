@@ -37,7 +37,7 @@ Publicera följande JSON till `cnb/vagrant/config/set` (QoS 1, retained).
 Använd en högre `revision` för varje ändring under samma uppstart:
 
 ```json
-{"schema_version":1,"revision":1,"stop_distance_cm":30,"reaction_distance_cm":40,"loop_interval_ms":20,"drive_duty":0.5,"telemetry_interval_ms":1000,"driver_style":"decide_action"}
+{"schema_version":1,"revision":1,"stop_distance_cm":30,"reaction_distance_cm":40,"loop_interval_ms":20,"drive_duty":0.5,"telemetry_interval_ms":1000,"drive_style":"decide_action"}
 ```
 
 Stoppavstånd: 1–100 cm. Reaktionsavstånd: 1–200 cm och större än stoppavståndet.
@@ -67,7 +67,7 @@ De finns också som kommentar överst i `vagrantLogic.cpp`.
 Från projektroten, med broker och bil anslutna:
 
 ```powershell
-.\tools\mqtt\set-config.ps1 -StopDistanceCm 45 -ReactionDistanceCm 52 -LoopIntervalMs 20 -DriveDuty 0.44 -TelemetryIntervalMs 200 -DriverStyle DecideAction
+.\tools\mqtt\set-config.ps1 -StopDistanceCm 45 -ReactionDistanceCm 52 -LoopIntervalMs 20 -DriveDuty 0.44 -TelemetryIntervalMs 200 -DriveStyle DecideAction
 .\tools\mqtt\test-servo.ps1 -Angle -30
 ```
 

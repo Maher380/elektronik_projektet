@@ -2,12 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import http from 'node:http';
-import { ConsoleControl, History, SUBSCRIPTIONS, TOPIC, piValues, validateConfig } from '../core.mjs';
+import { ConsoleControl, History, SPEED_CSV_COLUMNS, SpeedLog, SUBSCRIPTIONS, TOPIC, piValues, validateConfig } from '../core.mjs';
 import { segments, valueOf } from '../public/charts.mjs';
 import { createConsole } from '../server.mjs';
 import { DemoTransport, FordDemoTransport } from '../transport.mjs';
 
-const config = { schema_version: 1, revision: 5, result: 'applied', stop_distance_cm: 30, drive_duty: .5, driver_style: 'decide_action', telemetry_interval_ms: 200 };
+const config = { schema_version: 1, revision: 5, result: 'applied', stop_distance_cm: 30, drive_duty: .5, drive_style: 'decide_action', telemetry_interval_ms: 200 };
 const telemetry = { schema_version: 1, sequence: 1, uptime_ms: 1000, control_state: 'disarmed', motion_state: 'stopped', distance_cm: { left: 42, center: 60, right: 35 }, motor: { speed_command: 0 }, steering_deg: 0 };
 const command = { schema_version: 1, last_request_id: 8, session_id: '', control_state: 'disarmed', result: 'state' };
 class Transport extends EventEmitter {
@@ -36,11 +36,11 @@ test('system-test config validates reaction, stop and loop as one update', async
   const f = setup(); autoAck(f);
   f.transport.callback = async (_, data) => f.receive('config/state', { ...data, system_test: true, result: 'applied' });
   f.receive('config/state', { ...config, system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250 });
-  await f.control.configure('owner', { stop_distance_cm: 20, drive_duty: 1, telemetry_interval_ms: 200, driver_style: 'decide_action', reaction_distance_cm: 45, loop_interval_ms: 20 });
+  await f.control.configure('owner', { stop_distance_cm: 20, drive_duty: 1, telemetry_interval_ms: 200, drive_style: 'decide_action', reaction_distance_cm: 45, loop_interval_ms: 20 });
   assert.equal(f.transport.sent.at(-1).data.reaction_distance_cm, 45);
   assert.equal(f.transport.sent.at(-1).data.loop_interval_ms, 20);
-  const valid = { stop_distance_cm: 30, drive_duty: 0, telemetry_interval_ms: 1000, driver_style: 'decide_action', reaction_distance_cm: 40, loop_interval_ms: 250 };
-  for (const changes of [{ reaction_distance_cm: 30 }, { reaction_distance_cm: NaN }, { loop_interval_ms: 20.5 }, { loop_interval_ms: 1001 }, { driver_style: 'slow_left' }]) {
+  const valid = { stop_distance_cm: 30, drive_duty: 0, telemetry_interval_ms: 1000, drive_style: 'decide_action', reaction_distance_cm: 40, loop_interval_ms: 250 };
+  for (const changes of [{ reaction_distance_cm: 30 }, { reaction_distance_cm: NaN }, { loop_interval_ms: 20.5 }, { loop_interval_ms: 1001 }, { drive_style: 'slow_left' }]) {
     assert.throws(() => validateConfig({ ...valid, ...changes }, true));
   }
 });
@@ -127,22 +127,22 @@ test('stale telemetry stops even if the browser keeps its lease', async () => {
 test('configuration boundaries, full duty and newer observed revisions', async () => {
   const f = setup(); autoAck(f);
   f.receive('config/state', { ...config, revision: 2000000000 }, true);
-  await f.control.configure('owner', { stop_distance_cm: 70, drive_duty: 1, telemetry_interval_ms: 200, driver_style: 'gradual_sweep' });
+  await f.control.configure('owner', { stop_distance_cm: 70, drive_duty: 1, telemetry_interval_ms: 200, drive_style: 'gradual_sweep' });
   assert.equal(f.transport.sent[0].data.revision, 2000000001); assert.equal(f.transport.sent[0].retain, true);
-  for (const drive_duty of [-.1, 1.01, NaN, '0.5']) assert.throws(() => validateConfig({ stop_distance_cm: 30, drive_duty, telemetry_interval_ms: 1000, driver_style: 'decide_action' }));
-  assert.throws(() => validateConfig({ stop_distance_cm: 20, drive_duty: 0, telemetry_interval_ms: 1000, driver_style: 'decide_action' }));
-  assert.throws(() => validateConfig({ stop_distance_cm: 30, drive_duty: 0, telemetry_interval_ms: 100, driver_style: 'decide_action' }));
+  for (const drive_duty of [-.1, 1.01, NaN, '0.5']) assert.throws(() => validateConfig({ stop_distance_cm: 30, drive_duty, telemetry_interval_ms: 1000, drive_style: 'decide_action' }));
+  assert.throws(() => validateConfig({ stop_distance_cm: 20, drive_duty: 0, telemetry_interval_ms: 1000, drive_style: 'decide_action' }));
+  assert.throws(() => validateConfig({ stop_distance_cm: 30, drive_duty: 0, telemetry_interval_ms: 100, drive_style: 'decide_action' }));
 });
 test('changing style while armed is blocked; zero duty is allowed; other tab cannot configure', async () => {
   const f = setup(); autoAck(f); await f.control.start('owner');
-  const input = { stop_distance_cm: 35, drive_duty: 0, telemetry_interval_ms: 200, driver_style: 'decide_action' };
-  await assert.rejects(f.control.configure('owner', { ...input, driver_style: 'slow_left' }), /Stop the car/);
+  const input = { stop_distance_cm: 35, drive_duty: 0, telemetry_interval_ms: 200, drive_style: 'decide_action' };
+  await assert.rejects(f.control.configure('owner', { ...input, drive_style: 'slow_left' }), /Stop the car/);
   await assert.rejects(f.control.configure('other', input), /Another browser/);
   await f.control.configure('owner', input); assert.equal(f.transport.sent.at(-1).data.drive_duty, 0);
 });
 test('rejected configuration is surfaced, not reported as success', async () => {
   const f = setup(); f.transport.callback = async (_, data) => f.receive('config/state', { ...config, revision: data.revision, result: 'rejected', error: 'stale_revision' });
-  await assert.rejects(f.control.configure('a', { stop_distance_cm: 30, drive_duty: .5, telemetry_interval_ms: 200, driver_style: 'decide_action' }), /stale_revision/);
+  await assert.rejects(f.control.configure('a', { stop_distance_cm: 30, drive_duty: .5, telemetry_interval_ms: 200, drive_style: 'decide_action' }), /stale_revision/);
 });
 test('history rolls without new data, drops duplicates, and clears on device reboot', () => {
   const history = new History(); history.ingest(telemetry, 1000);
@@ -273,4 +273,179 @@ test('Ford demo reports a motor temperature', async () => {
   const sample = seen.find(m => m.topic === 'cnb/ford/telemetry');
   assert.ok(sample);
   assert.ok(Number.isFinite(sample.data.motor_temp_c) && sample.data.motor_temp_c >= 20 && sample.data.motor_temp_c <= 60);
+});
+
+test('Ford demo reports a steering servo temperature', async () => {
+  const demo = new FordDemoTransport(), seen = [];
+  demo.on('message', (topic, data) => seen.push({ topic, data }));
+  demo.start(); await new Promise(resolve => setTimeout(resolve, 300)); demo.close();
+  const sample = seen.find(m => m.topic === 'cnb/ford/telemetry');
+  assert.ok(sample);
+  assert.ok(Number.isFinite(sample.data.servo_temp_c) && sample.data.servo_temp_c >= 20 && sample.data.servo_temp_c <= 60);
+});
+
+test('Ford demo reports the odometer', async () => {
+  const demo = new FordDemoTransport(), seen = [];
+  demo.on('message', (topic, data) => seen.push({ topic, data }));
+  demo.start(); await new Promise(resolve => setTimeout(resolve, 300)); demo.close();
+  const sample = seen.find(m => m.topic === 'cnb/ford/telemetry');
+  assert.ok(sample);
+  assert.equal(sample.data.measured_speed_ms, 0);
+  assert.equal(sample.data.measured_speed_source, 'none');
+  assert.ok(Number.isFinite(sample.data.odometer_distance_m) && sample.data.odometer_distance_m >= 0);
+  assert.ok(Number.isInteger(sample.data.odometer_phase_losses));
+});
+
+// Ford's two drive styles. Its config/set is narrowed to the style, and a measured gap
+// table is written only when the operator confirms it. See ADR 0009.
+function fordStyleSetup(style = 'manual_by_remote', calibration = undefined) {
+  const transport = new Transport(); let time = 1800000000000;
+  const control = new ConsoleControl(transport, { now: () => time, ackMs: 50, car: 'ford' });
+  const receive = (suffix, data, retain = false) => transport.emit('message', `cnb/ford/${suffix}`, data, retain);
+  transport.emit('connection', true);
+  receive('status', { schema_version: 1, online: true }, true);
+  receive('config/state', { schema_version: 1, revision: 4, drive_style: style }, true);
+  receive('command/state', { ...command, control_state: 'disarmed' }, true);
+  receive('telemetry', { ...telemetry, drive_style: style, control_state: 'disarmed', ...(calibration ? { calibration } : {}) });
+  transport.callback = async (topic, data) => {
+    if (topic.endsWith('/config/set')) receive('config/state', { ...data, result: 'applied' });
+    if (data.command === 'store_gaps') receive('command/state', { ...command, last_request_id: data.request_id, result: 'accepted', control_state: 'disarmed' });
+  };
+  return { control, transport, receive, advance: ms => { time += ms; } };
+}
+
+test('Ford accepts a gap_calibration config/state instead of dropping it', () => {
+  const f = fordStyleSetup('gap_calibration');
+  assert.equal(f.control.snapshot().config.drive_style, 'gap_calibration');
+  // An unknown style is still refused, so a stray payload cannot select one.
+  f.receive('config/state', { schema_version: 1, revision: 5, drive_style: 'decide_action' }, true);
+  assert.equal(f.control.snapshot().config.revision, 4);
+});
+
+test('Ford accepts and selects the speed_calibration style', async () => {
+  const f = fordStyleSetup('speed_calibration');
+  assert.equal(f.control.snapshot().config.drive_style, 'speed_calibration');
+  const other = fordStyleSetup();
+  await other.control.selectDriveStyle('tab', 'speed_calibration');
+  const sent = other.transport.sent.filter(m => m.topic.endsWith('/config/set'));
+  assert.equal(sent.at(-1).data.drive_style, 'speed_calibration');
+});
+
+test('Ford reports the disabled style but the operator cannot select it', async () => {
+  const f = fordStyleSetup('disabled');
+  assert.equal(f.control.snapshot().config.drive_style, 'disabled');
+  await assert.rejects(f.control.selectDriveStyle('tab', 'disabled'), /Unknown Ford drive style/);
+  // Leaving it is an ordinary selection.
+  await f.control.selectDriveStyle('tab', 'manual_by_remote');
+  assert.equal(f.transport.sent.at(-1).data.drive_style, 'manual_by_remote');
+});
+
+test('Ford drive style selection sends only the three narrowed fields', async () => {
+  const f = fordStyleSetup();
+  await f.control.selectDriveStyle('tab', 'gap_calibration');
+  const sent = f.transport.sent.filter(m => m.topic.endsWith('/config/set'));
+  assert.equal(sent.length, 1);
+  assert.deepEqual(Object.keys(sent[0].data).sort(), ['drive_style', 'revision', 'schema_version']);
+  assert.equal(sent[0].data.drive_style, 'gap_calibration');
+  assert.equal(sent[0].retain, true);
+  await assert.rejects(f.control.selectDriveStyle('tab', 'decide_action'), /Unknown Ford drive style/);
+});
+
+test('a measured gap table is stored only once the operator confirms it', async () => {
+  // Nothing measured yet: there is nothing to confirm.
+  const idle = fordStyleSetup('gap_calibration', { phase: 'sampling', duty_index: 1, duty_count: 3, revolutions: 7, revolutions_wanted: 20 });
+  await assert.rejects(idle.control.storeGaps(), /No measured gap table/);
+
+  // A disagreeing run produced no table, so it cannot be confirmed either.
+  const refused = fordStyleSetup('gap_calibration', { phase: 'failed', failure: 'disagreed', spread: 0.043, duty_count: 3 });
+  await assert.rejects(refused.control.storeGaps(), /No measured gap table/);
+
+  const measured = fordStyleSetup('gap_calibration', {
+    phase: 'measured', duty_count: 3, revolutions: 20, revolutions_wanted: 20,
+    gaps: [0.125, 0.125, 0.25, 0.25, 0.125, 0.125], spread: 0.0012, phase_margin: 0.24, stored: false,
+  });
+  await measured.control.storeGaps();
+  const sent = measured.transport.sent.filter(m => m.data.command === 'store_gaps');
+  assert.equal(sent.length, 1);
+  assert.equal(sent[0].topic, 'cnb/ford/command');
+  assert.match(measured.control.snapshot().notice, /stored/i);
+});
+
+test('during gap calibration the console sends heartbeats, not refused drive commands', async () => {
+  // The car refuses drive commands outside ManualByRemote and a refused one renews no
+  // lease, so streaming them would starve the heartbeat and time out the run at 3 s.
+  for (const style of ['gap_calibration', 'speed_calibration', 'manual_by_remote']) {
+    const f = fordStyleSetup(style);
+    const streamed = [];
+    f.transport.stream = async (topic, data) => { streamed.push(data); };
+    const ack = f.transport.callback;
+    f.transport.callback = async (topic, data) => {
+      await ack(topic, data);
+      if (data.command === 'start') f.receive('command/state', { ...command, last_request_id: data.request_id, result: 'accepted', control_state: 'armed', session_id: data.session_id });
+    };
+    await f.control.start('owner');
+    const sent = await f.control.drive('owner', 0, 0);
+    f.advance(1000); await f.control.tick();
+    const heartbeat = f.transport.sent.at(-1).data.command === 'heartbeat';
+    if (style !== 'manual_by_remote') {
+      assert.equal(sent, false); assert.equal(streamed.length, 0); assert.equal(heartbeat, true);
+    } else {
+      assert.equal(sent, true); assert.equal(streamed[0].command, 'drive');
+    }
+  }
+});
+
+test('the gap calibration style is not offered on the Vagrant console', async () => {
+  const f = setup();
+  await assert.rejects(f.control.selectDriveStyle('tab', 'gap_calibration'), /for the Ford only/);
+  await assert.rejects(f.control.storeGaps(), /for the Ford only/);
+});
+
+// Ford speed calibration: the car sends only its latest leg, so the console collects them.
+function speedTelemetry(phase, last, extra = {}) {
+  return { battery_v: 7.4, speed_calibration: { phase, leg: last ? last.leg + 1 : 0, leg_count: 12, leg_m: 5, from: 0, target: 0.8, forward: true, stop_k: 0.2, ...(last ? { last } : {}), ...extra } };
+}
+const speedLeg = (leg, extra = {}) => ({ leg, from: 0, target: 0.8, forward: leg % 2 === 0, result: 'reached', speed_ms: 0.81, duty: 0.121, rise_s: 0.9, overshoot: 0.05, stop_m: 0.12, distance_m: 5.04, ...extra });
+
+test('the speed log collects each leg once and writes it to one CSV file per run', () => {
+  const written = [];
+  const log = new SpeedLog({ write: (file, text) => written.push({ file, text }) });
+  log.ingest(speedTelemetry('driving', null), Date.UTC(2026, 9, 5, 12, 0, 0));
+  assert.equal(log.legs.length, 0);
+  // The file is named when the first leg arrives.
+  for (let i = 0; i < 3; i++) log.ingest(speedTelemetry('braking', speedLeg(0)), Date.UTC(2026, 9, 5, 12, 0, 0));
+  log.ingest(speedTelemetry('driving', speedLeg(1, { result: 'not_reached', duty: undefined, distance_m: 4.9 })), 2);
+  assert.equal(log.legs.length, 2);
+  assert.equal(log.legs[0].error_m, 0.04);
+  assert.equal(log.legs[1].error_m, -0.1);
+  assert.equal(log.legs[1].direction, 'back');
+  assert.equal(log.legs[1].duty, null);
+  // One file, a header and a line per leg.
+  assert.equal(new Set(written.map(w => w.file)).size, 1);
+  assert.match(written[0].file, /^speed_calibration-2026-10-05T12-00-00\.csv$/);
+  assert.equal(written[0].text, SPEED_CSV_COLUMNS.join(',') + '\n');
+  assert.equal(written.length, 3);
+  assert.match(written[2].text, /^1,0,0\.8,back,not_reached,0\.81,,/);
+  assert.equal(log.csv().split('\n').length, 3);
+
+  // Starting again begins a new table and a new file.
+  log.ingest(speedTelemetry('driving', null), Date.UTC(2026, 9, 5, 12, 5, 0));
+  assert.equal(log.legs.length, 0);
+  log.ingest(speedTelemetry('braking', speedLeg(0)), 3);
+  assert.equal(new Set(written.map(w => w.file)).size, 2);
+});
+
+test('the speed log keeps the table when writing the file fails', () => {
+  const log = new SpeedLog({ write: () => { throw Error('disk full'); } });
+  log.ingest(speedTelemetry('braking', speedLeg(0)), 1);
+  assert.equal(log.legs.length, 1);
+  assert.match(log.snapshot().error, /disk full/);
+});
+
+test('the Ford console snapshot carries the collected speed calibration legs', () => {
+  const f = fordStyleSetup('speed_calibration');
+  f.receive('telemetry', { ...telemetry, sequence: 2, uptime_ms: 1200, drive_style: 'speed_calibration', control_state: 'armed', ...speedTelemetry('braking', speedLeg(0)) });
+  const snapshot = f.control.snapshot();
+  assert.equal(snapshot.speed_log.legs.length, 1);
+  assert.equal(snapshot.speed_log.legs[0].speed_ms, 0.81);
 });

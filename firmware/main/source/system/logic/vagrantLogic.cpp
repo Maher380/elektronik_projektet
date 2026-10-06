@@ -167,7 +167,7 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
         {
             if (!brake && duty == 0.0F) { sleep->write(false); }
             const auto mode = brake ? driver::motor::StopMode::Brake : driver::motor::StopMode::Coast;
-            outputOk = duty > 0.0F ? motor->setSpeed(duty) : motor->stop(mode);
+            outputOk = duty > 0.0F ? motor->setDuty(duty) : motor->stop(mode);
             // Verify both output writes before enabling nSLEEP, preserving
             // the tested Vagrant output sequence.
             const bool forwardOk = forwardPwm->setDuty(brake ? 1.0F : duty);

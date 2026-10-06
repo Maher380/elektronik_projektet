@@ -131,8 +131,8 @@ export class MosquittoTransport extends EventEmitter {
 export class DemoTransport extends EventEmitter {
   constructor() {
     super(); this.demo = true; this.label = 'SIMULATED BROKER'; this.sequence = 0; this.born = clock();
-    this.config = { schema_version: 1, revision: 0, result: 'defaults', system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250, stop_distance_cm: 30, drive_duty: 0.35, telemetry_interval_ms: 200, driver_style: 'decide_action' };
-    this.state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', driver_style: 'decide_action' };
+    this.config = { schema_version: 1, revision: 0, result: 'defaults', system_test: true, reaction_distance_cm: 40, loop_interval_ms: 250, stop_distance_cm: 30, drive_duty: 0.35, telemetry_interval_ms: 200, drive_style: 'decide_action' };
+    this.state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', drive_style: 'decide_action' };
   }
   message(suffix, data, retained = false) { this.emit('message', TOPIC + '/' + suffix, structuredClone(data), retained); }
   start() {
@@ -152,7 +152,7 @@ export class DemoTransport extends EventEmitter {
     const distances = { left: 44 + 19 * Math.sin(t * 0.63), center: 53 + 19 * Math.sin(t * 0.43 + 1), right: 39 + 18 * Math.sin(t * 0.7 + 2) };
     let steering = 0, selected = distances.center;
     const decision = Object.fromEntries(Object.entries(distances).map(([k, v]) => [k, Math.min(v, this.config.reaction_distance_cm)]));
-    const style = this.config.driver_style;
+    const style = this.config.drive_style;
     if (this.config.system_test) {
       if (decision.left > decision.center && decision.left > decision.right) steering = -30;
       else if (decision.right > decision.left && decision.right > decision.center) steering = 30;
@@ -176,8 +176,8 @@ export class DemoTransport extends EventEmitter {
   }
   async publish(topic, data) {
     if (topic.endsWith('/config/set')) {
-      const error = data.revision <= this.config.revision ? 'stale_revision' : this.state.control_state === 'armed' && data.driver_style !== this.config.driver_style ? 'driver_style_requires_disarmed' : null;
-      if (!error) { this.config = { ...this.config, ...data, result: 'applied' }; this.state.driver_style = data.driver_style; }
+      const error = data.revision <= this.config.revision ? 'stale_revision' : this.state.control_state === 'armed' && data.drive_style !== this.config.drive_style ? 'drive_style_requires_disarmed' : null;
+      if (!error) { this.config = { ...this.config, ...data, result: 'applied' }; this.state.drive_style = data.drive_style; }
       this.message('config/state', { ...this.config, revision: data.revision, result: error ? 'rejected' : 'applied', ...(error ? { error } : {}) });
     } else if (data.command === 'heartbeat') {
       if (data.session_id === this.state.session_id) this.heartbeatAt = clock();
@@ -196,11 +196,13 @@ export class DemoTransport extends EventEmitter {
 export class FordDemoTransport extends EventEmitter {
   constructor() {
     super(); this.demo = true; this.label = 'SIMULATED BROKER'; this.topic = 'cnb/ford'; this.sequence = 0; this.born = clock();
-    this.config = { schema_version: 1, revision: 0, result: 'defaults', system_test: false, driver_style: 'manual_by_remote', telemetry_interval_ms: 200 };
-    this.state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', driver_style: 'manual_by_remote' };
+    this.config = { schema_version: 1, revision: 0, result: 'defaults', system_test: false, drive_style: 'manual_by_remote', telemetry_interval_ms: 200 };
+    this.state = { schema_version: 1, last_request_id: 0, session_id: '', result: 'state', control_state: 'disarmed', motion_state: 'stopped', reason: 'boot', drive_style: 'manual_by_remote' };
     this.drive = null; this.driveAt = 0; this.heartbeatAt = 0; this.driven = 1; this.brakeAt = 0;
     // Simulated Pi: the car's real motion as SLAM would see it.
     this.motion = { speed: 0, wheel: 0 }; this.piAt = 0;
+    // Simulated odometer on the same motion: distance only grows, and speed has no sign.
+    this.odometer = { distance: 0, at: 0, forward: true, losses: 0 };
   }
   message(suffix, data, retained = false) { this.emit('message', this.topic + '/' + suffix, structuredClone(data), retained); }
   start() {
@@ -252,11 +254,27 @@ export class FordDemoTransport extends EventEmitter {
     this.message('telemetry', {
       schema_version: 1, sequence: ++this.sequence, uptime_ms: Math.floor(now - this.born), system_test: false, servo_test: false,
       distance_cm: { left: null, center: null, right: null }, adc_raw: { left: null, center: null, right: null }, closest: null,
-      driver_style: 'manual_by_remote', steering_deg: steering,
+      drive_style: 'manual_by_remote', steering_deg: steering,
       motor: { speed_command: speed, forward_duty: speed > 0 ? duty : 0, backward_duty: speed < 0 ? duty : 0, state },
       control_state: this.state.control_state, motion_state: this.state.motion_state, reason: this.state.reason,
       battery_v: this.battery(now, speed), motor_temp_c: this.motorTemp(now, speed),
+      servo_temp_c: this.servoTemp(now, steering),
+      ...this.odometerSample(now),
     });
+  }
+  // Fake odometer: follows the simulated wheel speed, uses the per-gap reading going forward and
+  // the revolution window in reverse, and counts a phase loss on every stop or direction change,
+  // as the firmware does.
+  odometerSample(now) {
+    const o = this.odometer, speed = Math.abs(this.motion.speed) < 0.02 ? 0 : this.motion.speed;
+    o.distance += Math.abs(speed) * (o.at ? (now - o.at) / 1000 : 0); o.at = now;
+    const forward = speed >= 0;
+    if (speed === 0 ? o.moving : forward !== o.forward) o.losses++;
+    o.moving = speed !== 0; if (speed) o.forward = forward;
+    return {
+      measured_speed_ms: Math.round(Math.abs(speed) * 100) / 100, odometer_distance_m: Math.round(o.distance * 1000) / 1000,
+      measured_speed_source: !speed ? 'none' : forward ? 'per_gap' : 'revolution', odometer_phase_losses: o.losses,
+    };
   }
   // Fake drive battery: drains from 8.4 V to 6.2 V every two minutes, then starts full again,
   // and sags while driving, so all battery colours appear.
@@ -269,6 +287,12 @@ export class FordDemoTransport extends EventEmitter {
   motorTemp(now, speed) {
     const t = (now - this.born) / 1000;
     return Math.round((25 + 25 * (t % 180) / 180 + 5 * Math.abs(speed) / 100) * 10) / 10;
+  }
+  // Fake steering servo temperature: warms from 25 °C to 55 °C every two minutes, then starts cool
+  // again, and runs warmer at full lock, so all temperature colours appear.
+  servoTemp(now, steering) {
+    const t = (now - this.born) / 1000;
+    return Math.round((25 + 30 * (t % 120) / 120 + 3 * Math.abs(steering) / 90) * 10) / 10;
   }
   async publish(topic, data) {
     if (data.command === 'heartbeat' || data.command === 'drive') {
