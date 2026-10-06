@@ -71,6 +71,7 @@ struct WireTelemetrySnapshot
     const char* measuredSpeedSource{nullptr};
     std::uint32_t odometerPhaseLosses{0U};
     float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+    float servoTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     // GapCalibration; see TelemetrySnapshot for what each one means.
     const char* calibrationPhase{nullptr};
     const char* calibrationFailure{nullptr};
@@ -716,6 +717,8 @@ bool writeTelemetry(char* destination,
                 != nullptr))
         && (!std::isfinite(snapshot.motorTemperatureC)
             || (cJSON_AddNumberToObject(root, "motor_temp_c", rounded(snapshot.motorTemperatureC)) != nullptr))
+        && (!std::isfinite(snapshot.servoTemperatureC)
+            || (cJSON_AddNumberToObject(root, "servo_temp_c", rounded(snapshot.servoTemperatureC)) != nullptr))
         && (cJSON_AddStringToObject(root,
                                     "control_state",
                                     toString(snapshot.controlState))
@@ -1080,6 +1083,7 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.measuredSpeedSource = snapshot.measuredSpeedSource;
     wireSnapshot.odometerPhaseLosses = snapshot.odometerPhaseLosses;
     wireSnapshot.motorTemperatureC = snapshot.motorTemperatureC;
+    wireSnapshot.servoTemperatureC = snapshot.servoTemperatureC;
     wireSnapshot.calibrationPhase = snapshot.calibrationPhase;
     wireSnapshot.calibrationFailure = snapshot.calibrationFailure;
     wireSnapshot.calibrationDutyIndex = snapshot.calibrationDutyIndex;

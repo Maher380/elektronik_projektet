@@ -19,6 +19,8 @@ const batteryLabels = { ok: 'OK', low: 'LOW · stop soon', critical: 'CRITICAL �
 // Motor can temperature from the TMP36 on A0. HOT is the A89301 config app's stop limit; both are
 // low while the sensor sits on electrical tape and reads low and late (ford_a89301_motor_controller.md).
 const MOTOR_WARM_C = 40, MOTOR_HOT_C = 45;
+// Steering servo case: a stalled servo heats up within seconds, so warn early.
+const SERVO_WARM_C = 40, SERVO_HOT_C = 50;
 const batteryPercent = volts => Math.min(100, Math.max(0, (volts - BATTERY_MIN_V) / (BATTERY_MAX_V - BATTERY_MIN_V) * 100));
 const slamLabels = { tracking: 'TRACKING', lost: 'TRACKING LOST', starting: 'STARTING' };
 // crypto.randomUUID() only exists on https and localhost; getRandomValues also works over plain http on the LAN.
@@ -193,14 +195,22 @@ function renderBattery(fresh, data) {
   $('battery-fill').style.width = volts === null ? '0' : batteryPercent(volts) + '%';
   $('battery-fill').className = level || '';
 }
+// One temperature tile: the reading, coloured by level, with what to do about it.
+function renderTemp(fresh, value, id, warmC, hotC, okLabel, warmLabel) {
+  const temp = fresh && typeof value === 'number' && Number.isFinite(value) ? value : null;
+  const level = temp === null ? null : temp >= hotC ? 'hot' : temp >= warmC ? 'warm' : 'ok';
+  text(id, temp === null ? '—' : `${temp.toFixed(1)} °C`);
+  $(id).className = 'mono' + (level === 'hot' ? ' hot' : level === 'warm' ? ' alert' : '');
+  text(`${id}-detail`, level === 'hot' ? 'HOT · stop and let it cool' : level === 'warm' ? warmLabel
+    : level === 'ok' ? okLabel : fresh ? 'No temperature reading' : 'Waiting for telemetry');
+  $(`${id}-detail`).className = level === 'hot' ? 'hot' : level === 'warm' ? 'warm' : '';
+}
 function renderMotorTemp(fresh, data) {
-  const temp = fresh && typeof data.motor_temp_c === 'number' && Number.isFinite(data.motor_temp_c) ? data.motor_temp_c : null;
-  const level = temp === null ? null : temp >= MOTOR_HOT_C ? 'hot' : temp >= MOTOR_WARM_C ? 'warm' : 'ok';
-  text('motor-temp', temp === null ? '—' : `${temp.toFixed(1)} °C`);
-  $('motor-temp').className = 'mono' + (level === 'hot' ? ' hot' : level === 'warm' ? ' alert' : '');
-  text('motor-temp-detail', level === 'hot' ? 'HOT · stop and let it cool' : level === 'warm' ? 'WARM · ease off'
-    : level === 'ok' ? 'Motor can · OK' : fresh ? 'No temperature reading' : 'Waiting for telemetry');
-  $('motor-temp-detail').className = level === 'hot' ? 'hot' : level === 'warm' ? 'warm' : '';
+  renderTemp(fresh, data.motor_temp_c, 'motor-temp', MOTOR_WARM_C, MOTOR_HOT_C, 'Motor can · OK', 'WARM · ease off');
+}
+function renderServoTemp(fresh, data) {
+  renderTemp(fresh, data.servo_temp_c, 'servo-temp', SERVO_WARM_C, SERVO_HOT_C, 'Steering servo · OK',
+    'WARM · avoid full lock');
 }
 const styleLabels = { manual_by_remote: 'ManualByRemote', gap_calibration: 'GapCalibration', speed_calibration: 'SpeedCalibration' };
 const calPhaseLabels = { idle: 'IDLE', settling: 'SETTLING', sampling: 'MEASURING', measured: 'MEASURED', failed: 'REFUSED' };
@@ -352,6 +362,7 @@ function render() {
   renderSpeedCalibration(fresh, data);
   renderBattery(fresh, data);
   renderMotorTemp(fresh, data);
+  renderServoTemp(fresh, data);
   renderOdometer(fresh, data);
   const seconds = Math.floor((data.uptime_ms || 0) / 1000);
   text('uptime', fresh ? `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—');

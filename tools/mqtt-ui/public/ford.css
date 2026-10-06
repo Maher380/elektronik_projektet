@@ -34,7 +34,7 @@ input[type=range]{accent-color:var(--cyan);cursor:pointer}
 .pad-up{grid-area:1/2}.pad-left{grid-area:2/1}.pad-down{grid-area:2/2}.pad-right{grid-area:2/3}
 /* Pi values: command beside what the Pi measured. */
 .measured-detail{display:block;margin:-8px 0 12px;color:var(--muted);font-size:11px}
-.status-strip{grid-template-columns:repeat(9,minmax(0,1fr))}
+.status-strip{grid-template-columns:repeat(10,minmax(0,1fr))}
 .status-strip small.warm{color:var(--orange)}
 .status-strip small.hot,.status-strip strong.hot{color:#ff8a80}
 .ford-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:14px}

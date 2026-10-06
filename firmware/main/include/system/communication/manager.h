@@ -122,6 +122,8 @@ struct TelemetrySnapshot
     std::uint32_t odometerPhaseLosses{0U};
     /** Ford: motor can temperature in degrees Celsius; NaN leaves it out. */
     float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+    /** Ford: steering servo temperature in degrees Celsius; NaN leaves it out. */
+    float servoTemperatureC{std::numeric_limits<float>::quiet_NaN()};
 
     // GapCalibration. These travel as a nested "calibration" object, present only while
     // that drive style is selected, which is how the payload already treats optional

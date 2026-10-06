@@ -258,6 +258,7 @@ export class FordDemoTransport extends EventEmitter {
       motor: { speed_command: speed, forward_duty: speed > 0 ? duty : 0, backward_duty: speed < 0 ? duty : 0, state },
       control_state: this.state.control_state, motion_state: this.state.motion_state, reason: this.state.reason,
       battery_v: this.battery(now, speed), motor_temp_c: this.motorTemp(now, speed),
+      servo_temp_c: this.servoTemp(now, steering),
       ...this.odometerSample(now),
     });
   }
@@ -286,6 +287,12 @@ export class FordDemoTransport extends EventEmitter {
   motorTemp(now, speed) {
     const t = (now - this.born) / 1000;
     return Math.round((25 + 25 * (t % 180) / 180 + 5 * Math.abs(speed) / 100) * 10) / 10;
+  }
+  // Fake steering servo temperature: warms from 25 °C to 55 °C every two minutes, then starts cool
+  // again, and runs warmer at full lock, so all temperature colours appear.
+  servoTemp(now, steering) {
+    const t = (now - this.born) / 1000;
+    return Math.round((25 + 30 * (t % 120) / 120 + 3 * Math.abs(steering) / 90) * 10) / 10;
   }
   async publish(topic, data) {
     if (data.command === 'heartbeat' || data.command === 'drive') {

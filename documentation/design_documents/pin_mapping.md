@@ -47,6 +47,7 @@ Power connections do not use driver factory calls:
 | `factory.adc(4)` | `A3 / ~D20` | 📈 ADC1_CH3 | Drive battery voltage divider: R1 101.24 kΩ from battery + (after the switch), R2 32.99 kΩ and 154 nF to `GND` | 🔵 Used |
 | `factory.gpioInputPullup(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor, 2 magnets set opposite each other on the right rear wheel. Open-collector and active low, so the internal pull-up is required and no external one is | 🔵 Used |
 | `factory.adc(1)` | `A0 / ~D17` | 📈 ADC1_CH0 | TMP36 on the motor can, sent as `motor_temp_c`; 100 kΩ to `GND` so a missing sensor reads 0 V, not a floating value | 🔵 Used |
+| `factory.adc(2)` | `A1 / ~D18` | 📈 ADC1_CH1 | TMP36 on the steering servo, sent as `servo_temp_c` | 🔵 Used |
 
 The A89301 configuration app (`A89301_CONFIG_MODE`) talks I2C instead: SDA on
 `A4` (GPIO11, A89301 FG/SDA) and SCL on `A5` (GPIO12, with a 4.7 kΩ pull-up to

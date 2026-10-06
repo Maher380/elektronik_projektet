@@ -50,6 +50,8 @@ constexpr std::uint8_t BatteryAdc{4U};
 constexpr std::uint8_t Odometer{18U};
 /** A0 <- TMP36 on the motor can. */
 constexpr std::uint8_t MotorTempAdc{1U};
+/** A1 <- TMP36 on the steering servo. */
+constexpr std::uint8_t ServoTempAdc{2U};
 /** A4 <- A89301 FG/SDA. I2C data, configuration wiring only. */
 constexpr std::uint8_t Sda{11U};
 /**
@@ -118,6 +120,8 @@ constexpr std::uint32_t DriveTimeoutMs{500U};
 constexpr std::uint32_t BatteryReadIntervalMs{100U};
 /** Motor temperature read period; the sensor averages its last 16 reads, so about 1.6 s. */
 constexpr std::uint32_t MotorTempReadIntervalMs{100U};
+/** Steering servo temperature read period; averaged like the motor sensor. */
+constexpr std::uint32_t ServoTempReadIntervalMs{100U};
 
 /**
  * @brief Motor can temperature at which a powered run stops.

@@ -275,6 +275,15 @@ test('Ford demo reports a motor temperature', async () => {
   assert.ok(Number.isFinite(sample.data.motor_temp_c) && sample.data.motor_temp_c >= 20 && sample.data.motor_temp_c <= 60);
 });
 
+test('Ford demo reports a steering servo temperature', async () => {
+  const demo = new FordDemoTransport(), seen = [];
+  demo.on('message', (topic, data) => seen.push({ topic, data }));
+  demo.start(); await new Promise(resolve => setTimeout(resolve, 300)); demo.close();
+  const sample = seen.find(m => m.topic === 'cnb/ford/telemetry');
+  assert.ok(sample);
+  assert.ok(Number.isFinite(sample.data.servo_temp_c) && sample.data.servo_temp_c >= 20 && sample.data.servo_temp_c <= 60);
+});
+
 test('Ford demo reports the odometer', async () => {
   const demo = new FordDemoTransport(), seen = [];
   demo.on('message', (topic, data) => seen.push({ topic, data }));

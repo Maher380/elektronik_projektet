@@ -192,6 +192,8 @@ private:
     std::unique_ptr<driver::odometer::Interface> myOdometer;
     std::unique_ptr<driver::adc::Interface> myMotorTempAdc;
     std::unique_ptr<driver::temperature_sensor::Interface> myMotorTemp;
+    std::unique_ptr<driver::adc::Interface> myServoTempAdc;
+    std::unique_ptr<driver::temperature_sensor::Interface> myServoTemp;
 
     /** USB serial console, for setting the Wi-Fi network. Optional: the car drives without it. */
     std::unique_ptr<driver::serial::Interface> mySerial;
@@ -314,6 +316,8 @@ private:
     std::uint32_t myLastBatteryReadMs{0U};
     bool myMotorTempRead{false};
     std::uint32_t myLastMotorTempReadMs{0U};
+    bool myServoTempRead{false};
+    std::uint32_t myLastServoTempReadMs{0U};
 };
 
 } // namespace app::logic

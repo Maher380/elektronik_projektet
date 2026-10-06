@@ -228,6 +228,11 @@ bool FordLogic::initializeDrivers() noexcept
     if (myMotorTempAdc) { myMotorTemp = myFactory.temperatureSensor(*myMotorTempAdc); }
     if (!myMotorTemp || !myMotorTempAdc->init() || !myMotorTemp->isInitialized())
     { ESP_LOGW("FORD", "Motor temperature sensor failed; motor temperature not reported"); }
+    // The steering servo temperature sensor is optional and reported only, like the motor's.
+    myServoTempAdc = myFactory.adc(ford::pin::ServoTempAdc);
+    if (myServoTempAdc) { myServoTemp = myFactory.temperatureSensor(*myServoTempAdc); }
+    if (!myServoTemp || !myServoTempAdc->init() || !myServoTemp->isInitialized())
+    { ESP_LOGW("FORD", "Servo temperature sensor failed; servo temperature not reported"); }
 
     // The serial console is optional too; without it the car joins whatever network it has.
     mySerial = myFactory.serial(SerialBaudRate);
@@ -422,6 +427,13 @@ void FordLogic::readSensors(const std::uint32_t nowMs) noexcept
         mySnapshot.motorTemperatureC = myMotorTemperatureC;
         myLastMotorTempReadMs = nowMs;
         myMotorTempRead = true;
+    }
+    if (myServoTemp
+        && (!myServoTempRead || (nowMs - myLastServoTempReadMs) >= ford::ServoTempReadIntervalMs))
+    {
+        mySnapshot.servoTemperatureC = myServoTemp->readTemperature();
+        myLastServoTempReadMs = nowMs;
+        myServoTempRead = true;
     }
 }
 
