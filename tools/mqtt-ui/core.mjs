@@ -6,8 +6,9 @@ export const CARS = ['vagrant', 'ford'];
 export const topicFor = car => 'cnb/' + car;
 export const STYLES = ['decide_action', 'slow_left', 'slow_right', 'gradual_sweep'];
 // The drive styles a Ford can run. It has no obstacle distances, so none of the
-// autonomous styles apply to it; gap_calibration drives a fixed measurement script.
-export const FORD_STYLES = ['manual_by_remote', 'gap_calibration'];
+// autonomous styles apply to it; gap_calibration and speed_calibration each drive a
+// fixed measurement script.
+export const FORD_STYLES = ['manual_by_remote', 'gap_calibration', 'speed_calibration'];
 export const clock = () => performance.timeOrigin + performance.now();
 const uint = n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff;
 // Topics below a car's tree that the console subscribes to. The Ford's Raspberry Pi
@@ -29,6 +30,50 @@ export function piValues(data) {
     measured_speed_mps: sources(data.measured_speed_mps), wheel_angle_deg: sources(data.wheel_angle_deg),
     slam_state: data.slam_state, cpu_temp_c: finiteOrNull(data.cpu_temp_c),
   };
+}
+
+// Ford speed calibration. The car sends only its latest finished leg (the whole table
+// would not fit one telemetry message), so the console collects the legs of a run here,
+// whether or not a page is open, and hands each new one to `write` for the CSV file.
+export const SPEED_CSV_COLUMNS = ['leg', 'from_ms', 'target_ms', 'direction', 'result', 'speed_ms', 'duty',
+  'rise_s', 'overshoot_ms', 'stop_m', 'distance_m', 'error_m', 'stop_k', 'battery_v'];
+const csvValue = value => typeof value === 'number' ? (Number.isFinite(value) ? String(value) : '') : (value ?? '');
+export class SpeedLog {
+  legs = []; file = null; error = null;
+  constructor({ write = null } = {}) { this.write = write; }
+  ingest(telemetry, now) {
+    const spd = telemetry?.speed_calibration;
+    if (!spd || typeof spd !== 'object') return false;
+    const running = spd.phase === 'driving' || spd.phase === 'braking';
+    const last = spd.last;
+    // A run that has started but finished no leg yet, or a leg number lower than the
+    // latest, means a new run: start a new table and a new file.
+    if ((running && !last) || (last && this.legs.length && last.leg < this.legs.at(-1).leg)) { this.legs = []; this.file = null; }
+    if (!last || !Number.isInteger(last.leg) || this.legs.some(leg => leg.leg === last.leg)) return false;
+    const finite = n => typeof n === 'number' && Number.isFinite(n) ? n : null;
+    const distance = finite(last.distance_m), legM = finite(spd.leg_m);
+    const row = {
+      leg: last.leg, from_ms: finite(last.from), target_ms: finite(last.target), direction: last.forward ? 'forward' : 'back',
+      result: String(last.result ?? ''), speed_ms: finite(last.speed_ms), duty: finite(last.duty), rise_s: finite(last.rise_s),
+      overshoot_ms: finite(last.overshoot), stop_m: finite(last.stop_m), distance_m: distance,
+      error_m: distance === null || legM === null ? null : Math.round((distance - legM) * 1000) / 1000,
+      stop_k: finite(spd.stop_k), battery_v: finite(telemetry.battery_v),
+    };
+    this.legs.push(row);
+    if (this.write) {
+      try {
+        if (!this.file) {
+          this.file = 'speed_calibration-' + new Date(now).toISOString().replace(/[:.]/g, '-').slice(0, 19) + '.csv';
+          this.write(this.file, SPEED_CSV_COLUMNS.join(',') + '\n');
+        }
+        this.write(this.file, SPEED_CSV_COLUMNS.map(key => csvValue(row[key])).join(',') + '\n');
+        this.error = null;
+      } catch (error) { this.error = 'Could not write the CSV file: ' + error.message; }
+    }
+    return true;
+  }
+  csv() { return [SPEED_CSV_COLUMNS.join(','), ...this.legs.map(row => SPEED_CSV_COLUMNS.map(key => csvValue(row[key])).join(','))].join('\n'); }
+  snapshot() { return { legs: this.legs, file: this.file, error: this.error, csv: this.csv() }; }
 }
 
 export const CONFIG_KEYS = ['stop_distance_cm', 'drive_duty', 'telemetry_interval_ms', 'drive_style', 'reaction_distance_cm', 'loop_interval_ms'];
@@ -69,7 +114,7 @@ export class History {
 }
 
 export class ConsoleControl extends EventEmitter {
-  constructor(transport, { now = clock, ackMs = 1800, car = 'vagrant' } = {}) {
+  constructor(transport, { now = clock, ackMs = 1800, car = 'vagrant', speedLog = null } = {}) {
     super();
     if (!CARS.includes(car)) throw Error('Unknown car.');
     this.transport = transport; this.now = now; this.ackMs = ackMs;
@@ -79,6 +124,7 @@ export class ConsoleControl extends EventEmitter {
     this.config = null; this.command = null; this.commandAt = 0; this.telemetry = null;
     this.owner = null; this.lastHeartbeatAt = 0; this.heartbeatBusy = false;
     this.pi = { online: false, receivedAt: 0, telemetry: null, history: [] };
+    this.speedLog = car === 'ford' ? speedLog || new SpeedLog() : null;
     this.notice = 'Waiting for MQTT connection.';
     transport.on('connection', connected => {
       this.connected = connected;
@@ -107,6 +153,7 @@ export class ConsoleControl extends EventEmitter {
     }
     if (suffix === 'telemetry' && !retained && this.history.ingest(data, this.now())) {
       this.telemetry = data; this.receivedAt = this.now();
+      this.speedLog?.ingest(data, this.now());
       if (this.notice === 'Connected. Waiting for fresh car telemetry.') this.notice = 'Receiving telemetry. Choose settings, then start when ready.';
       if (this.owner?.armed && data.control_state !== 'armed') this.cancel('Car disarmed: ' + (data.reason || 'unknown'));
     }
@@ -158,7 +205,7 @@ export class ConsoleControl extends EventEmitter {
       config: this.config, command: this.command, commandAt: this.commandAt, telemetry: this.telemetry,
       owner: this.owner ? { client: this.owner.client, session: this.owner.session, armed: this.owner.armed } : null,
       lastHeartbeatAt: this.lastHeartbeatAt, notice: this.notice, history: this.history.samples,
-      ...(this.car === 'ford' ? { pi: this.piSnapshot() } : {}),
+      ...(this.car === 'ford' ? { pi: this.piSnapshot(), speed_log: this.speedLog.snapshot() } : {}),
     };
   }
   piSnapshot() {

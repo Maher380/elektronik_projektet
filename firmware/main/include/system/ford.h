@@ -153,4 +153,73 @@ constexpr std::uint32_t StallMs{4000U};
 constexpr float Tolerance{0.01F};
 } // namespace calibration
 
+/**
+ * @brief The speed calibration recipe, driven on the floor rather than on a stand.
+ *
+ * Every leg is LegM long and the legs alternate forward and back, so the car always
+ * drives between the same two marks. A leg holds a target speed with a feed-forward duty
+ * and a small PI loop on the odometer speed, then brakes early enough to stop on the
+ * mark. What a leg measures - the duty that held the speed, the stopping distance -
+ * becomes the starting point for the next leg, so the run learns as it goes.
+ *
+ * The first floor run (2026-10-05, battery 7.14 V) set the starting values: the car did
+ * not start at duty 0.08, stalled at 0.10, and drove 0.82 m/s at 0.12. Below about
+ * 0.8 m/s it cannot hold a speed, so the targets start there.
+ */
+namespace speed_calibration
+{
+/** Target speeds, each driven from standstill forward and back. */
+constexpr float TargetsMs[]{0.8F, 1.0F, 1.2F, 1.4F};
+/** How many target speeds the recipe uses. */
+constexpr std::uint8_t TargetCount{static_cast<std::uint8_t>(sizeof(TargetsMs) / sizeof(TargetsMs[0]))};
+/** A step between two targets: low to high forward, high to low back. Both must be targets. */
+constexpr float StepLowMs{0.8F};
+constexpr float StepHighMs{1.4F};
+/** Two legs per target, two step legs, two lowest-speed legs. */
+constexpr std::uint8_t LegCount{static_cast<std::uint8_t>((TargetCount * 2U) + 4U)};
+/** Distance from start to standstill per leg, in metres. */
+constexpr float LegM{5.0F};
+
+/** Duty and speed pairs from the first floor run, for the feed-forward before anything is learned. */
+constexpr float InitialDuties[]{0.12F, 0.15F, 0.18F, 0.20F};
+constexpr float InitialSpeedsMs[]{0.82F, 1.22F, 1.41F, 1.57F};
+constexpr std::uint8_t InitialCount{static_cast<std::uint8_t>(sizeof(InitialDuties) / sizeof(InitialDuties[0]))};
+
+/** Lowest duty that started the car from standstill on the floor; held until the wheel turns. */
+constexpr float StartDuty{0.12F};
+/** Limits on the duty the speed loop may ask for. */
+constexpr float MinDuty{0.05F};
+constexpr float MaxDuty{0.25F};
+/** Speed loop: duty per m/s of error, and duty per metre of accumulated error. */
+constexpr float Kp{0.05F};
+constexpr float Ki{0.10F};
+/** Largest duty the integral may contribute either way. */
+constexpr float IntegralLimit{0.04F};
+/** Within this share of the target counts as having reached it. */
+constexpr float ReachedBand{0.05F};
+/** Time after reaching a target before the steady window opens, or a step is taken. */
+constexpr std::uint32_t HoldMs{500U};
+/** Fewest pulses in the steady window for its speed and duty to count. */
+constexpr std::uint32_t MinMeasuredPulses{6U};
+
+/** Stopping distance is modelled as k * v^2; this k comes from the first floor run. */
+constexpr float InitialStopK{0.25F};
+
+/** Lowest-speed legs: hold StartDuty this long after the wheel turns, then step down. */
+constexpr std::uint32_t MinimumSettleMs{1000U};
+/** Duties stepped through, one per MinimumStepMs, until the wheel stalls. */
+constexpr float MinimumDuties[]{0.10F, 0.09F, 0.08F, 0.07F, 0.06F, 0.05F};
+constexpr std::uint8_t MinimumCount{static_cast<std::uint8_t>(sizeof(MinimumDuties) / sizeof(MinimumDuties[0]))};
+constexpr std::uint32_t MinimumStepMs{1000U};
+
+/** No pulse this long after a leg starts: the motor did not start. Start-up takes about 1.1 s. */
+constexpr std::uint32_t StartTimeoutMs{2500U};
+/** No pulse this long once the wheel has moved: it stopped. */
+constexpr std::uint32_t StallMs{1000U};
+/** Longest a leg may drive. */
+constexpr std::uint32_t MaxLegMs{15000U};
+/** Brake time after each leg, so the car stands still before it drives the other way. */
+constexpr std::uint32_t BrakeMs{1500U};
+} // namespace speed_calibration
+
 } // namespace app::ford

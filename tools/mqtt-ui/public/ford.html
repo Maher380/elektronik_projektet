@@ -32,11 +32,14 @@
         <select id="style-select" aria-label="Drive style">
           <option value="manual_by_remote">ManualByRemote · you drive</option>
           <option value="gap_calibration">GapCalibration · measure the magnet gaps</option>
+          <option value="speed_calibration">SpeedCalibration · speed per duty, on the floor</option>
         </select>
         <button type="button" id="style-apply" class="button" disabled>Select</button>
       </div>
       <p id="style-note">ManualByRemote is what the car boots on. GapCalibration spins the measured
-        wheel under power for about a minute: <strong>lift the car</strong> before starting it.</p>
+        wheel under power for about a minute: <strong>lift the car</strong> before starting it.
+        SpeedCalibration drives the car <strong>on the floor</strong>, 5 m forward and 5 m back,
+        twelve times: give it a straight, clear run of 5 m plus about 0.5 m at each end.</p>
     </article>
   </section>
   <section class="calibration-panel" id="calibration-panel" aria-label="Magnet gap calibration" hidden>
@@ -54,6 +57,29 @@
         <button type="button" id="cal-store" class="button" disabled>Confirm &amp; store</button>
         <small id="cal-store-note">Nothing is written until you confirm it.</small>
       </div>
+    </article>
+  </section>
+  <section class="calibration-panel" id="speed-panel" aria-label="Speed calibration" hidden>
+    <article class="drive-card">
+      <div class="card-top"><h3>SPEED CALIBRATION · ON THE FLOOR</h3><span id="spd-phase" class="chip neutral">IDLE</span></div>
+      <div class="readout">
+        <span>LEG <strong id="spd-leg" class="mono">—</strong></span>
+        <span>TARGET <strong id="spd-target" class="mono">—</strong></span>
+        <span>DIRECTION <strong id="spd-dir" class="mono">—</strong></span>
+        <span class="odometer">STOP FACTOR k <strong id="spd-k" class="mono">—</strong></span>
+      </div>
+      <small id="spd-detail" class="measured-detail">Put the car on the start mark, then press Start.</small>
+      <div class="speed-table-wrap">
+        <table class="speed-table mono" aria-label="Speed calibration legs">
+          <thead><tr><th>LEG</th><th>TARGET m/s</th><th>DIR</th><th>RESULT</th><th>SPEED m/s</th><th>DUTY</th><th>RISE s</th><th>OVERSHOOT</th><th>STOP m</th><th>OFF MARK</th></tr></thead>
+          <tbody id="spd-rows"><tr><td colspan="10">No legs yet</td></tr></tbody>
+        </table>
+      </div>
+      <small class="measured-detail">SPEED and DUTY are the steady values once the target was held. RISE is from the
+        wheel turning (or the speed step) to within 5 % of the target. STOP is the braking distance, OFF MARK how far
+        from the 5 m mark the car stopped. On the lowest-speed legs, DUTY is the lowest that kept the car rolling.</small>
+      <small id="spd-file" class="measured-detail"></small>
+      <label class="spd-csv">CSV · select and copy<textarea id="spd-csv" class="mono" rows="6" readonly></textarea></label>
     </article>
   </section>
   <section class="drive-panel" aria-label="Drive controls">
@@ -87,7 +113,8 @@
         <button type="button" class="pad-down" data-pad="down" aria-label="Reverse">▼</button>
         <button type="button" class="pad-right" data-pad="right" aria-label="Right">▶</button>
       </div>
-      <p>↑ ↓ change the speed by 1, ← → change the steering by 10°. Hold a key to repeat. The 0 key sets the speed to 0.</p>
+      <label class="step-field">STEERING STEP<input id="steer-step" type="number" min="1" max="45" step="1" value="10" class="mono" aria-label="Steering change per arrow key press, 1 to 45"></label>
+      <p>↑ ↓ change the speed by 1, ← → change the steering by the step (1–45). Hold a key to repeat. The 0 key sets the speed to 0.</p>
     </article>
   </section>
   <section class="ford-charts" aria-label="Command beside measured, last 30 seconds">

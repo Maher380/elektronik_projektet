@@ -18,6 +18,7 @@ TEST_FILES := \
 	$(TEST_SRC_DIR)/test/odometer_gaps.cpp \
 	$(TEST_SRC_DIR)/test/pin_manager.cpp \
 	$(TEST_SRC_DIR)/test/servo.cpp \
+	$(TEST_SRC_DIR)/test/speed_calibration.cpp \
 	$(TEST_SRC_DIR)/test/temperature_sensor.cpp \
 	$(TEST_SRC_DIR)/test/voltage_meter.cpp \
 	$(TEST_SRC_DIR)/test/wifi_store.cpp
@@ -26,6 +27,7 @@ SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/system/pin_manager/esp32s3.cpp \
 	$(FIRMWARE_SRC_DIR)/system/runtime/control.cpp \
 	$(FIRMWARE_SRC_DIR)/system/logic/gapCalibration.cpp \
+	$(FIRMWARE_SRC_DIR)/system/logic/speedCalibration.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/servo/ford.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/distance_sensor/gp2y0a21yk.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301.cpp \
@@ -35,7 +37,8 @@ SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/driver/odometer/store.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/serial/stub.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/temperature_sensor/tmp36.cpp \
-	$(FIRMWARE_SRC_DIR)/driver/voltage_meter/divider.cpp \n	$(FIRMWARE_SRC_DIR)/driver/wifi/store.cpp
+	$(FIRMWARE_SRC_DIR)/driver/voltage_meter/divider.cpp \
+	$(FIRMWARE_SRC_DIR)/driver/wifi/store.cpp
 
 ALL_FILES := $(TEST_FILES) $(SOURCE_FILES)
 

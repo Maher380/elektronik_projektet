@@ -78,10 +78,19 @@ $('cal-store').addEventListener('click', async () => {
 });
 // Arrow keys and the on-screen pad step a slider per press: speed by 1, steering by 10 degrees.
 // Holding a key repeats at the keyboard's rate. The value stays where it is when the key is released.
-const pad = { up: ['speed', 1], down: ['speed', -1], left: ['steering', -10], right: ['steering', 10] };
+// The steering step is set on the page (1-45) and remembered in this browser.
+const STEER_STEP_KEY = 'ford.steeringStep';
+const steeringStep = () => { const n = Math.round(Number($('steer-step').value)); return Number.isFinite(n) ? Math.min(45, Math.max(1, n)) : 10; };
+try { const saved = localStorage.getItem(STEER_STEP_KEY); if (saved) $('steer-step').value = saved; } catch { /* Storage blocked: keep 10. */ }
+$('steer-step').addEventListener('change', () => {
+  $('steer-step').value = steeringStep();
+  try { localStorage.setItem(STEER_STEP_KEY, String(steeringStep())); } catch { /* Not remembered; still used. */ }
+});
+const pad = { up: ['speed', 1], down: ['speed', -1], left: ['steering', -1], right: ['steering', 1] };
 const arrows = { ArrowUp: 'up', ArrowDown: 'down', ArrowLeft: 'left', ArrowRight: 'right' };
 function step(name) {
-  const [id, change] = pad[name];
+  const [id, direction] = pad[name];
+  const change = id === 'steering' ? direction * steeringStep() : direction;
   // The range input clamps to its min/max.
   $(id).value = Number($(id).value) + change;
   $(id).dispatchEvent(new Event('input'));
@@ -89,6 +98,8 @@ function step(name) {
 // The 0 key (main row or numpad) sets the speed to 0; steering stays where it is.
 document.addEventListener('keydown', event => {
   if (event.altKey || event.ctrlKey || event.metaKey) return;
+  // Typing a step (e.g. 10) must not zero the speed or steer the car.
+  if (event.target === $('steer-step')) return;
   if (event.key === '0') { event.preventDefault(); centre('speed'); return; }
   const name = arrows[event.key];
   if (!name) return;
@@ -191,7 +202,7 @@ function renderMotorTemp(fresh, data) {
     : level === 'ok' ? 'Motor can · OK' : fresh ? 'No temperature reading' : 'Waiting for telemetry');
   $('motor-temp-detail').className = level === 'hot' ? 'hot' : level === 'warm' ? 'warm' : '';
 }
-const styleLabels = { manual_by_remote: 'ManualByRemote', gap_calibration: 'GapCalibration' };
+const styleLabels = { manual_by_remote: 'ManualByRemote', gap_calibration: 'GapCalibration', speed_calibration: 'SpeedCalibration' };
 const calPhaseLabels = { idle: 'IDLE', settling: 'SETTLING', sampling: 'MEASURING', measured: 'MEASURED', failed: 'REFUSED' };
 // Why a run produced no table. These are the operator's next action, not an error code:
 // a disagreement means the magnets, a stall means the wheel, too_hot means wait.
@@ -232,6 +243,76 @@ function renderCalibration(fresh, data, armed) {
   $('cal-detail').className = 'measured-detail' + (phase === 'failed' || cal.store_failed ? ' hot' : '');
   $('cal-store').disabled = pending > 0 || armed || phase !== 'measured' || cal.stored === true;
 }
+// Speed calibration. The car sends only its latest finished leg, so the console server
+// collects the legs of a run (state.speed_log) and also writes them to a CSV file.
+const spdPhaseLabels = { idle: 'IDLE', driving: 'DRIVING', braking: 'BRAKING', finished: 'FINISHED', failed: 'STOPPED' };
+const spdResultLabels = {
+  reached: 'reached', short: 'held briefly', not_reached: 'not reached', lowest: 'stalled below',
+  bottom: 'rolled at every step', no_start: 'no start', stalled: 'stalled',
+};
+const spdGood = ['reached', 'lowest', 'bottom'];
+const spdFailureDetail = {
+  no_odometer: 'No odometer. Check the A3144 sensor on D9.',
+  too_hot: 'The motor can got too hot. Let it cool, then run again.',
+  stopped: 'Stopped before the last leg. The legs below were measured; Start runs all of them again.',
+};
+const spdTarget = (from, target) => from > 0 ? `${from.toFixed(1)}→${target.toFixed(1)}` : target > 0 ? target.toFixed(1) : 'lowest';
+const spdFixed = (n, digits) => typeof n === 'number' && Number.isFinite(n) ? n.toFixed(digits) : '—';
+let speedTableKey = '';
+function renderSpeedTable(log) {
+  const body = $('spd-rows');
+  body.replaceChildren();
+  if (!log.legs.length) {
+    const cell = body.insertRow().insertCell(); cell.colSpan = 10; cell.textContent = 'No legs yet';
+  }
+  for (const leg of log.legs) {
+    const row = body.insertRow();
+    const add = (value, className = '') => { const cell = row.insertCell(); cell.textContent = value; cell.className = className; };
+    add(String(leg.leg + 1));
+    add(spdTarget(leg.from_ms ?? 0, leg.target_ms ?? 0));
+    add(leg.direction === 'forward' ? 'FWD' : 'BACK');
+    add(spdResultLabels[leg.result] || leg.result, spdGood.includes(leg.result) ? 'measured' : 'warn');
+    add(spdFixed(leg.speed_ms, 3), leg.speed_ms === null ? 'missing' : '');
+    add(spdFixed(leg.duty, 3), leg.duty === null ? 'missing' : '');
+    add(spdFixed(leg.rise_s, 2), leg.rise_s === null ? 'missing' : '');
+    add(spdFixed(leg.overshoot_ms, 3), leg.overshoot_ms === null ? 'missing' : '');
+    add(spdFixed(leg.stop_m, 2));
+    const off = leg.error_m;
+    add(off === null ? '—' : `${off > 0 ? '+' : ''}${off.toFixed(2)} m`, off !== null && Math.abs(off) > 0.15 ? 'warn' : '');
+  }
+  $('spd-csv').value = log.csv || '';
+}
+function renderSpeedCalibration(fresh, data) {
+  const spd = fresh ? data.speed_calibration : null;
+  const log = state.speed_log || { legs: [], csv: '', file: null, error: null };
+  $('speed-panel').hidden = !spd && !log.legs.length;
+  const key = log.legs.map(leg => leg.leg).join(',') + '|' + log.legs.length;
+  if (key !== speedTableKey) { speedTableKey = key; renderSpeedTable(log); }
+  text('spd-file', log.error ? log.error : log.file ? `Saved as tools/mqtt/logs/${log.file}` : '');
+  $('spd-file').className = 'measured-detail' + (log.error ? ' hot' : '');
+  if (!spd) {
+    text('spd-phase', 'NOT SELECTED'); $('spd-phase').className = 'chip neutral';
+    text('spd-detail', 'The results of the last run. Choose SpeedCalibration to run it again.');
+    return;
+  }
+  const phase = spd.phase || 'idle';
+  const running = phase === 'driving' || phase === 'braking';
+  text('spd-phase', spdPhaseLabels[phase] || phase.toUpperCase());
+  $('spd-phase').className = 'chip ' + (phase === 'finished' ? 'good' : phase === 'failed' ? 'warn' : 'neutral');
+  text('spd-leg', spd.leg_count ? `${Math.min(spd.leg + 1, spd.leg_count)} of ${spd.leg_count}` : '—');
+  text('spd-target', running ? spdTarget(spd.from ?? 0, spd.target ?? 0) : '—');
+  text('spd-dir', running ? (spd.forward ? 'FORWARD' : 'BACK') : '—');
+  text('spd-k', spdFixed(spd.stop_k, 3));
+  let detail;
+  if (phase === 'failed') detail = spdFailureDetail[spd.failure] || 'The run ended early.';
+  else if (phase === 'finished') detail = 'All legs driven. The table and the CSV file are complete.';
+  else if (phase === 'braking') detail = 'Braking before the next leg.';
+  else if (phase === 'driving') detail = 'Driving. Press PANIC STOP if it heads for anything.';
+  else detail = `Put the car on the start mark with ${spdFixed(spd.leg_m, 0)} m clear ahead, then press Start.`;
+  if (running && !Number.isFinite(data.motor_temp_c)) detail += ' No motor temperature reading, so the overheat guard is off.';
+  text('spd-detail', detail);
+  $('spd-detail').className = 'measured-detail' + (phase === 'failed' ? ' hot' : '');
+}
 function render() {
   text('steering-slider-value', signed(Number($('steering').value)));
   text('speed-slider-value', signed(Number($('speed').value)));
@@ -258,6 +339,7 @@ function render() {
   const style = fresh ? data.drive_style : null;
   text('current-style', style ? styleLabels[style] || style : '—');
   text('style-detail', style === 'gap_calibration' ? 'Measures its own magnet gaps'
+    : style === 'speed_calibration' ? 'Measures speed per duty'
     : style === 'manual_by_remote' ? 'Operator drives live' : 'Waiting for telemetry');
   // A style is chosen only while disarmed, which is what makes "arming starts the
   // selected style" answerable: one answer, fixed before anything can move.
@@ -267,6 +349,7 @@ function render() {
   $('style-select').disabled = !canSelect;
   $('style-lock').textContent = armed ? 'Stop the car to change it' : canSelect ? 'Select, then Start to run it' : 'Waiting for telemetry';
   renderCalibration(fresh, data, armed);
+  renderSpeedCalibration(fresh, data);
   renderBattery(fresh, data);
   renderMotorTemp(fresh, data);
   renderOdometer(fresh, data);

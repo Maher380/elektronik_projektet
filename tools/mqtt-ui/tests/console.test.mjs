@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { EventEmitter } from 'node:events';
 import http from 'node:http';
-import { ConsoleControl, History, SUBSCRIPTIONS, TOPIC, piValues, validateConfig } from '../core.mjs';
+import { ConsoleControl, History, SPEED_CSV_COLUMNS, SpeedLog, SUBSCRIPTIONS, TOPIC, piValues, validateConfig } from '../core.mjs';
 import { segments, valueOf } from '../public/charts.mjs';
 import { createConsole } from '../server.mjs';
 import { DemoTransport, FordDemoTransport } from '../transport.mjs';
@@ -313,6 +313,15 @@ test('Ford accepts a gap_calibration config/state instead of dropping it', () =>
   assert.equal(f.control.snapshot().config.revision, 4);
 });
 
+test('Ford accepts and selects the speed_calibration style', async () => {
+  const f = fordStyleSetup('speed_calibration');
+  assert.equal(f.control.snapshot().config.drive_style, 'speed_calibration');
+  const other = fordStyleSetup();
+  await other.control.selectDriveStyle('tab', 'speed_calibration');
+  const sent = other.transport.sent.filter(m => m.topic.endsWith('/config/set'));
+  assert.equal(sent.at(-1).data.drive_style, 'speed_calibration');
+});
+
 test('Ford drive style selection sends only the three narrowed fields', async () => {
   const f = fordStyleSetup();
   await f.control.selectDriveStyle('tab', 'gap_calibration');
@@ -347,7 +356,7 @@ test('a measured gap table is stored only once the operator confirms it', async 
 test('during gap calibration the console sends heartbeats, not refused drive commands', async () => {
   // The car refuses drive commands outside ManualByRemote and a refused one renews no
   // lease, so streaming them would starve the heartbeat and time out the run at 3 s.
-  for (const style of ['gap_calibration', 'manual_by_remote']) {
+  for (const style of ['gap_calibration', 'speed_calibration', 'manual_by_remote']) {
     const f = fordStyleSetup(style);
     const streamed = [];
     f.transport.stream = async (topic, data) => { streamed.push(data); };
@@ -360,7 +369,7 @@ test('during gap calibration the console sends heartbeats, not refused drive com
     const sent = await f.control.drive('owner', 0, 0);
     f.advance(1000); await f.control.tick();
     const heartbeat = f.transport.sent.at(-1).data.command === 'heartbeat';
-    if (style === 'gap_calibration') {
+    if (style !== 'manual_by_remote') {
       assert.equal(sent, false); assert.equal(streamed.length, 0); assert.equal(heartbeat, true);
     } else {
       assert.equal(sent, true); assert.equal(streamed[0].command, 'drive');
@@ -372,4 +381,53 @@ test('the gap calibration style is not offered on the Vagrant console', async ()
   const f = setup();
   await assert.rejects(f.control.selectDriveStyle('tab', 'gap_calibration'), /for the Ford only/);
   await assert.rejects(f.control.storeGaps(), /for the Ford only/);
+});
+
+// Ford speed calibration: the car sends only its latest leg, so the console collects them.
+function speedTelemetry(phase, last, extra = {}) {
+  return { battery_v: 7.4, speed_calibration: { phase, leg: last ? last.leg + 1 : 0, leg_count: 12, leg_m: 5, from: 0, target: 0.8, forward: true, stop_k: 0.2, ...(last ? { last } : {}), ...extra } };
+}
+const speedLeg = (leg, extra = {}) => ({ leg, from: 0, target: 0.8, forward: leg % 2 === 0, result: 'reached', speed_ms: 0.81, duty: 0.121, rise_s: 0.9, overshoot: 0.05, stop_m: 0.12, distance_m: 5.04, ...extra });
+
+test('the speed log collects each leg once and writes it to one CSV file per run', () => {
+  const written = [];
+  const log = new SpeedLog({ write: (file, text) => written.push({ file, text }) });
+  log.ingest(speedTelemetry('driving', null), Date.UTC(2026, 9, 5, 12, 0, 0));
+  assert.equal(log.legs.length, 0);
+  // The file is named when the first leg arrives.
+  for (let i = 0; i < 3; i++) log.ingest(speedTelemetry('braking', speedLeg(0)), Date.UTC(2026, 9, 5, 12, 0, 0));
+  log.ingest(speedTelemetry('driving', speedLeg(1, { result: 'not_reached', duty: undefined, distance_m: 4.9 })), 2);
+  assert.equal(log.legs.length, 2);
+  assert.equal(log.legs[0].error_m, 0.04);
+  assert.equal(log.legs[1].error_m, -0.1);
+  assert.equal(log.legs[1].direction, 'back');
+  assert.equal(log.legs[1].duty, null);
+  // One file, a header and a line per leg.
+  assert.equal(new Set(written.map(w => w.file)).size, 1);
+  assert.match(written[0].file, /^speed_calibration-2026-10-05T12-00-00\.csv$/);
+  assert.equal(written[0].text, SPEED_CSV_COLUMNS.join(',') + '\n');
+  assert.equal(written.length, 3);
+  assert.match(written[2].text, /^1,0,0\.8,back,not_reached,0\.81,,/);
+  assert.equal(log.csv().split('\n').length, 3);
+
+  // Starting again begins a new table and a new file.
+  log.ingest(speedTelemetry('driving', null), Date.UTC(2026, 9, 5, 12, 5, 0));
+  assert.equal(log.legs.length, 0);
+  log.ingest(speedTelemetry('braking', speedLeg(0)), 3);
+  assert.equal(new Set(written.map(w => w.file)).size, 2);
+});
+
+test('the speed log keeps the table when writing the file fails', () => {
+  const log = new SpeedLog({ write: () => { throw Error('disk full'); } });
+  log.ingest(speedTelemetry('braking', speedLeg(0)), 1);
+  assert.equal(log.legs.length, 1);
+  assert.match(log.snapshot().error, /disk full/);
+});
+
+test('the Ford console snapshot carries the collected speed calibration legs', () => {
+  const f = fordStyleSetup('speed_calibration');
+  f.receive('telemetry', { ...telemetry, sequence: 2, uptime_ms: 1200, drive_style: 'speed_calibration', control_state: 'armed', ...speedTelemetry('braking', speedLeg(0)) });
+  const snapshot = f.control.snapshot();
+  assert.equal(snapshot.speed_log.legs.length, 1);
+  assert.equal(snapshot.speed_log.legs[0].speed_ms, 0.81);
 });

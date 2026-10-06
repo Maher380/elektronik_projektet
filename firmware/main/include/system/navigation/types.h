@@ -11,7 +11,8 @@ enum Position : std::size_t { Left, Forward, Right, SensorCount };
 using Distances = std::array<float, SensorCount>;
 /** ManualByRemote: an operator drives live from the web page (Ford only). */
 /** GapCalibration: the car drives a fixed script to measure its own magnet gaps (Ford only). */
+/** SpeedCalibration: the car drives a fixed script on the floor to measure speed per duty (Ford only). */
 enum class DriveStyle : std::uint8_t
-{ DecideAction, SlowLeft, SlowRight, GradualSweep, ManualByRemote, GapCalibration };
+{ DecideAction, SlowLeft, SlowRight, GradualSweep, ManualByRemote, GapCalibration, SpeedCalibration };
 
 } // namespace app::navigation

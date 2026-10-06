@@ -70,3 +70,16 @@ input[type=range]{accent-color:var(--cyan);cursor:pointer}
    outlier is visible at a glance, which is what the operator is looking for. */
 .cal-gaps{margin-top:10px;min-height:14px;font-size:12px;letter-spacing:.6px;color:var(--lime);white-space:pre-wrap}
 .calibration-panel .measured-detail.hot{color:#ff8a80}
+/* Speed calibration: one row per duty, forward and back beside each other. */
+.speed-table-wrap{overflow-x:auto;margin:12px 0 6px}
+.speed-table{width:100%;border-collapse:collapse;font-size:12px;white-space:nowrap}
+.speed-table th{text-align:left;font-size:9px;letter-spacing:1px;color:var(--muted);font-weight:600;padding:4px 8px;border-bottom:1px solid #293c4c}
+.speed-table td{padding:5px 8px;border-bottom:1px solid #1d2c39;color:var(--text)}
+.speed-table td.measured{color:var(--lime)}
+.speed-table td.warn{color:var(--orange)}
+.speed-table td.missing{color:var(--muted)}
+.spd-csv{display:block;margin-top:10px;font-size:9px;letter-spacing:1px;color:var(--muted)}
+.spd-csv textarea{display:block;width:100%;margin-top:6px;padding:7px 9px;border-radius:6px;background:#0e1924;color:var(--text);border:1px solid #324859;font-size:11px;resize:vertical}
+/* Arrow keys: the steering change per press, set by the operator. */
+.step-field{display:flex;align-items:center;gap:8px;font-size:9px;letter-spacing:1px;color:var(--muted)}
+.step-field input{width:64px;padding:5px 7px;border-radius:6px;background:#0e1924;color:var(--text);border:1px solid #324859;font-size:13px}

@@ -31,7 +31,8 @@ bool Control::supportsDriveStyle(navigation::DriveStyle style) const noexcept
     if (myRemoteDrivenCar)
     {
         return (style == navigation::DriveStyle::ManualByRemote)
-            || (style == navigation::DriveStyle::GapCalibration);
+            || (style == navigation::DriveStyle::GapCalibration)
+            || (style == navigation::DriveStyle::SpeedCalibration);
     }
     switch (style)
     {
@@ -40,9 +41,9 @@ bool Control::supportsDriveStyle(navigation::DriveStyle style) const noexcept
         case navigation::DriveStyle::SlowRight:
         case navigation::DriveStyle::GradualSweep: return !mySystemTest;
         case navigation::DriveStyle::ManualByRemote:
-        // GapCalibration measures a wheel's magnet gaps, so it needs an Odometer with
-        // magnets on it. Only a remote-driven car has one.
-        case navigation::DriveStyle::GapCalibration: return false;
+        // The calibrations measure with an Odometer, and only a remote-driven car has one.
+        case navigation::DriveStyle::GapCalibration:
+        case navigation::DriveStyle::SpeedCalibration: return false;
     }
     return false;
 }

@@ -435,6 +435,9 @@ void FordLogic::decideAction(const std::uint32_t nowMs) noexcept
         case navigation::DriveStyle::GapCalibration:
             decideGapCalibrationAction(nowMs);
             break;
+        case navigation::DriveStyle::SpeedCalibration:
+            decideSpeedCalibrationAction(nowMs);
+            break;
         // A remote-driven car never has an autonomous style selected: Control's
         // supportsDriveStyle() refuses them, so these cannot be reached. No drive is
         // nevertheless the right answer rather than carrying on with a stale request.
@@ -566,6 +569,151 @@ void FordLogic::logCalibration() noexcept
              static_cast<double>(result.margin), static_cast<double>(odo::MinPhaseMargin));
 }
 
+void FordLogic::decideSpeedCalibrationAction(const std::uint32_t nowMs) noexcept
+{
+    // Straight ahead throughout: the operator lines the car up and stops it if it drifts.
+    myPlannedDrive = {};
+    auto& state = mySpeedCalibration;
+
+    // The lease is style-independent; see decideGapCalibrationAction().
+    const bool armed = myControl.renewLease(nowMs);
+
+    // Arming starts a run; the edge, not the level, because a finished run disarms.
+    if (armed && !state.wasArmed)
+    {
+        state.run.start(nowMs, ford::OdometerMagnets, static_cast<float>(ford::WheelCircumferenceM));
+        state.loggedAny = false;
+        char targets[64];
+        formatValues(ford::speed_calibration::TargetsMs, ford::speed_calibration::TargetCount, targets,
+                     sizeof(targets));
+        ESP_LOGI("SPD", "start targets=%s legs=%u leg_m=%.2f stop_k=%.3f",
+                 targets, ford::speed_calibration::LegCount,
+                 static_cast<double>(ford::speed_calibration::LegM),
+                 static_cast<double>(state.run.stopK()));
+    }
+    state.wasArmed = armed;
+
+    if (!state.run.isRunning()) { return; }
+
+    myPlannedDrive.duty = state.run.update(nowMs, armed, myMotorTemperatureC, myOdometer.get());
+    myPlannedDrive.brake = state.run.isBraking();
+    logSpeedCalibration();
+
+    // As for GapCalibration: a finished run disarms with its own reason, a disarmed one
+    // already has the real reason and is left alone.
+    if (!state.run.isRunning())
+    {
+        myPlannedDrive = {};
+        if (armed) { myControl.finishDriveStyle(); }
+        state.wasArmed = false;
+        const char* failure = toString(state.run.failure());
+        ESP_LOGI("SPD", "end phase=%s failure=%s", toString(state.run.phase()),
+                 (failure != nullptr) ? failure : "none");
+    }
+}
+
+void FordLogic::logSpeedCalibration() noexcept
+{
+    // Tag SPD, one line per leg, so a serial capture can be filtered with grep.
+    auto& state = mySpeedCalibration;
+    if (!state.run.hasLastLeg()) { return; }
+
+    const auto& leg = state.run.lastLeg();
+    if (state.loggedAny && (state.loggedLeg == leg.index)) { return; }
+    state.loggedAny = true;
+    state.loggedLeg = leg.index;
+
+    ESP_LOGI("SPD", "leg n=%u from=%.2f target=%.2f dir=%s result=%s speed_ms=%.3f duty=%.3f "
+             "rise_s=%.2f overshoot=%.3f stop_m=%.3f distance_m=%.3f stop_k=%.3f",
+             leg.index, static_cast<double>(leg.plan.fromMs), static_cast<double>(leg.plan.targetMs),
+             leg.plan.forward ? "fwd" : "back", toString(leg.outcome),
+             static_cast<double>(leg.speedMs), static_cast<double>(leg.duty),
+             static_cast<double>(leg.riseS), static_cast<double>(leg.overshootMs),
+             static_cast<double>(leg.stopM), static_cast<double>(leg.distanceM),
+             static_cast<double>(state.run.stopK()));
+}
+
+const char* FordLogic::toString(const SpeedCalibration::Phase phase) noexcept
+{
+    switch (phase)
+    {
+        case SpeedCalibration::Phase::Idle: return "idle";
+        case SpeedCalibration::Phase::Driving: return "driving";
+        case SpeedCalibration::Phase::Braking: return "braking";
+        case SpeedCalibration::Phase::Finished: return "finished";
+        case SpeedCalibration::Phase::Failed: return "failed";
+    }
+    return "idle";
+}
+
+const char* FordLogic::toString(const SpeedCalibration::Failure failure) noexcept
+{
+    switch (failure)
+    {
+        case SpeedCalibration::Failure::None: return nullptr;
+        case SpeedCalibration::Failure::NoOdometer: return "no_odometer";
+        case SpeedCalibration::Failure::TooHot: return "too_hot";
+        case SpeedCalibration::Failure::Stopped: return "stopped";
+    }
+    return nullptr;
+}
+
+const char* FordLogic::toString(const SpeedCalibration::Outcome outcome) noexcept
+{
+    switch (outcome)
+    {
+        case SpeedCalibration::Outcome::None: return "none";
+        case SpeedCalibration::Outcome::Reached: return "reached";
+        case SpeedCalibration::Outcome::Short: return "short";
+        case SpeedCalibration::Outcome::NotReached: return "not_reached";
+        case SpeedCalibration::Outcome::Lowest: return "lowest";
+        case SpeedCalibration::Outcome::Bottom: return "bottom";
+        case SpeedCalibration::Outcome::NoStart: return "no_start";
+        case SpeedCalibration::Outcome::Stalled: return "stalled";
+    }
+    return "none";
+}
+
+void FordLogic::publishSpeedCalibrationState() noexcept
+{
+    auto& out = mySnapshot.speedCalibration;
+    if (myControl.configuration().driveStyle != navigation::DriveStyle::SpeedCalibration)
+    {
+        out.phase = nullptr;
+        return;
+    }
+
+    const auto& run = mySpeedCalibration.run;
+    out.phase = toString(run.phase());
+    out.failure = toString(run.failure());
+    out.leg = run.legIndex();
+    out.legCount = ford::speed_calibration::LegCount;
+    out.legM = ford::speed_calibration::LegM;
+    const auto plan = SpeedCalibration::planOf(run.legIndex());
+    out.fromMs = plan.fromMs;
+    out.targetMs = plan.targetMs;
+    out.forward = plan.forward;
+    out.stopK = run.stopK();
+
+    if (!run.hasLastLeg())
+    {
+        out.lastResult = nullptr;
+        return;
+    }
+    const auto& leg = run.lastLeg();
+    out.lastResult = toString(leg.outcome);
+    out.lastLeg = leg.index;
+    out.lastFromMs = leg.plan.fromMs;
+    out.lastTargetMs = leg.plan.targetMs;
+    out.lastForward = leg.plan.forward;
+    out.lastSpeedMs = leg.speedMs;
+    out.lastDuty = leg.duty;
+    out.lastRiseS = leg.riseS;
+    out.lastOvershootMs = leg.overshootMs;
+    out.lastStopM = leg.stopM;
+    out.lastDistanceM = leg.distanceM;
+}
+
 const char* FordLogic::toString(const GapCalibration::Phase phase) noexcept
 {
     switch (phase)
@@ -675,7 +823,11 @@ void FordLogic::executeAction(const std::uint32_t nowMs) noexcept
         ? driver::motor::Direction::Backward
         : driver::motor::Direction::Forward;
     if (!armed || myActuatorFault) { myBraking = false; }
-    else if (myPlannedDrive.duty == 0.0F) { wanted = MotorState::NoDrive; myBraking = false; }
+    else if (myPlannedDrive.duty == 0.0F)
+    {
+        wanted = myPlannedDrive.brake ? MotorState::Braking : MotorState::NoDrive;
+        myBraking = false;
+    }
     else
     {
         // Never reverse a spinning sensorless motor: brake first, then change DIR.
@@ -759,6 +911,7 @@ void FordLogic::publishState(const std::uint32_t nowMs) noexcept
         mySnapshot.odometerPhaseLosses = myOdometer->phaseLossCount();
     }
     publishCalibrationState();
+    publishSpeedCalibrationState();
     if (myPreviousState != myControl.controlState() || myPreviousMotion != myControl.motionState()
         || myPreviousReason != myControl.stateReason())
     { myCommunication->notifyControlStateChanged(); }

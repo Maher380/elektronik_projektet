@@ -22,6 +22,7 @@
 #include "driver/wifi/store.h"
 #include "system/communication/manager.h"
 #include "system/logic/gapCalibration.h"
+#include "system/logic/speedCalibration.h"
 #include "system/navigation/types.h"
 #include "system/runtime/control.h"
 
@@ -51,6 +52,13 @@ struct PlannedDrive
     float duty{0.0F};
     /** -90 full left, 0 straight ahead, +90 full right. */
     float steeringCommand{0.0F};
+    /**
+     * @brief With duty 0: hold the brake rather than coast.
+     *
+     * SpeedCalibration brakes between legs, so that a fixed run on the floor ends in a
+     * short, repeatable distance. The arm gate still decides first: disarmed always brakes.
+     */
+    bool brake{false};
 };
 
 /**
@@ -97,6 +105,18 @@ private:
     /** Fill in the nested calibration object, or leave it out for any other style. */
     void publishCalibrationState() noexcept;
 
+    /** Name for a speed calibration phase, reported as speed_calibration.phase. */
+    static const char* toString(SpeedCalibration::Phase phase) noexcept;
+
+    /** Name for a speed calibration failure; nullptr when there was none. */
+    static const char* toString(SpeedCalibration::Failure failure) noexcept;
+
+    /** Name for a leg's outcome, reported as speed_calibration.last.result. */
+    static const char* toString(SpeedCalibration::Outcome outcome) noexcept;
+
+    /** Fill in the nested speed_calibration object, or leave it out for any other style. */
+    void publishSpeedCalibrationState() noexcept;
+
     /**
      * @brief Construct and initialize every driver, brake first.
      *
@@ -141,6 +161,12 @@ private:
 
     /** Log each new revolution, each finished duty and the result, for analysis offline. */
     void logCalibration() noexcept;
+
+    /** SpeedCalibration: drive the recipe's legs on the floor and report each one. */
+    void decideSpeedCalibrationAction(std::uint32_t nowMs) noexcept;
+
+    /** Log each finished leg over serial, tagged SPD. */
+    void logSpeedCalibration() noexcept;
 
     /** Store a measured gap table when the operator confirms it. */
     void storeMeasuredGaps() noexcept;
@@ -248,6 +274,19 @@ private:
         std::uint8_t loggedDuties{0U};
     };
     GapCalibrationState myCalibration{};
+
+    /** SpeedCalibration's own state, kept apart for the same reason. */
+    struct SpeedCalibrationState
+    {
+        /** The measurement itself. */
+        SpeedCalibration run{};
+        /** Whether the car was armed on the previous tick; arming starts a run. */
+        bool wasArmed{false};
+        /** Whether a leg has been logged in this run, and which. */
+        bool loggedAny{false};
+        std::uint8_t loggedLeg{0U};
+    };
+    SpeedCalibrationState mySpeedCalibration{};
 
     /** Last motor can temperature, or NaN when there is no sensor. Read by readSensors(). */
     float myMotorTemperatureC{std::numeric_limits<float>::quiet_NaN()};

@@ -85,6 +85,7 @@ struct WireTelemetrySnapshot
     bool calibrationStored{false};
     bool calibrationStoreFailed{false};
     bool calibrationOverheatGuard{false};
+    SpeedCalibrationTelemetry speedCalibration{};
     runtime::ControlState controlState{runtime::ControlState::Disarmed};
     runtime::MotionState motionState{runtime::MotionState::Stopped};
     runtime::StateReason reason{runtime::StateReason::Boot};
@@ -107,6 +108,7 @@ const char* toString(navigation::DriveStyle style) noexcept
         case navigation::DriveStyle::GradualSweep: return "gradual_sweep";
         case navigation::DriveStyle::ManualByRemote: return "manual_by_remote";
         case navigation::DriveStyle::GapCalibration: return "gap_calibration";
+        case navigation::DriveStyle::SpeedCalibration: return "speed_calibration";
     }
     return "invalid";
 }
@@ -118,7 +120,7 @@ bool readDriveStyle(const cJSON* item, navigation::DriveStyle& style, ParseError
     constexpr navigation::DriveStyle styles[]{navigation::DriveStyle::DecideAction,
         navigation::DriveStyle::SlowLeft, navigation::DriveStyle::SlowRight,
         navigation::DriveStyle::GradualSweep, navigation::DriveStyle::ManualByRemote,
-        navigation::DriveStyle::GapCalibration};
+        navigation::DriveStyle::GapCalibration, navigation::DriveStyle::SpeedCalibration};
     for (const auto candidate : styles)
     {
         if (std::strcmp(item->valuestring, toString(candidate)) == 0) { style = candidate; return true; }
@@ -560,6 +562,60 @@ bool writeCommandState(char* destination,
     return printAndDelete(root, destination, destinationSize);
 }
 
+/**
+ * @brief A value rounded to three decimals.
+ *
+ * cJSON prints a float as the double it widens to, 0.15 as 0.15000000596046448. With the
+ * speed calibration object Ford's telemetry would not fit the 1024-byte payload that way,
+ * so Ford's measured values and that object are rounded first.
+ */
+double rounded(const float value) noexcept
+{
+    return std::round(static_cast<double>(value) * 1000.0) / 1000.0;
+}
+
+/** Add a rounded number when it is finite; a NaN leaves the field out. */
+bool addOptional(cJSON* object, const char* name, const float value) noexcept
+{
+    return !std::isfinite(value) || (cJSON_AddNumberToObject(object, name, rounded(value)) != nullptr);
+}
+
+/** Add SpeedCalibration's nested object; nothing when that style is not selected. */
+bool addSpeedCalibration(cJSON* root, const SpeedCalibrationTelemetry& speed) noexcept
+{
+    if (speed.phase == nullptr) { return true; }
+
+    cJSON* object = cJSON_AddObjectToObject(root, "speed_calibration");
+    bool valid = (object != nullptr)
+        && (cJSON_AddStringToObject(object, "phase", speed.phase) != nullptr)
+        && (cJSON_AddNumberToObject(object, "leg", speed.leg) != nullptr)
+        && (cJSON_AddNumberToObject(object, "leg_count", speed.legCount) != nullptr)
+        && (cJSON_AddNumberToObject(object, "leg_m", rounded(speed.legM)) != nullptr)
+        && (cJSON_AddNumberToObject(object, "from", rounded(speed.fromMs)) != nullptr)
+        && (cJSON_AddNumberToObject(object, "target", rounded(speed.targetMs)) != nullptr)
+        && (cJSON_AddBoolToObject(object, "forward", speed.forward) != nullptr)
+        && (cJSON_AddNumberToObject(object, "stop_k", rounded(speed.stopK)) != nullptr);
+    if (valid && (speed.failure != nullptr))
+    {
+        valid = cJSON_AddStringToObject(object, "failure", speed.failure) != nullptr;
+    }
+    if (!valid || (speed.lastResult == nullptr)) { return valid; }
+
+    cJSON* last = cJSON_AddObjectToObject(object, "last");
+    return (last != nullptr)
+        && (cJSON_AddNumberToObject(last, "leg", speed.lastLeg) != nullptr)
+        && (cJSON_AddNumberToObject(last, "from", rounded(speed.lastFromMs)) != nullptr)
+        && (cJSON_AddNumberToObject(last, "target", rounded(speed.lastTargetMs)) != nullptr)
+        && (cJSON_AddBoolToObject(last, "forward", speed.lastForward) != nullptr)
+        && (cJSON_AddStringToObject(last, "result", speed.lastResult) != nullptr)
+        && addOptional(last, "speed_ms", speed.lastSpeedMs)
+        && addOptional(last, "duty", speed.lastDuty)
+        && addOptional(last, "rise_s", speed.lastRiseS)
+        && addOptional(last, "overshoot", speed.lastOvershootMs)
+        && (cJSON_AddNumberToObject(last, "stop_m", rounded(speed.lastStopM)) != nullptr)
+        && (cJSON_AddNumberToObject(last, "distance_m", rounded(speed.lastDistanceM)) != nullptr);
+}
+
 bool writeTelemetry(char* destination,
                     std::size_t destinationSize,
                     const WireTelemetrySnapshot& snapshot) noexcept
@@ -643,12 +699,12 @@ bool writeTelemetry(char* destination,
         && ((snapshot.motorState == nullptr)
             || (cJSON_AddStringToObject(motor, "state", snapshot.motorState) != nullptr))
         && (!std::isfinite(snapshot.batteryVoltage)
-            || (cJSON_AddNumberToObject(root, "battery_v", snapshot.batteryVoltage) != nullptr))
+            || (cJSON_AddNumberToObject(root, "battery_v", rounded(snapshot.batteryVoltage)) != nullptr))
         && (!std::isfinite(snapshot.measuredSpeedMs)
-            || (cJSON_AddNumberToObject(root, "measured_speed_ms", snapshot.measuredSpeedMs)
+            || (cJSON_AddNumberToObject(root, "measured_speed_ms", rounded(snapshot.measuredSpeedMs))
                 != nullptr))
         && (!std::isfinite(snapshot.odometerDistanceM)
-            || (cJSON_AddNumberToObject(root, "odometer_distance_m", snapshot.odometerDistanceM)
+            || (cJSON_AddNumberToObject(root, "odometer_distance_m", rounded(snapshot.odometerDistanceM))
                 != nullptr))
         && ((snapshot.measuredSpeedSource == nullptr)
             || (cJSON_AddStringToObject(root, "measured_speed_source", snapshot.measuredSpeedSource)
@@ -659,7 +715,7 @@ bool writeTelemetry(char* destination,
                                         static_cast<double>(snapshot.odometerPhaseLosses))
                 != nullptr))
         && (!std::isfinite(snapshot.motorTemperatureC)
-            || (cJSON_AddNumberToObject(root, "motor_temp_c", snapshot.motorTemperatureC) != nullptr))
+            || (cJSON_AddNumberToObject(root, "motor_temp_c", rounded(snapshot.motorTemperatureC)) != nullptr))
         && (cJSON_AddStringToObject(root,
                                     "control_state",
                                     toString(snapshot.controlState))
@@ -719,6 +775,8 @@ bool writeTelemetry(char* destination,
             }
         }
     }
+
+    valid = valid && addSpeedCalibration(root, snapshot.speedCalibration);
 
     if (!valid)
     {
@@ -1035,6 +1093,7 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.calibrationStored = snapshot.calibrationStored;
     wireSnapshot.calibrationStoreFailed = snapshot.calibrationStoreFailed;
     wireSnapshot.calibrationOverheatGuard = snapshot.calibrationOverheatGuard;
+    wireSnapshot.speedCalibration = snapshot.speedCalibration;
     wireSnapshot.controlState = control.controlState();
     wireSnapshot.motionState = control.motionState();
     wireSnapshot.reason = control.stateReason();
