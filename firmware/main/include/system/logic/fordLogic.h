@@ -130,7 +130,11 @@ private:
     /** Join the network stored over serial if there is one, the compiled-in one if not. */
     void loadWifiNetwork() noexcept;
 
-    /** Handle one serial line if one has arrived. Only network settings, never motion. */
+    /**
+     * @brief Handle one serial line if one has arrived.
+     *
+     * Network settings, and a raw steering pulse for measuring the servo. Never drive.
+     */
     void processSerialCommand() noexcept;
 
     /**
@@ -139,6 +143,16 @@ private:
      * @param[in] args Everything after "wifi", leading spaces removed. Values keep their case.
      */
     void handleWifiCommand(const char* args) noexcept;
+
+    /**
+     * @brief Handle the arguments of a `servo` command: send a raw steering pulse.
+     *
+     * For measuring where the wheels point straight and where they hit the end stops.
+     * Disarmed only. The pulse is held until `servo` alone or Start, which centre it.
+     *
+     * @param[in] args A pulse width in microseconds, or nothing to centre again.
+     */
+    void handleServoCommand(const char* args) noexcept;
 
     /**
      * @brief Read what the car can sense, before any style decides on it.
@@ -309,6 +323,8 @@ private:
     MotorState myAppliedState{MotorState::Braked};
     float myAppliedDuty{0.0F};
     float myAppliedSteering{std::numeric_limits<float>::quiet_NaN()};
+    /** True while a `servo <us>` pulse is on the steering instead of the applied command. */
+    bool myRawSteeringPulse{false};
 
     /** Direction-change brake: the last driven direction and when the brake started. */
     driver::motor::Direction myDrivenDirection{driver::motor::Direction::Forward};

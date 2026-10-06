@@ -16,6 +16,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <limits>
 #include <memory>
@@ -102,7 +103,18 @@ constexpr const char* SerialHelpText{
     "  wifi pass <pass>  set the password; leave it out for an open network\n"
     "  wifi save         store the new network; it is used after a restart\n"
     "  wifi clear        forget the stored network, back to the built-in one\n"
+    "  servo <us>        send a raw steering pulse, 500-2400 us; disarmed only\n"
+    "  servo             centre the steering again\n"
     "  help              this text\n"};
+
+/**
+ * @brief Raw pulses the `servo` command accepts: the MG90S's own full travel.
+ *
+ * Wider than the steering can move. Step in small increments and back off as soon as the
+ * wheels stop or the servo hums, or it stalls against the end stop.
+ */
+constexpr long ServoCommandMinPulseUs{500};
+constexpr long ServoCommandMaxPulseUs{2400};
 
 /**
  * @brief Match a command word at the start of a line, ignoring case.
@@ -312,8 +324,50 @@ void FordLogic::processSerialCommand() noexcept
     while (*start == ' ') { ++start; }
 
     if (const char* args{afterWord(start, "wifi")}) { handleWifiCommand(args); }
+    else if (const char* args{afterWord(start, "servo")}) { handleServoCommand(args); }
     else if (afterWord(start, "help") != nullptr) { mySerial->write(SerialHelpText); }
     else if (*start != '\0') { mySerial->write("Unknown command. Type help.\n"); }
+}
+
+void FordLogic::handleServoCommand(const char* args) noexcept
+{
+    if (myControl.controlState() != app::runtime::ControlState::Disarmed)
+    {
+        mySerial->write("Stop the car first: servo works only while disarmed.\n");
+        return;
+    }
+    if (*args == '\0')
+    {
+        // executeAction() writes the steering again when it differs from what was applied.
+        myAppliedSteering = std::numeric_limits<float>::quiet_NaN();
+        myRawSteeringPulse = false;
+        mySerial->write("Steering centred.\n");
+        return;
+    }
+
+    char* end{nullptr};
+    const long pulseUs{std::strtol(args, &end, 10)};
+    if ((end == args) || (*end != '\0') || (pulseUs < ServoCommandMinPulseUs)
+        || (pulseUs > ServoCommandMaxPulseUs))
+    {
+        mySerial->write("Usage: servo <us>, a whole number from 500 to 2400, or servo to centre.\n");
+        return;
+    }
+
+    // Straight to the PWM, past the servo driver's left/centre/right mapping being measured.
+    // The applied steering is left alone, so executeAction() holds this pulse while disarmed.
+    // Start drops it; see executeAction().
+    const float duty{static_cast<float>(pulseUs) * static_cast<float>(mySteeringPwm->frequencyHz())
+                     / 1'000'000.0F};
+    char out[96]{};
+    if (!mySteeringPwm->setDuty(duty))
+    {
+        mySerial->write("Could not set the steering pulse.\n");
+        return;
+    }
+    myRawSteeringPulse = true;
+    std::snprintf(out, sizeof(out), "Steering pulse %ld us. Back off if the servo hums.\n", pulseUs);
+    mySerial->write(out);
 }
 
 void FordLogic::handleWifiCommand(const char* args) noexcept
@@ -866,6 +920,12 @@ void FordLogic::executeAction(const std::uint32_t nowMs) noexcept
     const auto wantedDirection = myPlannedDrive.duty < 0.0F
         ? driver::motor::Direction::Backward
         : driver::motor::Direction::Forward;
+    // An armed car steers by its commands, never by a `servo` measuring pulse.
+    if (armed && myRawSteeringPulse)
+    {
+        myAppliedSteering = std::numeric_limits<float>::quiet_NaN();
+        myRawSteeringPulse = false;
+    }
     if (!armed || myActuatorFault) { myBraking = false; }
     else if (myPlannedDrive.duty == 0.0F)
     {
