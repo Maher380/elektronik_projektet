@@ -56,12 +56,12 @@ private:
     static constexpr float MinPulseUs{500.0F};
     static constexpr float MaxPulseUs{2400.0F};
 
-    // @Todo measure the steering end stops with the servo fitted and set these just inside
-    // them. Until then they stay +-300 us from center, well short of full servo travel.
-    // Swap left and right if the servo is mounted so that it steers the wrong way.
-    static constexpr float LeftPulseUs{1200.0F};
-    static constexpr float CenterPulseUs{1500.0F};
-    static constexpr float RightPulseUs{1800.0F};
+    // Measured on Ford with the `servo` serial command: the wheels point straight at about
+    // 1950 us, and 2250 us is full right for now.
+    // @Todo measure the left end stop. Until then left mirrors right, 300 us from center.
+    static constexpr float LeftPulseUs{1650.0F};
+    static constexpr float CenterPulseUs{1950.0F};
+    static constexpr float RightPulseUs{2250.0F};
 
     static_assert(MinPulseUs <= LeftPulseUs && LeftPulseUs <= MaxPulseUs, "left pulse outside servo travel");
     static_assert(MinPulseUs <= RightPulseUs && RightPulseUs <= MaxPulseUs, "right pulse outside servo travel");
