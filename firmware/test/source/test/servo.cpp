@@ -40,23 +40,23 @@ bool runServoTest() noexcept
     bool passed = expect(!servo.setDirection(0.0F), "uninitialized servo should reject a direction")
         && expect(servo.init(), "init should succeed")
         && expect(pwm.isInitialized(), "init should initialize the PWM")
-        && expect(isPulse(pwm, 1500.0F), "init should center the servo at 1500 us");
+        && expect(isPulse(pwm, 1582.0F), "init should center the servo at 1582 us");
 
     passed = passed
-        && expect(servo.setDirection(-90.0F) && isPulse(pwm, 1000.0F), "full left should be 1000 us")
-        && expect(servo.setDirection(90.0F) && isPulse(pwm, 2000.0F), "full right should be 2000 us")
-        && expect(servo.setDirection(-45.0F) && isPulse(pwm, 1250.0F), "half left should be 1250 us")
-        && expect(servo.setDirection(45.0F) && isPulse(pwm, 1750.0F), "half right should be 1750 us")
+        && expect(servo.setDirection(-90.0F) && isPulse(pwm, 1182.0F), "full left should be 1182 us")
+        && expect(servo.setDirection(90.0F) && isPulse(pwm, 1982.0F), "full right should be 1982 us")
+        && expect(servo.setDirection(-45.0F) && isPulse(pwm, 1382.0F), "half left should be 1382 us")
+        && expect(servo.setDirection(45.0F) && isPulse(pwm, 1782.0F), "half right should be 1782 us")
         && expect(servo.getDirection() == 45.0F, "direction should be stored");
 
     // Commands past full lock are clamped, not rejected.
     passed = passed
-        && expect(servo.setDirection(120.0F) && isPulse(pwm, 2000.0F), "past full right should clamp to 2000 us")
+        && expect(servo.setDirection(120.0F) && isPulse(pwm, 1982.0F), "past full right should clamp to 1982 us")
         && expect(servo.getDirection() == 90.0F, "clamped direction should be stored")
-        && expect(servo.setDirection(-120.0F) && isPulse(pwm, 1000.0F), "past full left should clamp to 1000 us");
+        && expect(servo.setDirection(-120.0F) && isPulse(pwm, 1182.0F), "past full left should clamp to 1182 us");
 
     passed = passed
-        && expect(servo.center() && isPulse(pwm, 1500.0F), "center should be 1500 us")
+        && expect(servo.center() && isPulse(pwm, 1582.0F), "center should be 1582 us")
         && expect(servo.deinit() && !servo.isInitialized() && !pwm.isInitialized(),
                   "deinit should stop the servo and its PWM");
 
