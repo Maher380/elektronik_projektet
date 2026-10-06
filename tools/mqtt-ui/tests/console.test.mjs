@@ -331,6 +331,15 @@ test('Ford accepts and selects the speed_calibration style', async () => {
   assert.equal(sent.at(-1).data.drive_style, 'speed_calibration');
 });
 
+test('Ford reports the disabled style but the operator cannot select it', async () => {
+  const f = fordStyleSetup('disabled');
+  assert.equal(f.control.snapshot().config.drive_style, 'disabled');
+  await assert.rejects(f.control.selectDriveStyle('tab', 'disabled'), /Unknown Ford drive style/);
+  // Leaving it is an ordinary selection.
+  await f.control.selectDriveStyle('tab', 'manual_by_remote');
+  assert.equal(f.transport.sent.at(-1).data.drive_style, 'manual_by_remote');
+});
+
 test('Ford drive style selection sends only the three narrowed fields', async () => {
   const f = fordStyleSetup();
   await f.control.selectDriveStyle('tab', 'gap_calibration');

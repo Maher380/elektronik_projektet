@@ -148,6 +148,8 @@ enum class StateReason : std::uint8_t
     DriveTimeout,
     /** The selected drive style ran to its end. Not a fault; Start begins another run. */
     DriveStyleFinished,
+    /** Ford safe mode: a temperature reached its limit, so the car switched to Disabled. */
+    Overheated,
     None,
 };
 

@@ -32,7 +32,8 @@ bool Control::supportsDriveStyle(navigation::DriveStyle style) const noexcept
     {
         return (style == navigation::DriveStyle::ManualByRemote)
             || (style == navigation::DriveStyle::GapCalibration)
-            || (style == navigation::DriveStyle::SpeedCalibration);
+            || (style == navigation::DriveStyle::SpeedCalibration)
+            || (style == navigation::DriveStyle::Disabled);
     }
     switch (style)
     {
@@ -43,7 +44,9 @@ bool Control::supportsDriveStyle(navigation::DriveStyle style) const noexcept
         case navigation::DriveStyle::ManualByRemote:
         // The calibrations measure with an Odometer, and only a remote-driven car has one.
         case navigation::DriveStyle::GapCalibration:
-        case navigation::DriveStyle::SpeedCalibration: return false;
+        case navigation::DriveStyle::SpeedCalibration:
+        // Only Ford's safe mode selects Disabled.
+        case navigation::DriveStyle::Disabled: return false;
     }
     return false;
 }

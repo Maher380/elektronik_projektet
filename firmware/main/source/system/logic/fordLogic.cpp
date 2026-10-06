@@ -437,6 +437,32 @@ void FordLogic::readSensors(const std::uint32_t nowMs) noexcept
     }
 }
 
+void FordLogic::checkSafeMode() noexcept
+{
+    if (!ford::SafeModeEnabled) { return; }
+    // Disabled keeps the cause it was entered with until the operator selects another style.
+    if (myControl.configuration().driveStyle == navigation::DriveStyle::Disabled) { return; }
+    mySnapshot.disabledCause = nullptr;
+
+    const char* cause{nullptr};
+    float temperatureC{std::numeric_limits<float>::quiet_NaN()};
+    // A missing sensor reads NaN, and NaN never compares as hot.
+    if (myMotorTemperatureC >= ford::SafeModeMaxTempC)
+    { cause = "motor_temp"; temperatureC = myMotorTemperatureC; }
+    else if (mySnapshot.servoTemperatureC >= ford::SafeModeMaxTempC)
+    { cause = "servo_temp"; temperatureC = mySnapshot.servoTemperatureC; }
+    if (cause == nullptr) { return; }
+
+    // A style only changes while disarmed. executeAction() brakes a disarmed car.
+    if (myControl.controlState() != app::runtime::ControlState::Disarmed)
+    { myControl.forceDisarm(app::runtime::StateReason::Overheated); }
+    if (!myControl.setDriveStyle(navigation::DriveStyle::Disabled)) { return; }
+    mySnapshot.disabledCause = cause;
+    mySnapshot.disabledTemperatureC = temperatureC;
+    ESP_LOGW("FORD", "Safe mode: %s %.1f C reached %.1f C; drive style Disabled", cause,
+             static_cast<double>(temperatureC), static_cast<double>(ford::SafeModeMaxTempC));
+}
+
 void FordLogic::decideAction(const std::uint32_t nowMs) noexcept
 {
     switch (myControl.configuration().driveStyle)
@@ -449,6 +475,12 @@ void FordLogic::decideAction(const std::uint32_t nowMs) noexcept
             break;
         case navigation::DriveStyle::SpeedCalibration:
             decideSpeedCalibrationAction(nowMs);
+            break;
+        // Safe mode parked the car. A Start is undone at once, so the page shows why.
+        case navigation::DriveStyle::Disabled:
+            if (myControl.controlState() != app::runtime::ControlState::Disarmed)
+            { myControl.forceDisarm(app::runtime::StateReason::Overheated); }
+            myPlannedDrive = {};
             break;
         // A remote-driven car never has an autonomous style selected: Control's
         // supportsDriveStyle() refuses them, so these cannot be reached. No drive is
@@ -951,6 +983,7 @@ void FordLogic::run(const std::atomic<bool>& stop) noexcept
         if (myControl.takeStoreGapsRequest()) { storeMeasuredGaps(); }
 
         readSensors(now);
+        checkSafeMode();
         decideAction(now);
         executeAction(now);
         publishState(now);

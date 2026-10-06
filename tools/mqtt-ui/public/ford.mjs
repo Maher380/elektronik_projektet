@@ -212,7 +212,14 @@ function renderServoTemp(fresh, data) {
   renderTemp(fresh, data.servo_temp_c, 'servo-temp', SERVO_WARM_C, SERVO_HOT_C, 'Steering servo · OK',
     'WARM · avoid full lock');
 }
-const styleLabels = { manual_by_remote: 'ManualByRemote', gap_calibration: 'GapCalibration', speed_calibration: 'SpeedCalibration' };
+const styleLabels = { manual_by_remote: 'ManualByRemote', gap_calibration: 'GapCalibration', speed_calibration: 'SpeedCalibration', disabled: 'DISABLED' };
+const disabledCauses = { motor_temp: 'Motor', servo_temp: 'Servo' };
+// Safe mode's reason, e.g. "Servo 40.3 °C · too hot".
+function disabledDetail(disabled) {
+  const what = disabledCauses[disabled?.cause] || 'Safe mode';
+  const temp = Number.isFinite(disabled?.temp_c) ? ` ${disabled.temp_c.toFixed(1)} °C` : '';
+  return `${what}${temp} · too hot. Let it cool, then select a style`;
+}
 const calPhaseLabels = { idle: 'IDLE', settling: 'SETTLING', sampling: 'MEASURING', measured: 'MEASURED', failed: 'REFUSED' };
 // Why a run produced no table. These are the operator's next action, not an error code:
 // a disagreement means the magnets, a stall means the wheel, too_hot means wait.
@@ -348,12 +355,16 @@ function render() {
   text('duty', duty === null ? 'Duty —' : `Duty ${duty.toFixed(3)}`);
   const style = fresh ? data.drive_style : null;
   text('current-style', style ? styleLabels[style] || style : '—');
-  text('style-detail', style === 'gap_calibration' ? 'Measures its own magnet gaps'
+  $('current-style').className = style === 'disabled' ? 'hot' : '';
+  $('style-detail').className = style === 'disabled' ? 'hot' : '';
+  text('style-detail', style === 'disabled' ? disabledDetail(data.disabled)
+    : style === 'gap_calibration' ? 'Measures its own magnet gaps'
     : style === 'speed_calibration' ? 'Measures speed per duty'
     : style === 'manual_by_remote' ? 'Operator drives live' : 'Waiting for telemetry');
   // A style is chosen only while disarmed, which is what makes "arming starts the
   // selected style" answerable: one answer, fixed before anything can move.
-  if (style && !styleTouched && $('style-select').value !== style) { $('style-select').value = style; }
+  // Disabled is not in the box: the operator leaves it by picking a style that drives.
+  if (style && style !== 'disabled' && !styleTouched && $('style-select').value !== style) { $('style-select').value = style; }
   const canSelect = fresh && !!state.config && !armed && !state.owner && pending === 0;
   $('style-apply').disabled = !canSelect;
   $('style-select').disabled = !canSelect;

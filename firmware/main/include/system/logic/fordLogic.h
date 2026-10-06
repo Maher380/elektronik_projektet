@@ -150,6 +150,13 @@ private:
      */
     void readSensors(std::uint32_t nowMs) noexcept;
 
+    /**
+     * @brief Safe mode: brake and select Disabled if the motor or servo is too hot.
+     *
+     * Runs after readSensors() so it sees this tick's temperatures. See ford::SafeModeEnabled.
+     */
+    void checkSafeMode() noexcept;
+
     /** Dispatch to the decide step of whichever drive style is selected. */
     void decideAction(std::uint32_t nowMs) noexcept;
 

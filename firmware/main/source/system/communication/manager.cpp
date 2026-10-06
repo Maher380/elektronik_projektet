@@ -86,6 +86,8 @@ struct WireTelemetrySnapshot
     bool calibrationStored{false};
     bool calibrationStoreFailed{false};
     bool calibrationOverheatGuard{false};
+    const char* disabledCause{nullptr};
+    float disabledTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     SpeedCalibrationTelemetry speedCalibration{};
     runtime::ControlState controlState{runtime::ControlState::Disarmed};
     runtime::MotionState motionState{runtime::MotionState::Stopped};
@@ -110,6 +112,7 @@ const char* toString(navigation::DriveStyle style) noexcept
         case navigation::DriveStyle::ManualByRemote: return "manual_by_remote";
         case navigation::DriveStyle::GapCalibration: return "gap_calibration";
         case navigation::DriveStyle::SpeedCalibration: return "speed_calibration";
+        case navigation::DriveStyle::Disabled: return "disabled";
     }
     return "invalid";
 }
@@ -117,7 +120,8 @@ const char* toString(navigation::DriveStyle style) noexcept
 bool readDriveStyle(const cJSON* item, navigation::DriveStyle& style, ParseError& error) noexcept
 {
     if (!cJSON_IsString(item)) { error = ParseError::InvalidType; return false; }
-    // Control decides which of these styles the car can actually run.
+    // Control decides which of these styles the car can actually run. Disabled is left out:
+    // only the car's safe mode selects it.
     constexpr navigation::DriveStyle styles[]{navigation::DriveStyle::DecideAction,
         navigation::DriveStyle::SlowLeft, navigation::DriveStyle::SlowRight,
         navigation::DriveStyle::GradualSweep, navigation::DriveStyle::ManualByRemote,
@@ -781,6 +785,15 @@ bool writeTelemetry(char* destination,
 
     valid = valid && addSpeedCalibration(root, snapshot.speedCalibration);
 
+    if (valid && snapshot.driveStyle == navigation::DriveStyle::Disabled && snapshot.disabledCause != nullptr)
+    {
+        cJSON* disabled = cJSON_AddObjectToObject(root, "disabled");
+        valid = (disabled != nullptr)
+            && (cJSON_AddStringToObject(disabled, "cause", snapshot.disabledCause) != nullptr)
+            && (!std::isfinite(snapshot.disabledTemperatureC)
+                || (cJSON_AddNumberToObject(disabled, "temp_c", rounded(snapshot.disabledTemperatureC)) != nullptr));
+    }
+
     if (!valid)
     {
         cJSON_Delete(root);
@@ -875,6 +888,7 @@ const char* toString(runtime::StateReason reason) noexcept
         case runtime::StateReason::MessageOverflow: return "message_overflow";
         case runtime::StateReason::DriveTimeout: return "drive_timeout";
         case runtime::StateReason::DriveStyleFinished: return "drive_style_finished";
+        case runtime::StateReason::Overheated: return "overheated";
         case runtime::StateReason::None: return "none";
     }
     return "none";
@@ -1097,6 +1111,8 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.calibrationStored = snapshot.calibrationStored;
     wireSnapshot.calibrationStoreFailed = snapshot.calibrationStoreFailed;
     wireSnapshot.calibrationOverheatGuard = snapshot.calibrationOverheatGuard;
+    wireSnapshot.disabledCause = snapshot.disabledCause;
+    wireSnapshot.disabledTemperatureC = snapshot.disabledTemperatureC;
     wireSnapshot.speedCalibration = snapshot.speedCalibration;
     wireSnapshot.controlState = control.controlState();
     wireSnapshot.motionState = control.motionState();

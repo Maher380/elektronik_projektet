@@ -156,6 +156,13 @@ struct TelemetrySnapshot
      * without that guard, which ADR 0009 accepts deliberately. The operator is told.
      */
     bool calibrationOverheatGuard{false};
+    /**
+     * Ford: why safe mode selected Disabled, "motor_temp" or "servo_temp". Sent as a nested
+     * "disabled" object only while that style is selected; nullptr leaves it out.
+     */
+    const char* disabledCause{nullptr};
+    /** Ford: the temperature that triggered safe mode, in degrees Celsius. */
+    float disabledTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     /** Ford: SpeedCalibration; see SpeedCalibrationTelemetry. */
     SpeedCalibrationTelemetry speedCalibration{};
     /** Raw counts used for these distances; -1 means unavailable. */

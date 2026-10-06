@@ -9,6 +9,8 @@ export const STYLES = ['decide_action', 'slow_left', 'slow_right', 'gradual_swee
 // autonomous styles apply to it; gap_calibration and speed_calibration each drive a
 // fixed measurement script.
 export const FORD_STYLES = ['manual_by_remote', 'gap_calibration', 'speed_calibration'];
+// The car can also report 'disabled', which its safe mode selects; the operator cannot.
+export const FORD_REPORTED_STYLES = [...FORD_STYLES, 'disabled'];
 export const clock = () => performance.timeOrigin + performance.now();
 const uint = n => Number.isInteger(n) && n >= 0 && n <= 0xffffffff;
 // Topics below a car's tree that the console subscribes to. The Ford's Raspberry Pi
@@ -159,7 +161,7 @@ export class ConsoleControl extends EventEmitter {
     }
     if (suffix === 'config/state' && uint(data.revision)) {
       // The Ford has no settings; its config/state only names its drive style.
-      if (this.car === 'ford') { if (!FORD_STYLES.includes(data.drive_style)) return; }
+      if (this.car === 'ford') { if (!FORD_REPORTED_STYLES.includes(data.drive_style)) return; }
       else try { validateConfig(configValues(data), data.system_test === true); }
       catch { return; }
       this.config = data; this.highWater = Math.max(this.highWater, data.revision);

@@ -135,6 +135,18 @@ constexpr float MaxMotorTempC{45.0F};
 /** Can temperature a run waits to fall below before starting again. Lowered with the above. */
 constexpr float CoolMotorTempC{32.0F};
 
+/**
+ * @brief Safe mode: switch to the Disabled drive style when a temperature gets too high.
+ *
+ * On while Ford is a prototype. In any drive style, armed or not, the motor can or the
+ * steering servo reaching SafeModeMaxTempC brakes the car and selects Disabled, which
+ * reports which sensor did it. Selecting another style leaves Disabled; if the sensor is
+ * still that hot, safe mode selects Disabled again at once. A missing sensor is ignored.
+ */
+constexpr bool SafeModeEnabled{true};
+/** Motor can or steering servo temperature that triggers safe mode. */
+constexpr float SafeModeMaxTempC{40.0F};
+
 /** The magnet gap calibration recipe. See ADR 0008 for why each value is what it is. */
 namespace calibration
 {
