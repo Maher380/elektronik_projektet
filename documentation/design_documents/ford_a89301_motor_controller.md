@@ -97,31 +97,32 @@ Measured performance).
 
 ## Saved A89301 configuration
 
-Only three EEPROM words were changed from the configuration we received. All
+Four EEPROM words were changed from the configuration we received. All
 Allegro-only bits are at their default values (checked by the programmer before
 writing).
 
 | EEPROM address | Original | Saved | Changed fields |
 | --- | --- | --- | --- |
+| 10 | `0x00DC` | `0x0108` | `RATED_CURRENT` 220 (2.5 A) → **264 (3.0 A)**, saved 2026-10-07 |
 | 12 | `0x0028` | `0x01FF` | `PID_P` 40 → **255**, `MOTOR_INDUCTANCE` 0 → **1** |
 | 13 | `0x011E` | `0x0114` | `PID_I` 30 → **20** |
 | 21 | `0xC020` | `0xC120` | `SPEED_INPUT_OFF_THRESHOLD` 10 % → **6 %** |
 
 To restore the original configuration, write the original values back to
-addresses 12, 13 and 21.
+addresses 10, 12, 13 and 21.
 
 Full EEPROM contents after saving (addresses 8–22):
 
 ```
  8 0x275E    12 0x01FF    16 0x0A6C    20 0x0B25
  9 0x7120    13 0x0114    17 0x2000    21 0xC120
-10 0x00DC    14 0x0E15    18 0x8E0D    22 0x925E
+10 0x0108    14 0x0E15    18 0x8E0D    22 0x925E
 11 0xD880    15 0x39B1    19 0x5500
 ```
 
 Other relevant settings (unchanged): open loop speed control
 (`SPEED_CLOSE_LOOP` 0), `RATED_SPEED` 1886 (1000 Hz), `RATED_VOLTAGE` 7.4 V,
-`RATED_CURRENT` 2.5 A (current limit about 3.25 A), `MOTOR_RESISTANCE` 113
+`MOTOR_RESISTANCE` 113
 (about 0.24 Ω phase to centre, matches the measurement), `FG_PIN_DIS` 1 (FG
 always high, I2C friendly), `RESTART_ATTEMPT` 3 times, standby disabled.
 
@@ -223,8 +224,18 @@ matched the odometer where the odometer was reliable.
 
 ## Known issues and open items
 
-- **Load test:** not done yet. Low speed torque (demand 0.06–0.08) and the
-  current limit may need changes with the car on the ground.
+- **Load test (2026-10-07):** with the Pi and power bank aboard, the car
+  stalled at `RATED_CURRENT` 2.5 A: the current limit held `cmd` below the
+  demand and the chip lost the motor. At 3.0 A, with a full battery, the belly
+  clear of the floor and the front wheels held straight, 10 of 10 floor starts
+  ran clean at I2C demand 0.1, 0.2 and 0.4. 3.0 A was saved. Demand 0.06–0.08
+  on the floor is still untested.
+- **Steering in the config app:** an unpowered servo lets the front wheels
+  swing and the car turns and stalls, so the config app holds the MG90S
+  centred; `servo <us>` sets a raw pulse.
+- **Motor temperature under load:** the TMP36 reading drops out or jumps
+  (`nan`, 54–101 °C) while the motor runs, so the overheat stop cannot be
+  trusted during a drive. The 3.0 A current limit is the main motor protection.
 - **Odometer:** misses pulses above about 2.5 m/s with the current mounting.
 - **Speed plateau** above demand 0.40 in step tests is not explained. It does
   not matter at SLAM speeds.
