@@ -44,6 +44,8 @@ Power connections do not use driver factory calls:
 | `factory.gpioOutput(7)` | `~D4` | ⚡ Digital output | A89301 DIR | 🔵 Used |
 | `factory.pwm(8)` | `~D5` | 〰️ PWM output, 20 kHz | A89301 SPD/SCL (speed); 4.7 kΩ to `GND`, so an undriven pin means stopped | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo (pulse width) | 🔵 Used |
+| UART1 TX (`PiUartTx`) | `~D7` | 📡 UART transmit | Raspberry Pi header pin 10 (GPIO15 RXD), via 1 kΩ in series near this pin, in case only one of the two is powered | 🔵 Used |
+| UART1 RX (`PiUartRx`) | `~D8` | 📡 UART receive | Raspberry Pi header pin 8 (GPIO14 TXD), via 1 kΩ in series at the Pi; internal pull-up, so a powered-off Pi reads as an idle line | 🔵 Used |
 | `factory.adc(4)` | `A3 / ~D20` | 📈 ADC1_CH3 | Drive battery voltage divider: R1 101.24 kΩ from battery + (after the switch), R2 32.99 kΩ and 154 nF to `GND` | 🔵 Used |
 | `factory.gpioInputPullup(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor, 2 magnets set opposite each other on the right rear wheel. Open-collector and active low, so the internal pull-up is required and no external one is | 🔵 Used |
 | `factory.adc(1)` | `A0 / ~D17` | 📈 ADC1_CH0 | TMP36 on the motor can, sent as `motor_temp_c`; 100 kΩ to `GND` so a missing sensor reads 0 V, not a floating value | 🔵 Used |
@@ -84,12 +86,12 @@ Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,
 | `7` | `~D4` | ✅ ADC1_CH6 | ✅ | Digital / PWM | 🔵 MP6550 nSLEEP |
 | `8` | `~D5` | ✅ ADC1_CH7 | ✅ | Digital / PWM | 🟢 Available |
 | `9` | `~D6` | ✅ ADC1_CH8 | ✅ | Digital / PWM | 🔵 Steering servo |
-| `10` | `~D7` | ✅ ADC1_CH9 | ✅ | Digital / PWM | 🔵 SRF05 Echo |
+| `10` | `~D7` | ✅ ADC1_CH9 | ✅ | Digital / PWM | 🔵 SRF05 Echo (Vagrant); Pi UART1 TX (Ford) |
 | `11` | `A4 / ~D21` | ⚠️ ADC2_CH0 | ✅ | I2C SDA | 🟡 Shared function |
 | `12` | `A5 / ~D22` | ⚠️ ADC2_CH1 | ✅ | I2C SCL | 🟡 Shared function |
 | `13` | `A6 / ~D23` | ⚠️ ADC2_CH2 | ✅ | Analog / digital | 🟢 Available |
 | `14` | `A7 / ~D24` | ⚠️ ADC2_CH3 | ✅ | Analog / digital | 🟢 Available |
-| `17` | `~D8` | ⚠️ ADC2_CH6 | ✅ | Digital / PWM | 🔵 SRF05 Trigger |
+| `17` | `~D8` | ⚠️ ADC2_CH6 | ✅ | Digital / PWM | 🔵 SRF05 Trigger (Vagrant); Pi UART1 RX (Ford) |
 | `18` | `~D9` | ⚠️ ADC2_CH7 | ✅ | Digital / PWM | 🔵 Odometer, right rear (A3144 Hall sensor) |
 | `21` | `~D10` | - | ✅ | Digital / PWM | 🟢 Available, reserved for a second odometer (left rear) |
 | `38` | `~D11` | - | ✅ | SPI COPI | 🟡 Shared function |
