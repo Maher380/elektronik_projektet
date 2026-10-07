@@ -45,6 +45,16 @@ namespace app::test_app
 [[noreturn]] void runMotorTest() noexcept;
 
 /**
+ * @brief Run the start module test app.
+ *
+ * Polls the start module on GPIO8 (~D5) every second and prints the pin level and
+ * the start module state (waiting, started or stopped).
+ *
+ * @note Never returns.
+ */
+[[noreturn]] void runStartModuleTest() noexcept;
+
+/**
  * @brief Run the A89301 configuration app.
  *
  * Reads, changes and saves the A89301 settings over I2C, with a live monitor, PID sweeps,
