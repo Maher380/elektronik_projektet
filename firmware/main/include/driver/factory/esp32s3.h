@@ -81,6 +81,16 @@ public:
     std::unique_ptr<temperature_sensor::Interface> temperatureSensor(driver::adc::Interface& adc) noexcept override;
 
     /**
+     * @brief Create a start module read through one digital input.
+     *
+     * @param[in] input Reference to the GPIO input connected to the start module output.
+     * @param[in] holdTimeMs Time the signal must stay high before the start counts, in milliseconds.
+     * @return A unique pointer to the created start module interface instance.
+     */
+    std::unique_ptr<start_module::Interface> startModule(driver::gpio::Interface& input,
+                                                         std::uint32_t holdTimeMs) noexcept override;
+
+    /**
      * @brief Create a real ESP32-S3 GPIO input hardware instance.
      * * @param[in] pin The hardware pin number to configure as input.
      * @return A unique pointer to the created GPIO interface instance.

@@ -13,6 +13,7 @@
 #include "test/pin_manager.h"
 #include "test/servo.h"
 #include "test/speed_calibration.h"
+#include "test/start_module.h"
 #include "test/temperature_sensor.h"
 #include "test/voltage_meter.h"
 #include "test/wifi_store.h"
@@ -37,6 +38,7 @@ int main()
     if (!test::runGapCalibrationTest()) { return -1; }
     if (!test::runSpeedCalibrationTest()) { return -1; }
     if (!test::runVoltageMeterTest()) { return -1; }
+    if (!test::runStartModuleTest()) { return -1; }
     if (!test::runOdometerGapsTest()) { return -1; }
     if (!test::runTemperatureSensorTest()) { return -1; }
 

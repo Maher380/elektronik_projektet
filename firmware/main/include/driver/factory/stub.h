@@ -19,6 +19,7 @@
 #include "driver/pwm/stub.h"
 #include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
+#include "driver/start_module/stub.h"
 #include "driver/temperature_sensor/stub.h"
 #include "driver/timer/stub.h"
 #include "driver/voltage_meter/stub.h"
@@ -198,6 +199,21 @@ public:
     {
         (void)adc;
         return std::make_unique<driver::temperature_sensor::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated start module stub instance.
+     *
+     * @param[in] input Reference to the GPIO input connected to the start module output (unused).
+     * @param[in] holdTimeMs Time the signal must stay high before the start counts (unused).
+     * @return A unique pointer to the created simulated start module interface instance.
+     */
+    std::unique_ptr<start_module::Interface> startModule(gpio::Interface& input,
+                                                         std::uint32_t holdTimeMs) noexcept override
+    {
+        (void)input;
+        (void)holdTimeMs;
+        return std::make_unique<driver::start_module::Stub>();
     }
 
     /**
