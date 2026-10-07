@@ -22,7 +22,9 @@
 #include "driver/odometer/a3144.h"
 #include "driver/odometer/gaps.h"
 #include "driver/odometer/store.h"
+#include "driver/pwm/esp32s3.h"
 #include "driver/serial/esp32s3.h"
+#include "driver/servo/mg90s.h"
 #include "system/ford.h"
 #include "esp_rom_sys.h"
 #include "esp_timer.h"
@@ -37,7 +39,8 @@ void runA89301ConfigTest() noexcept
     // A89301 configuration app over I2C. See helpText for commands.
     // Wiring: SPD/SCL -> A6 (GPIO13), FG/SDA -> A5 (GPIO12), 4.7 kOhm pull-up SCL -> 3.3 V,
     // DIR -> D4 (GPIO7), BRAKE -> D2 (GPIO5), IOREF -> 3V3, A3144 wheel sensor -> D9 (GPIO18),
-    // TMP36 on the motor can -> A0 (GPIO1). Start the ESP32 before powering VIN.
+    // TMP36 on the motor can -> A0 (GPIO1), steering servo -> D6 (GPIO9), held centred.
+    // Start the ESP32 before powering VIN.
     // Safety: spd runs and sweeps stop above maxMotorTempC or when the chip drives a wheel that does not turn.
     namespace a89301 = driver::motor::a89301;
 
@@ -68,6 +71,8 @@ void runA89301ConfigTest() noexcept
         "                   then turns the direction round so the next spd drives back\n"
         "  stop             speed demand 0 and brake on\n"
         "  f / b            direction pin forward / backward\n"
+        "  servo <us>       raw steering pulse, 500 - 2400 us (back off if the servo hums)\n"
+        "  servo            centre the steering again\n"
         "  save             show working registers that differ from EEPROM\n"
         "  save yes         program those differences into EEPROM (keep VIN on!)\n"
         "  cal [yes]        measure the magnet gaps and store them (lift the car)\n"
@@ -170,6 +175,14 @@ void runA89301ConfigTest() noexcept
                                                                             : "GPIO init FAILED\n");
     serial.write(i2c.init() ? "I2C init OK\n" : "I2C init FAILED\n");
     serial.write(odometer.init() ? "Odometer init OK\n" : "Odometer init FAILED\n");
+
+    // Hold the front wheels straight: an unpowered servo lets them swing, and the car turns.
+    driver::pwm::Esp32s3 steeringPwm(driver::pwm::Config{
+        .pin = app::ford::pin::Steering,
+        .frequencyHz = app::ford::SteeringPwmFrequencyHz,
+    });
+    driver::servo::Mg90s steering(steeringPwm);
+    serial.write(steering.init() ? "Steering servo centred (D6)\n" : "Steering servo init FAILED\n");
 
     driver::adc::Esp32s3 motorTempAdc(motorTempPin);
     serial.write(motorTempAdc.init() ? "Motor temperature ADC init OK (TMP36 on A0)\n"
@@ -1219,6 +1232,30 @@ void runA89301ConfigTest() noexcept
             forward = std::strcmp(cmd, "f") == 0;
             directionGpio.write(forward);
             serial.write(forward ? "DIR high (forward)\n" : "DIR low (backward)\n");
+        }
+        else if ((std::strcmp(cmd, "servo") == 0) && (arg1 == nullptr))
+        {
+            serial.write(steering.center() ? "Steering centred.\n" : "Could not centre the steering.\n");
+        }
+        else if (std::strcmp(cmd, "servo") == 0)
+        {
+            // Raw pulse straight to the PWM, past the servo driver's measured left/centre/right.
+            char* end{nullptr};
+            const long pulseUs{std::strtol(arg1, &end, 10)};
+            if ((end == arg1) || (*end != '\0') || (pulseUs < 500L) || (pulseUs > 2400L))
+            {
+                serial.write("Usage: servo <us>, a whole number from 500 to 2400, or servo to centre.\n");
+            }
+            else if (!steeringPwm.setDuty(static_cast<float>(pulseUs)
+                                          * static_cast<float>(steeringPwm.frequencyHz()) / 1'000'000.0F))
+            {
+                serial.write("Could not set the steering pulse.\n");
+            }
+            else
+            {
+                std::snprintf(buf, sizeof(buf), "Steering pulse %ld us. Back off if the servo hums.\n", pulseUs);
+                serial.write(buf);
+            }
         }
         else if (std::strcmp(cmd, "save") == 0)
         {
