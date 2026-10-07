@@ -74,13 +74,13 @@ bool runMg90sTest() noexcept
         && expect(!servo.setDirection(0.0F), "uninitialized MG90S should reject a direction")
         && expect(servo.init(), "MG90S init should succeed")
         && expect(pwm.isInitialized(), "MG90S init should initialize the PWM")
-        && expect(isPulse(pwm, 1950.0F), "MG90S init should center at 1950 us");
+        && expect(isPulse(pwm, 1931.0F), "MG90S init should center at 1931 us");
 
     passed = passed
-        && expect(servo.setDirection(-90.0F) && isPulse(pwm, 1650.0F), "MG90S full left should be 1650 us")
+        && expect(servo.setDirection(-90.0F) && isPulse(pwm, 1631.0F), "MG90S full left should be 1631 us")
         && expect(servo.setDirection(90.0F) && isPulse(pwm, 2250.0F), "MG90S full right should be 2250 us")
-        && expect(servo.setDirection(-45.0F) && isPulse(pwm, 1800.0F), "MG90S half left should be 1800 us")
-        && expect(servo.setDirection(45.0F) && isPulse(pwm, 2100.0F), "MG90S half right should be 2100 us")
+        && expect(servo.setDirection(-45.0F) && isPulse(pwm, 1781.0F), "MG90S half left should be 1781 us")
+        && expect(servo.setDirection(45.0F) && isPulse(pwm, 2090.5F), "MG90S half right should be 2090.5 us")
         && expect(servo.setDirection(120.0F) && isPulse(pwm, 2250.0F), "MG90S past full right should clamp")
         && expect(servo.getDirection() == 90.0F, "MG90S clamped direction should be stored")
         && expect(servo.deinit() && !pwm.isInitialized(), "MG90S deinit should stop its PWM");
