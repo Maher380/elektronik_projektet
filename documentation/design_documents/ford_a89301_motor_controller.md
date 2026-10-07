@@ -37,7 +37,7 @@ with gains `PID_P` and `PID_I`. These parameters must fit the motor.
 | SPD/SCL | A6 / GPIO13 | I2C SCL. **Add 4.7 kΩ pull-up to 3.3 V** (the board has none on SCL) |
 | FG/SDA | A5 / GPIO12 | I2C SDA. The board has a pull-up to IOREF |
 | DIR | D4 / GPIO7 | High = forward in the test apps |
-| BRAKE | D2 / GPIO5 | High = brake. **Fit a 10–12 kΩ pull-up to 2V8**, see Safety |
+| BRAKE | D2 / GPIO5 | High = brake. **12 kΩ pull-up to 2V8 (R1)**, see Safety |
 | FLT | not connected | Open drain, pulled up to IOREF |
 | – | D9 / GPIO18 | A3144 wheel odometer, 2 magnets on the right rear wheel |
 | – | A0 / GPIO1 | TMP36 on the motor can (ADC1) |
@@ -57,7 +57,7 @@ sit on the same wire: together they hold a floating SPD at about 2.2 V, which is
 full speed. So the wire moves, and each resistor stays at its own Nano pin:
 
 - the 4.7 kΩ pull-up from **A6** to 3V3,
-- R2 (10–12 kΩ) from **D5** to GND.
+- R2 (4.7 kΩ) from **D5** to GND.
 
 Only the SPD/SCL wire moves. DIR, BRAKE, FG/SDA (A5), the odometer (D9), the
 TMP36 (A0) and the battery divider (A3) stay where they are in both wirings.
@@ -182,13 +182,13 @@ matched the odometer where the odometer was reliable.
 
   ```text
                                    2V8 (A89301 board) ─┐
-                                                      [R1] 10–12 kΩ
+                                                      [R1] 12 kΩ
                                                        │
      D2 / GPIO5  ──────────────────────────────────────┴── BRAKE   (high = brake)
      D4 / GPIO7  ───────────────────────────────────────── DIR
      D5 / GPIO8  ──────────────────────────────────────┬── SPD/SCL (20 kHz PWM)
                                                        │   (no pull-up to 3V3 here)
-                                                      [R2] 10–12 kΩ
+                                                      [R2] 4.7 kΩ
                                                        │
                                    GND ────────────────┴── GND (header)
      D6 / GPIO9  ──────────────────────────────────────┬── steering servo signal
@@ -199,17 +199,27 @@ matched the odometer where the odometer was reliable.
   - **R1** keeps the brake on whenever the motor board has battery power and the
     ESP32 does not drive BRAKE (reset, flashing, crash, Nano unpowered). 2V8 is
     the A89301's own 2.8 V output, made for pull-ups (max 10 mA).
-  - **R2** makes a floating SPD read as 0 % speed.
+  - **R2** makes a floating SPD read as 0 % speed. 4.7 kΩ is stiff enough to
+    win against a weak internal pull-up in the ESP32 during reset (a 100 kΩ
+    pull-down would not), and costs the PWM output only about 0.7 mA. It never
+    meets the 4.7 kΩ SCL pull-up, because each resistor stays at its own Nano pin.
   - **Keep the 4.7 kΩ SCL pull-up on A6**, never on D5 or the SPD wire: on SPD
     it turns a floating SPD into full speed. See Switching between the two wirings.
   - **R3** only stops the servo twitching during flashing.
-  - Do not connect 2V8 or VM (battery voltage) to the Nano.
+  - Do not connect 2V8 or VM (battery voltage) to the Nano. **R1 goes to 2V8,
+    never to VM** (the battery voltage pin on the same header): BRAKE is also wired to D2, so
+    R1 on VM puts battery voltage on an ESP32 pin. Until 2026-10-07 R1 sat on
+    VM, and with a test app that left D2 undriven the car drove off the stand.
   - **Check** with the Nano unplugged and the battery on: BRAKE ≈ 2.8 V,
     SPD ≈ 0 V. Then flash once on the stand; the wheels must not move.
+  - **Checked 2026-10-07**, battery on, Nano on `VIN`, wheels in the air: SPD
+    0 V throughout; BRAKE about 2.8 V while the ESP32 boots and its pins are
+    released, and 3.3 V while RESET is held or the firmware drives it. The
+    wheels stayed still in every phase.
 - **BRAKE pull-up:** the board pulls BRAKE low (brake off) by default. While
   the ESP32 is reset or flashed its pins float, and in the I2C wiring SPD/SCL
   is pulled high, which the chip reads as a large speed demand. **The wheels
-  spin during flashing.** A 10 kΩ pull-up from BRAKE to 3.3 V keeps the brake
+  spin during flashing.** R1, the 12 kΩ pull-up from BRAKE to 2V8, keeps the brake
   on whenever the ESP32 is not driving the pin. Recommended for ford.
 - **Motor temperature:** the config app stops above 45 °C and waits for
   32 °C between runs. These limits are temporarily low because the TMP36 is

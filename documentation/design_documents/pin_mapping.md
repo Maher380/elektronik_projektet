@@ -40,9 +40,9 @@ Power connections do not use driver factory calls:
 
 | Driver call | Pin on Arduino | Driver function | Connected hardware | Status |
 | --- | --- | --- | --- | --- |
-| `factory.gpioOutput(5)` | `~D2` | ⚡ Digital output | A89301 BRAKE (high = brake) | 🔵 Used |
+| `factory.gpioOutput(5)` | `~D2` | ⚡ Digital output | A89301 BRAKE (high = brake); 12 kΩ pull-up to the A89301's `2V8`, so an undriven pin brakes | 🔵 Used |
 | `factory.gpioOutput(7)` | `~D4` | ⚡ Digital output | A89301 DIR | 🔵 Used |
-| `factory.pwm(8)` | `~D5` | 〰️ PWM output, 20 kHz | A89301 SPD/SCL (speed) | 🔵 Used |
+| `factory.pwm(8)` | `~D5` | 〰️ PWM output, 20 kHz | A89301 SPD/SCL (speed); 4.7 kΩ to `GND`, so an undriven pin means stopped | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo (pulse width) | 🔵 Used |
 | `factory.adc(4)` | `A3 / ~D20` | 📈 ADC1_CH3 | Drive battery voltage divider: R1 101.24 kΩ from battery + (after the switch), R2 32.99 kΩ and 154 nF to `GND` | 🔵 Used |
 | `factory.gpioInputPullup(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor, 2 magnets set opposite each other on the right rear wheel. Open-collector and active low, so the internal pull-up is required and no external one is | 🔵 Used |
