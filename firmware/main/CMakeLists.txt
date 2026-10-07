@@ -25,6 +25,7 @@ idf_component_register(
         "source/driver/servo/vagrant.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"
+        "source/driver/start_module/gpio.cpp"
         "source/driver/timer/esp32s3.cpp"
         "source/system/pin_manager/esp32s3.cpp"
         "source/driver/wifi/esp32s3.cpp"

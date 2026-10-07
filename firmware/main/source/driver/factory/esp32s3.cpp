@@ -11,6 +11,7 @@
 #include "driver/pwm/esp32s3.h"
 #include "driver/servo/vagrant.h"
 #include "driver/serial/esp32s3.h"
+#include "driver/start_module/gpio.h"
 #include "driver/timer/esp32s3.h"
 #include "driver/wifi/esp32s3.h"
 
@@ -32,6 +33,12 @@ std::unique_ptr<distance_sensor::Interface> Esp32s3::ultrasonic_sensor(gpio::Int
 {
     // Create a real SRF05 ultrasonic sensor from existing trigger (output) and echo (input) GPIOs.
     return std::make_unique<driver::distance_sensor::SRF05>(trigger, echo);
+}
+
+std::unique_ptr<start_module::Interface> Esp32s3::startModule(gpio::Interface& input,
+                                                              std::uint32_t holdTimeMs) noexcept
+{
+    return std::make_unique<driver::start_module::Gpio>(input, holdTimeMs);
 }
 
 std::unique_ptr<gpio::Interface> Esp32s3::gpioInput(std::uint8_t pin) noexcept {

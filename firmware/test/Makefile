@@ -12,7 +12,8 @@ CXX_FLAGS := -Wall -Wextra -Werror -std=c++17 -I$(FIRMWARE_INC_DIR) -I$(TEST_INC
 TEST_FILES := \
 	$(TEST_SRC_DIR)/test.cpp \
 	$(TEST_SRC_DIR)/test/a89301_programmer.cpp \
-	$(TEST_SRC_DIR)/test/pin_manager.cpp
+	$(TEST_SRC_DIR)/test/pin_manager.cpp \
+	$(TEST_SRC_DIR)/test/start_module.cpp
 
 SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/system/pin_manager/esp32s3.cpp \
@@ -20,7 +21,8 @@ SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301_programmer.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/l298n.cpp \
-	$(FIRMWARE_SRC_DIR)/driver/serial/stub.cpp
+	$(FIRMWARE_SRC_DIR)/driver/serial/stub.cpp \
+	$(FIRMWARE_SRC_DIR)/driver/start_module/gpio.cpp
 
 ALL_FILES := $(TEST_FILES) $(SOURCE_FILES)
 

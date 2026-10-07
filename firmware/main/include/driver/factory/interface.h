@@ -18,6 +18,7 @@ namespace driver::pwm { struct Config; class Interface; }
 namespace driver::servo { class Interface; }
 namespace driver::serial { class Interface; }
 namespace driver::timer { class Interface; }
+namespace driver::start_module { class Interface; }
 namespace driver::wifi { class Interface; }
 
 namespace driver::factory {
@@ -104,6 +105,16 @@ public:
      */
     virtual std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(gpio::Interface& trigger,
                                                                           gpio::Interface& echo) noexcept = 0;
+
+    /**
+     * @brief Create a start module read through one digital input.
+     *
+     * @param[in] input Reference to the GPIO input connected to the start module output.
+     * @param[in] holdTimeMs Time the signal must stay high before the start counts, in milliseconds.
+     * @return A unique pointer to the created start module interface instance.
+     */
+    virtual std::unique_ptr<start_module::Interface> startModule(gpio::Interface& input,
+                                                                 std::uint32_t holdTimeMs) noexcept = 0;
 
     /**
      * @brief Create a motor driver instance.

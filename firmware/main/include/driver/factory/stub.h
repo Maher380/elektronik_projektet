@@ -18,6 +18,7 @@
 #include "driver/pwm/stub.h"
 #include "driver/servo/stub.h"
 #include "driver/serial/stub.h"
+#include "driver/start_module/stub.h"
 #include "driver/timer/stub.h"
 #include "driver/wifi/stub.h"
 
@@ -138,6 +139,21 @@ public:
     std::unique_ptr<distance_sensor::Interface> ultrasonic_sensor(gpio::Interface&, gpio::Interface&) noexcept override
     {
         return std::make_unique<driver::distance_sensor::Stub>();
+    }
+
+    /**
+     * @brief Create a simulated start module stub instance.
+     *
+     * @param[in] input Reference to the GPIO input connected to the start module output (unused).
+     * @param[in] holdTimeMs Time the signal must stay high before the start counts (unused).
+     * @return A unique pointer to the created simulated start module interface instance.
+     */
+    std::unique_ptr<start_module::Interface> startModule(gpio::Interface& input,
+                                                         std::uint32_t holdTimeMs) noexcept override
+    {
+        (void)input;
+        (void)holdTimeMs;
+        return std::make_unique<driver::start_module::Stub>();
     }
 
     /**
