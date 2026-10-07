@@ -9,11 +9,15 @@
 /** @attention Uncomment MOTOR_TEST_MODE to run a minimal A89301 BLDC motor test app. */
 // #define MOTOR_TEST_MODE
 
+/** @attention Uncomment START_MODULE_TEST_MODE to poll the start module on GPIO8 every second. */
+// #define START_MODULE_TEST_MODE
+
 /** @attention Uncomment A89301_CONFIG_MODE to read, change and save the A89301 settings over I2C. */
 // #define A89301_CONFIG_MODE
 
 // if compiling a test purpose variant
-#if defined(DRIVER_TEST_MODE) || defined(ODOMETER_TEST_MODE) || defined(MOTOR_TEST_MODE) || defined(A89301_CONFIG_MODE)
+#if defined(DRIVER_TEST_MODE) || defined(ODOMETER_TEST_MODE) || defined(MOTOR_TEST_MODE) || defined(START_MODULE_TEST_MODE) \
+    || defined(A89301_CONFIG_MODE)
 
 #include "test_app/test_app.h"
 
@@ -41,6 +45,8 @@ extern "C" void app_main(void)
     app::test_app::runOdometerTest();
     #elif defined(MOTOR_TEST_MODE)
     app::test_app::runMotorTest();
+    #elif defined(START_MODULE_TEST_MODE)
+    app::test_app::runStartModuleTest();
     #elif defined(A89301_CONFIG_MODE)
     app::test_app::runA89301ConfigTest();
     #else
