@@ -62,6 +62,15 @@ constexpr std::uint8_t Sda{12U};
  * at its own Nano pin. Only this wire moves.
  */
 constexpr std::uint8_t Scl{13U};
+/**
+ * @brief D7 -> Raspberry Pi header pin 10 (GPIO15 RXD), UART1 TX to the Pi.
+ *
+ * Not UART0 on D0/D1: that is where the boot ROM and the log print, and the Pi must not
+ * receive either. 1 kOhm in series near this pin, in case only one of the two is powered.
+ */
+constexpr std::uint8_t PiUartTx{10U};
+/** D8 <- Raspberry Pi header pin 8 (GPIO14 TXD), UART1 RX from the Pi. 1 kOhm in series at the Pi. */
+constexpr std::uint8_t PiUartRx{17U};
 } // namespace pin
 
 /**
