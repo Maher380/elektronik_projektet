@@ -10,11 +10,27 @@
 namespace driver::start_module
 {
 /**
+ * @brief State of the start module.
+ *
+ * The state only moves forward, Waiting → Started → Stopped. Only a restart of
+ * the car brings it back to Waiting.
+ */
+enum class State : std::uint8_t
+{
+    /** No start signal yet: the car must not drive. */
+    Waiting,
+
+    /** The start signal has come: the car may drive. */
+    Started,
+
+    /** The stop signal has come after a start: the car must stop until it restarts. */
+    Stopped,
+};
+
+/**
  * @brief Start module interface.
  *
- * Tells whether the start signal has come from outside the car. Once started, the
- * module stays started until the car restarts: nothing the signal does later takes
- * the start back.
+ * Tells whether the start and stop signals have come from outside the car.
  */
 class Interface
 {
@@ -32,11 +48,11 @@ public:
     virtual void update(std::uint32_t nowMs) noexcept = 0;
 
     /**
-     * @brief Check whether the start signal has come.
+     * @brief Get the state of the start module.
      *
-     * @return True once the car has been started, until the car restarts.
+     * @return Waiting until started, Started until stopped, then Stopped until the car restarts.
      */
-    virtual bool isStarted() const noexcept = 0;
+    virtual State state() const noexcept = 0;
 
     /**
      * @brief Check if the start module is ready to use.

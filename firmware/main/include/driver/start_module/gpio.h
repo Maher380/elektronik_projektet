@@ -15,13 +15,17 @@ namespace driver::start_module
 /**
  * @brief Start module read through one digital input.
  *
- * The signal is low while the car waits and goes high to start it. The start counts
- * only once the input has been read low and then read high on every update() for at
- * least the hold time, which ignores short noise spikes. A signal that is already
- * high at power-on does not count until it has gone low and high again, so a module
- * that was not reset after the last run cannot start the car.
+ * The signal is low while the car waits, goes high to start it and low again to
+ * stop it.
  *
- * Once started, the module stays started until the car restarts.
+ * - **Start:** counts only once the input has been read low and then read high on
+ *   every update() for at least the hold time, which ignores short noise spikes. A
+ *   signal that is already high at power-on does not count until it has gone low and
+ *   high again, so a module that was not reset after the last run cannot start the car.
+ * - **Stop:** counts on the first low read after the start, with no hold time: a
+ *   false stop is safe, a missed one is not.
+ *
+ * Stopped is final until the car restarts.
  *
  * @note No pull-down is used: the start module must drive the line both low and
  *       high. A loose wire leaves the input floating and may give a false start.
@@ -51,18 +55,18 @@ public:
     ~Gpio() noexcept override = default;
 
     /**
-     * @brief Sample the start signal. Does nothing if uninitialized or already started.
+     * @brief Sample the start signal. Does nothing if uninitialized or stopped.
      *
      * @param[in] nowMs Current time in milliseconds. It may wrap around.
      */
     void update(std::uint32_t nowMs) noexcept override;
 
     /**
-     * @brief Check whether the start signal has come.
+     * @brief Get the state of the start module.
      *
-     * @return True once the car has been started, until the car restarts.
+     * @return Waiting until started, Started until stopped, then Stopped until the car restarts.
      */
-    bool isStarted() const noexcept override;
+    State state() const noexcept override;
 
     /**
      * @brief Check if the GPIO input is initialized.
@@ -78,6 +82,9 @@ public:
     Gpio& operator=(Gpio&&)      = delete; // No move assignment.
 
 private:
+    /** Sample the signal while waiting for the start. */
+    void updateWaiting(bool high, std::uint32_t nowMs) noexcept;
+
     /** GPIO input connected to the start module output. */
     driver::gpio::Interface& myInput;
     /** Time the signal must stay high before the start counts, in milliseconds. */
@@ -88,7 +95,7 @@ private:
     bool mySeenLow;
     /** True while the signal has been read high on every update since a low. */
     bool myHigh;
-    /** True once the start has counted. Only a restart clears it. */
-    bool myStarted;
+    /** Current state. It only moves forward; only a restart brings it back to Waiting. */
+    State myState;
 };
 } // namespace driver::start_module

@@ -22,7 +22,7 @@ public:
      * @brief Constructor.
      */
     Stub() noexcept
-        : myStarted{false}
+        : myModuleState{State::Waiting}
         , myState{true}
     {}
 
@@ -32,7 +32,7 @@ public:
     ~Stub() noexcept override = default;
 
     /**
-     * @brief Does nothing; use setStarted() to simulate the start signal.
+     * @brief Does nothing; use setState() to simulate the start and stop signals.
      *
      * @param[in] nowMs Current time in milliseconds (unused).
      */
@@ -42,13 +42,13 @@ public:
     }
 
     /**
-     * @brief Check whether the simulated start signal has come.
+     * @brief Get the simulated state of the start module.
      *
-     * @return True if started, false otherwise.
+     * @return The state set by setState(), Waiting by default.
      */
-    bool isStarted() const noexcept override
+    State state() const noexcept override
     {
-        return myStarted;
+        return myModuleState;
     }
 
     /**
@@ -62,13 +62,13 @@ public:
     }
 
     /**
-     * @brief Simulate the start signal for testing purposes.
+     * @brief Simulate the start module state for testing purposes.
      *
-     * @param[in] started True to simulate a start, false to simulate waiting.
+     * @param[in] state The state to simulate.
      */
-    void setStarted(const bool started) noexcept
+    void setState(const State state) noexcept
     {
-        myStarted = started;
+        myModuleState = state;
     }
 
     /**
@@ -87,8 +87,8 @@ public:
     Stub& operator=(Stub&&)      = delete; // No move assignment.
 
 private:
-    /** Simulated start signal. */
-    bool myStarted;
+    /** Simulated start module state. */
+    State myModuleState;
     /** Whether the stub reports itself as initialized. */
     bool myState;
 };
