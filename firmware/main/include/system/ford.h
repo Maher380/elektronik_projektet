@@ -52,16 +52,16 @@ constexpr std::uint8_t Odometer{18U};
 constexpr std::uint8_t MotorTempAdc{1U};
 /** A1 <- TMP36 on the steering servo. */
 constexpr std::uint8_t ServoTempAdc{2U};
-/** A4 <- A89301 FG/SDA. I2C data, configuration wiring only. */
-constexpr std::uint8_t Sda{11U};
+/** A5 <- A89301 FG/SDA. I2C data, configuration wiring only. */
+constexpr std::uint8_t Sda{12U};
 /**
- * @brief A5 -> A89301 SPD/SCL. I2C clock, configuration wiring only.
+ * @brief A6 -> A89301 SPD/SCL. I2C clock, configuration wiring only.
  *
  * The A89301 has one pin for both jobs. SCL needs a pull-up and SPD a pull-down, and
- * both cannot share a wire, so the wire moves between A5 and D5 and each resistor stays
+ * both cannot share a wire, so the wire moves between A6 and D5 and each resistor stays
  * at its own Nano pin. Only this wire moves.
  */
-constexpr std::uint8_t Scl{12U};
+constexpr std::uint8_t Scl{13U};
 } // namespace pin
 
 /**

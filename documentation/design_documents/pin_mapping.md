@@ -47,11 +47,11 @@ Power connections do not use driver factory calls:
 | `factory.adc(4)` | `A3 / ~D20` | 📈 ADC1_CH3 | Drive battery voltage divider: R1 101.24 kΩ from battery + (after the switch), R2 32.99 kΩ and 154 nF to `GND` | 🔵 Used |
 | `factory.gpioInputPullup(18)` | `~D9` | 🔌 Digital input (interrupt) | A3144 Hall-effect odometer sensor, 2 magnets set opposite each other on the right rear wheel. Open-collector and active low, so the internal pull-up is required and no external one is | 🔵 Used |
 | `factory.adc(1)` | `A0 / ~D17` | 📈 ADC1_CH0 | TMP36 on the motor can, sent as `motor_temp_c`; 100 kΩ to `GND` so a missing sensor reads 0 V, not a floating value | 🔵 Used |
-| `factory.adc(2)` | `A1 / ~D18` | 📈 ADC1_CH1 | TMP36 on the steering servo, sent as `servo_temp_c` | 🔵 Used |
+| `factory.adc(2)` | `A1 / ~D18` | 📈 ADC1_CH1 | TMP36 on the steering servo, sent as `servo_temp_c`; 100 kΩ to `GND` so a missing sensor reads 0 V, not a floating value | 🔵 Used |
 
 The A89301 configuration app (`A89301_CONFIG_MODE`) talks I2C instead: SDA on
-`A4` (GPIO11, A89301 FG/SDA) and SCL on `A5` (GPIO12, with a 4.7 kΩ pull-up to
-3V3). The A89301 SPD/SCL wire moves from `~D5` to `A5` for it, and back again
+`A5` (GPIO12, A89301 FG/SDA) and SCL on `A6` (GPIO13, with a 4.7 kΩ pull-up to
+3V3). The A89301 SPD/SCL wire moves from `~D5` to `A6` for it, and back again
 for the car. See "Switching between the two wirings" in
 `ford_a89301_motor_controller.md`.
 
@@ -99,6 +99,10 @@ Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,
 | `46` | `B0 / ~D14` | - | 🔴 Blocked | RGB LED red / strapping | 🔴 Avoid |
 | `47` | `~D12` | - | ✅ | SPI CIPO | 🟡 Shared function |
 | `48` | `~D13` | - | ✅ | SPI SCK / built-in LED | 🟡 Shared function |
+
+> **Note (Ford):** the A89301 configuration app does not use the default I2C pins
+> above. It puts SDA on `A5` (GPIO12, A89301 FG/SDA) and SCL on `A6` (GPIO13,
+> A89301 SPD/SCL, 4.7 kΩ pull-up to 3V3). `A4` (GPIO11) is not used on Ford.
 
 GPIO values not listed above are not exposed as normal Arduino Nano ESP32
 header pins. Do not use them only because `PinManager::isPinValid()` returns

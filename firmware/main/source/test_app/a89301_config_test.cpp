@@ -35,7 +35,7 @@ namespace app::test_app
 void runA89301ConfigTest() noexcept
 {
     // A89301 configuration app over I2C. See helpText for commands.
-    // Wiring: SPD/SCL -> A5 (GPIO12), FG/SDA -> A4 (GPIO11), 4.7 kOhm pull-up SCL -> 3.3 V,
+    // Wiring: SPD/SCL -> A6 (GPIO13), FG/SDA -> A5 (GPIO12), 4.7 kOhm pull-up SCL -> 3.3 V,
     // DIR -> D4 (GPIO7), BRAKE -> D2 (GPIO5), IOREF -> 3V3, A3144 wheel sensor -> D9 (GPIO18),
     // TMP36 on the motor can -> A0 (GPIO1). Start the ESP32 before powering VIN.
     // Safety: spd runs and sweeps stop above maxMotorTempC or when the chip drives a wheel that does not turn.
@@ -64,7 +64,8 @@ void runA89301ConfigTest() noexcept
         "  r <reg>          read one register (decimal or 0x hex)\n"
         "  m                toggle live monitor (speed, wheel, currents, VBB, demand, state)\n"
         "  set <FIELD> <v>  change a field in the working register (temporary)\n"
-        "  spd <0.0 - 1.0>  drive with I2C speed control (releases brake)\n"
+        "  spd <0.0 - 1.0>  drive with I2C speed control (releases brake). Stops after 2 m or 5 s,\n"
+        "                   then turns the direction round so the next spd drives back\n"
         "  stop             speed demand 0 and brake on\n"
         "  f / b            direction pin forward / backward\n"
         "  save             show working registers that differ from EEPROM\n"
@@ -132,6 +133,10 @@ void runA89301ConfigTest() noexcept
     constexpr std::uint32_t sweepSampleMs{500U};   // Status line period during a run.
     constexpr std::uint32_t sweepMaxRunS{30U};     // Longest allowed run time.
     constexpr float sweepRunningRps{2.0F};         // Wheel speed in the last second that counts as running.
+    // An spd run on the floor stops after this distance, or after this time if the wheel
+    // does not turn (no start) or the odometer misses pulses.
+    constexpr double spdMaxDistanceM{2.0};
+    constexpr std::int64_t spdMaxRunUs{5'000'000};
 
     driver::serial::Esp32s3 serial(driver::serial::Config{
         .port = UART_NUM_0,
@@ -159,7 +164,7 @@ void runA89301ConfigTest() noexcept
     });
 
     char buf[200]{'\0'};
-    serial.write("\nA89301 config: SDA GPIO11 (A4), SCL GPIO12 (A5), DIR GPIO7 (D4), BRAKE GPIO5 (D2), "
+    serial.write("\nA89301 config: SDA GPIO12 (A5), SCL GPIO13 (A6), DIR GPIO7 (D4), BRAKE GPIO5 (D2), "
                  "odometer GPIO18 (D9)\n");
     serial.write(brakeGpio.isInitialized() && directionGpio.isInitialized() ? "GPIO init OK, brake ON\n"
                                                                             : "GPIO init FAILED\n");
@@ -900,10 +905,31 @@ void runA89301ConfigTest() noexcept
     std::uint32_t safetyPulses{0U};
     std::int64_t safetyLastPulseUs{0};
     bool safetyWasFast{false};
+    bool forward{true};               // Direction pin state, high = forward.
+    std::uint32_t spdStartPulses{0U}; // Odometer count when the spd run started.
+
+    // End an spd run: brake, then turn the direction round so the next spd drives back.
+    auto endSpdRun = [&](const char* reason) {
+        stopMotor();
+        driving = false;
+        forward = !forward;
+        directionGpio.write(forward);
+        const double distanceM{(odometer.pulseCount() - spdStartPulses) * wheelCircumferenceM / wheelPulsesPerRev};
+        std::snprintf(buf, sizeof(buf), "%s after %.2f m. Brake ON, speed demand 0. Next spd drives %s.\n",
+                      reason, distanceM, forward ? "forward" : "backward");
+        serial.write(buf);
+    };
 
     while (true)
     {
         vTaskDelay(pdMS_TO_TICKS(pollPeriodMs));
+
+        if (driving)
+        {
+            const double distanceM{(odometer.pulseCount() - spdStartPulses) * wheelCircumferenceM / wheelPulsesPerRev};
+            if (distanceM >= spdMaxDistanceM) { endSpdRun("DISTANCE STOP"); }
+            else if ((esp_timer_get_time() - startUs) > spdMaxRunUs) { endSpdRun("TIME STOP"); }
+        }
 
         if (driving && ((xTaskGetTickCount() - lastSafety) >= pdMS_TO_TICKS(safetyPeriodMs)))
         {
@@ -929,12 +955,11 @@ void runA89301ConfigTest() noexcept
 
             if (stalled || tooHot)
             {
-                stopMotor();
-                driving = false;
-                std::snprintf(buf, sizeof(buf), "SAFETY STOP: %s (motor %.1f degC). Brake ON, speed demand 0.\n",
+                char reason[80]{'\0'}; // Not buf: endSpdRun() formats its message into buf.
+                std::snprintf(reason, sizeof(reason), "SAFETY STOP: %s (motor %.1f degC)",
                               stalled ? "chip drives but the wheel does not turn" : "motor too hot",
                               static_cast<double>(tempC));
-                serial.write(buf);
+                endSpdRun(reason);
             }
         }
 
@@ -1083,14 +1108,23 @@ void runA89301ConfigTest() noexcept
             else
             {
                 const auto demand{static_cast<std::uint16_t>(speed * a89301::SpeedDemandMax + 0.5F)};
-                if (programmer.setSpeedDemand(demand))
+                if (demand == 0U)
+                {
+                    if (driving) { endSpdRun("STOP"); }
+                    else { stopMotor(); }
+                }
+                else if (programmer.setSpeedDemand(demand))
                 {
                     brakeGpio.write(false);
-                    startUs = esp_timer_get_time();
-                    driving = (demand > 0U);
-                    safetyPulses      = odometer.pulseCount();
-                    safetyLastPulseUs = startUs;
-                    safetyWasFast     = false;
+                    if (!driving)
+                    {
+                        startUs           = esp_timer_get_time();
+                        spdStartPulses    = odometer.pulseCount();
+                        safetyPulses      = spdStartPulses;
+                        safetyLastPulseUs = startUs;
+                        safetyWasFast     = false;
+                    }
+                    driving = true;
                     std::snprintf(buf, sizeof(buf), "I2C speed demand %u / 511, brake off\n", demand);
                     serial.write(buf);
                     if (std::isnan(motorTempC())) { serial.write("WARNING: no valid motor temperature\n"); }
@@ -1106,7 +1140,11 @@ void runA89301ConfigTest() noexcept
                 serial.write("cal spins the wheel under power at three duties, about a minute.\n"
                              "LIFT THE CAR so the measured wheel turns freely, then: cal yes\n");
             }
-            else { runCalibration(); }
+            else
+            {
+                runCalibration();
+                forward = true; // cal leaves the direction pin forward.
+            }
         }
         else if (std::strcmp(cmd, "sweep") == 0)
         {
@@ -1169,16 +1207,16 @@ void runA89301ConfigTest() noexcept
                 else { runProfile(profileUp, config); }
             }
         }
+        else if ((std::strcmp(cmd, "stop") == 0) && driving) { endSpdRun("STOP"); }
         else if (std::strcmp(cmd, "stop") == 0)
         {
-            driving = false;
             brakeGpio.write(true);
             serial.write(programmer.setSpeedDemand(0U) ? "Speed demand 0, brake ON\n"
                                                        : "Brake ON, but I2C write failed\n");
         }
         else if ((std::strcmp(cmd, "f") == 0) || (std::strcmp(cmd, "b") == 0))
         {
-            const bool forward{std::strcmp(cmd, "f") == 0};
+            forward = std::strcmp(cmd, "f") == 0;
             directionGpio.write(forward);
             serial.write(forward ? "DIR high (forward)\n" : "DIR low (backward)\n");
         }
