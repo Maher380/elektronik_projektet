@@ -30,6 +30,7 @@ idf_component_register(
         "source/driver/servo/vagrant.cpp"
         "source/driver/serial/esp32s3.cpp"
         "source/driver/serial/stub.cpp"
+        "source/driver/start_module/gpio.cpp"
         "source/driver/temperature_sensor/tmp36.cpp"
         "source/driver/timer/esp32s3.cpp"
         "source/driver/voltage_meter/divider.cpp"
@@ -47,6 +48,7 @@ idf_component_register(
         "source/test_app/motor_test.cpp"
         "source/test_app/odometer_test.cpp"
         "source/test_app/srf05_test.cpp"
+        "source/test_app/start_module_test.cpp"
 
     INCLUDE_DIRS
         "include"

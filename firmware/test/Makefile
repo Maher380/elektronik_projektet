@@ -19,6 +19,7 @@ TEST_FILES := \
 	$(TEST_SRC_DIR)/test/pin_manager.cpp \
 	$(TEST_SRC_DIR)/test/servo.cpp \
 	$(TEST_SRC_DIR)/test/speed_calibration.cpp \
+	$(TEST_SRC_DIR)/test/start_module.cpp \
 	$(TEST_SRC_DIR)/test/temperature_sensor.cpp \
 	$(TEST_SRC_DIR)/test/voltage_meter.cpp \
 	$(TEST_SRC_DIR)/test/wifi_store.cpp
@@ -37,6 +38,7 @@ SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/driver/odometer/gaps.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/odometer/store.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/serial/stub.cpp \
+	$(FIRMWARE_SRC_DIR)/driver/start_module/gpio.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/temperature_sensor/tmp36.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/voltage_meter/divider.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/wifi/store.cpp
