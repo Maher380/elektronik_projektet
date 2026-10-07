@@ -55,6 +55,17 @@ namespace app::test_app
 [[noreturn]] void runStartModuleTest() noexcept;
 
 /**
+ * @brief Run the Pi UART link test app.
+ *
+ * Echoes every line the Raspberry Pi sends on UART1 (TX D7, RX D8) back to it, and prints
+ * a summary on the USB console. Commands (type + Enter): b <baud> = change the link baud
+ * rate, s <text> = send a line to the Pi, h = help.
+ *
+ * @note Never returns.
+ */
+[[noreturn]] void runUartLinkTest() noexcept;
+
+/**
  * @brief Run the A89301 configuration app.
  *
  * Reads, changes and saves the A89301 settings over I2C, with a live monitor, PID sweeps,
