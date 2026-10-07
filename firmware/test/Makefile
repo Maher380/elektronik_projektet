@@ -16,6 +16,7 @@ TEST_FILES := \
 	$(TEST_SRC_DIR)/test/gap_calibration.cpp \
 	$(TEST_SRC_DIR)/test/nvs.cpp \
 	$(TEST_SRC_DIR)/test/odometer_gaps.cpp \
+	$(TEST_SRC_DIR)/test/pi_link.cpp \
 	$(TEST_SRC_DIR)/test/pin_manager.cpp \
 	$(TEST_SRC_DIR)/test/servo.cpp \
 	$(TEST_SRC_DIR)/test/speed_calibration.cpp \
@@ -27,6 +28,7 @@ TEST_FILES := \
 SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/system/pin_manager/esp32s3.cpp \
 	$(FIRMWARE_SRC_DIR)/system/runtime/control.cpp \
+	$(FIRMWARE_SRC_DIR)/system/communication/pi_link.cpp \
 	$(FIRMWARE_SRC_DIR)/system/logic/gapCalibration.cpp \
 	$(FIRMWARE_SRC_DIR)/system/logic/speedCalibration.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/servo/ford.cpp \

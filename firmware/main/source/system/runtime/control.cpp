@@ -253,8 +253,18 @@ CommandResult Control::handleCommand(const Command& command,
             if (myControlState != ControlState::Armed) { return {false, CommandError::NotArmed}; }
             if (!isActiveSession(command.sessionId)) { return {false, CommandError::SessionMismatch}; }
 
+            // While the Pi drives, the operator's sliders only show the operator is still
+            // there. Accepted rather than refused: the page counts every drive it sends as
+            // its heartbeat, and a refusal would also be reported on every slider sample.
+            if (isPiDriving(nowMs))
+            {
+                myLastHeartbeatMs = nowMs;
+                return {true, CommandError::None};
+            }
+
             // Each accepted drive command also counts as an operator heartbeat.
             myDrive = {command.steeringCommand, command.speedCommand};
+            myDriveFromPi = false;
             myHasDrive = true;
             myLastDriveMs = nowMs;
             myLastHeartbeatMs = nowMs;
@@ -262,6 +272,58 @@ CommandResult Control::handleCommand(const Command& command,
     }
 
     return {false, CommandError::InvalidSession};
+}
+
+bool Control::handlePiLine(const PiState state, const float steeringCommand,
+                           const float speedCommand, const std::uint32_t nowMs) noexcept
+{
+    myHasPiLine = true;
+    myPiState = state;
+    myLastPiLineMs = nowMs;
+
+    // Disarmed, a car follows nobody and centres its steering; disarm() cleared the drive.
+    if ((myControlState != ControlState::Armed) || !isManualByRemoteStyle() || myActuatorFault)
+    {
+        return false;
+    }
+    if (state != PiState::Driving)
+    {
+        // Waiting or lost: no drive now, rather than after the drive timeout, and the
+        // steering stays where it was. Only a drive the Pi asked for: while the Pi is not
+        // driving, the operator's sliders drive the car, and the Pi's waiting lines must
+        // not cancel them.
+        if (myDriveFromPi) { myDrive.speedCommand = 0.0F; }
+        return false;
+    }
+    if (!isFiniteInRange(steeringCommand, -90.0F, 90.0F)
+        || !isFiniteInRange(speedCommand, -100.0F, 100.0F))
+    {
+        return false;
+    }
+
+    // Not a heartbeat: the lease belongs to whoever armed the car, never to the Pi.
+    myDrive = {steeringCommand, speedCommand};
+    myDriveFromPi = true;
+    myHasDrive = true;
+    myLastDriveMs = nowMs;
+    return true;
+}
+
+PiLink Control::piLink(const std::uint32_t nowMs) const noexcept
+{
+    if (!myHasPiLine || (nowMs - myLastPiLineMs) >= PiGoneMs) { return PiLink::Gone; }
+    switch (myPiState)
+    {
+        case PiState::Waiting: return PiLink::Waiting;
+        case PiState::Driving: return PiLink::Driving;
+        case PiState::Lost: return PiLink::Lost;
+    }
+    return PiLink::Gone;
+}
+
+bool Control::isPiDriving(const std::uint32_t nowMs) const noexcept
+{
+    return piLink(nowMs) == PiLink::Driving;
 }
 
 void Control::forceDisarm(StateReason reason) noexcept
@@ -336,6 +398,7 @@ void Control::disarm(StateReason reason) noexcept
     myActiveSession.fill('\0');
     myLastHeartbeatMs = 0U;
     myDrive = {};
+    myDriveFromPi = false;
     myHasDrive = false;
 }
 

@@ -41,6 +41,7 @@ Power connections do not use driver factory calls:
 | Driver call | Pin on Arduino | Driver function | Connected hardware | Status |
 | --- | --- | --- | --- | --- |
 | `factory.gpioOutput(5)` | `~D2` | ⚡ Digital output | A89301 BRAKE (high = brake); 12 kΩ pull-up to the A89301's `2V8`, so an undriven pin brakes | 🔵 Used |
+| `factory.gpioInput(6)` | `~D3` | 🔌 Digital input | A89301 FLT (low = fault; flashes while it lasts, seen on a stalled motor). Open drain, pulled up to `IOREF` (3V3) on the A89301 board. Wired 2026-10-07; reported as `motor_fault` in telemetry, not acted on | 🟡 Wired |
 | `factory.gpioOutput(7)` | `~D4` | ⚡ Digital output | A89301 DIR | 🔵 Used |
 | `factory.pwm(8)` | `~D5` | 〰️ PWM output, 20 kHz | A89301 SPD/SCL (speed); 4.7 kΩ to `GND`, so an undriven pin means stopped | 🔵 Used |
 | `factory.pwm(9)` | `~D6` | 〰️ PWM output | steering servo (pulse width) | 🔵 Used |
@@ -82,7 +83,7 @@ Use the first column when passing a pin to `gpioInput()`, `gpioOutput()`,
 | `3` | `A2 / ~D19` | 🔴 ADC1_CH2 blocked | 🔴 Blocked | Strapping | 🔴 Avoid |
 | `4` | `A3 / ~D20` | ✅ ADC1_CH3 | ✅ | Analog / digital | 🔵 Right IR sensor |
 | `5` | `~D2` | ✅ ADC1_CH4 | ✅ | Digital / PWM | 🔵 MP6550 IN1 |
-| `6` | `~D3` | ✅ ADC1_CH5 | ✅ | Digital / PWM | 🔵 MP6550 IN2 |
+| `6` | `~D3` | ✅ ADC1_CH5 | ✅ | Digital / PWM | 🔵 MP6550 IN2 (Vagrant); A89301 FLT (Ford) |
 | `7` | `~D4` | ✅ ADC1_CH6 | ✅ | Digital / PWM | 🔵 MP6550 nSLEEP |
 | `8` | `~D5` | ✅ ADC1_CH7 | ✅ | Digital / PWM | 🟢 Available |
 | `9` | `~D6` | ✅ ADC1_CH8 | ✅ | Digital / PWM | 🔵 Steering servo |

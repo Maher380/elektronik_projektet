@@ -192,6 +192,20 @@ private:
     /** Store a measured gap table when the operator confirms it. */
     void storeMeasuredGaps() noexcept;
 
+    /** Open the UART to the Pi. Optional: without it the car is driven over MQTT only. */
+    void connectPiLink() noexcept;
+
+    /**
+     * @brief Take every line the Pi has sent since the last tick.
+     *
+     * A valid line goes to Control, which alone decides what it may do; a damaged one is
+     * dropped whole and counted. See ADR 0012.
+     */
+    void receivePiLines(std::uint32_t nowMs) noexcept;
+
+    /** Send the car's state to the Pi every pi_link::PeriodMs, on the car's own timer. */
+    void sendCarLine(std::uint32_t nowMs) noexcept;
+
     /** Apply myPlannedDrive through the arm gate, the brake interlock and the outputs. */
     void executeAction(std::uint32_t nowMs) noexcept;
 
@@ -215,9 +229,24 @@ private:
     std::unique_ptr<driver::temperature_sensor::Interface> myMotorTemp;
     std::unique_ptr<driver::adc::Interface> myServoTempAdc;
     std::unique_ptr<driver::temperature_sensor::Interface> myServoTemp;
+    /** A89301 FLT; optional, and only reported. See ford::pin::MotorFault. */
+    std::unique_ptr<driver::gpio::Interface> myMotorFaultGpio;
 
     /** USB serial console, for setting the Wi-Fi network. Optional: the car drives without it. */
     std::unique_ptr<driver::serial::Interface> mySerial;
+
+    /** The UART to the Pi's follower. Optional: without it the car is driven over MQTT only. */
+    std::unique_ptr<driver::serial::Interface> myPiSerial;
+
+    /** The Pi link's bookkeeping, for the car's own lines and for telemetry. */
+    struct PiLinkState
+    {
+        std::uint32_t sequence{0U};
+        std::uint32_t lastSentMs{0U};
+        std::uint32_t lastReceivedSequence{0U};
+        std::uint32_t dropped{0U};
+    };
+    PiLinkState myPiLink{};
 
     /**
      * @brief The network the Manager joins, and the stored credentials it points into.
@@ -341,6 +370,11 @@ private:
     std::uint32_t myLastMotorTempReadMs{0U};
     bool myServoTempRead{false};
     std::uint32_t myLastServoTempReadMs{0U};
+
+    /** A89301 FLT: whether it counts as a fault now, when it was last low, and how often. */
+    bool myMotorFault{false};
+    std::uint32_t myLastMotorFaultMs{0U};
+    std::uint32_t myMotorFaultCount{0U};
 };
 
 } // namespace app::logic

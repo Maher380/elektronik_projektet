@@ -40,6 +40,7 @@ idf_component_register(
         "source/driver/mqtt/esp32s3.cpp"
         "source/driver/nvs/esp32s3.cpp"
         "source/system/communication/manager.cpp"
+        "source/system/communication/pi_link.cpp"
         "source/system/logic/gapCalibration.cpp"
         "source/system/logic/speedCalibration.cpp"
         "source/system/runtime/control.cpp"

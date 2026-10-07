@@ -124,6 +124,14 @@ struct TelemetrySnapshot
     float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     /** Ford: steering servo temperature in degrees Celsius; NaN leaves it out. */
     float servoTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+    /** Ford: the Pi as the car judges it over the UART, e.g. "driving"; nullptr leaves it out. */
+    const char* piLink{nullptr};
+    /** Ford: lines from the Pi dropped since start-up for a bad CRC or a bad field. */
+    std::uint32_t piLinkDropped{0U};
+    /** Ford: A89301 FLT, 1 = a fault (e.g. a stalled motor), 0 = none, -1 leaves it out. */
+    std::int8_t motorFault{-1};
+    /** Ford: faults the A89301 has reported since start-up. */
+    std::uint32_t motorFaultCount{0U};
 
     // GapCalibration. These travel as a nested "calibration" object, present only while
     // that drive style is selected, which is how the payload already treats optional

@@ -118,6 +118,30 @@ struct CommandResult
     CommandError error{CommandError::None};
 };
 
+/**
+ * @brief What the Pi's follower says it is doing, in each line it sends over the UART.
+ *
+ * Only Driving carries steering and speed the car may follow. See ADR 0012.
+ */
+enum class PiState : std::uint8_t
+{
+    /** Not localized yet, or not driving because the car has not been armed. */
+    Waiting,
+    /** Sending steering and speed it wants followed. */
+    Driving,
+    /** Localization has lost track; the follower asks for no drive. */
+    Lost,
+};
+
+/** The Pi as the car judges it: what its last line said, or Gone if none is fresh. */
+enum class PiLink : std::uint8_t
+{
+    Gone,
+    Waiting,
+    Driving,
+    Lost,
+};
+
 /** Operator authorization state. */
 enum class ControlState : std::uint8_t
 {
@@ -184,6 +208,8 @@ public:
     float servoAngleDegrees() const noexcept { return myServoAngleDegrees; }
 
     static constexpr std::uint32_t HeartbeatTimeoutMs{3000U};
+    /** No valid line from the Pi for this long, and the Pi is Gone. See ADR 0012. */
+    static constexpr std::uint32_t PiGoneMs{500U};
 
     /** Apply a complete runtime configuration atomically. */
     ConfigurationResult applyConfiguration(const ConfigurationRequest& request) noexcept;
@@ -196,6 +222,26 @@ public:
 
     /** Handle one parsed start, stop, heartbeat, or manual servo command. */
     CommandResult handleCommand(const Command& command, std::uint32_t nowMs) noexcept;
+
+    /**
+     * @brief Handle one valid line from the Pi's follower, received over the UART.
+     *
+     * The Pi is never an arming source and holds no lease: its lines never arm the car and
+     * never renew the heartbeat, which stays the operator's. A Driving line from an armed
+     * ManualByRemote car becomes the drive the car follows. Any other state asks for no
+     * drive at once and holds the steering. See ADR 0012.
+     *
+     * @param[in] state What the follower says it is doing.
+     * @param[in] steeringCommand −90 full left, 0 straight ahead, +90 full right.
+     * @param[in] speedCommand −100 full reverse, 0 no drive, +100 full forward.
+     * @param[in] nowMs Monotonic milliseconds.
+     * @return True if the line's commands were taken as the drive to follow.
+     */
+    bool handlePiLine(PiState state, float steeringCommand, float speedCommand,
+                      std::uint32_t nowMs) noexcept;
+
+    /** The Pi as the car judges it now; Gone if no valid line arrived for PiGoneMs. */
+    PiLink piLink(std::uint32_t nowMs) const noexcept;
 
     /** Force a fail-safe disarm for a local runtime error. */
     void forceDisarm(StateReason reason) noexcept;
@@ -263,6 +309,8 @@ private:
                                   const Configuration& rhs) noexcept;
     bool isActiveSession(const std::array<char, SessionIdSize>& sessionId) const noexcept;
     bool supportsDriveStyle(navigation::DriveStyle style) const noexcept;
+    /** Whether a fresh line from the Pi says it is driving. */
+    bool isPiDriving(std::uint32_t nowMs) const noexcept;
     void disarm(StateReason reason) noexcept;
 
     const bool mySystemTest;
@@ -289,6 +337,12 @@ private:
     std::uint32_t myLastControlRequestId{0U};
     std::uint32_t myLastStartRequestId{0U};
     bool myActuatorFault{false};
+    /** Whether myDrive came from the Pi rather than from the operator's sliders. */
+    bool myDriveFromPi{false};
+    /** The Pi's last valid line, and when it arrived. */
+    bool myHasPiLine{false};
+    PiState myPiState{PiState::Waiting};
+    std::uint32_t myLastPiLineMs{0U};
 };
 
 } // namespace app::runtime

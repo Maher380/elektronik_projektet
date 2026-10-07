@@ -12,6 +12,7 @@
 #include "driver/factory/interface.h"
 #include "driver/mqtt/interface.h"
 #include "driver/wifi/interface.h"
+#include "system/runtime/names.h"
 #include "sdkconfig.h"
 
 extern "C" {
@@ -72,6 +73,10 @@ struct WireTelemetrySnapshot
     std::uint32_t odometerPhaseLosses{0U};
     float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     float servoTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+    const char* piLink{nullptr};
+    std::uint32_t piLinkDropped{0U};
+    std::int8_t motorFault{-1};
+    std::uint32_t motorFaultCount{0U};
     // GapCalibration; see TelemetrySnapshot for what each one means.
     const char* calibrationPhase{nullptr};
     const char* calibrationFailure{nullptr};
@@ -97,25 +102,7 @@ struct WireTelemetrySnapshot
 const char* toString(ParseError error) noexcept;
 const char* toString(runtime::ConfigurationResult result) noexcept;
 const char* toString(runtime::CommandError error) noexcept;
-const char* toString(runtime::ControlState state) noexcept;
 const char* toString(runtime::MotionState state) noexcept;
-const char* toString(runtime::StateReason reason) noexcept;
-
-const char* toString(navigation::DriveStyle style) noexcept
-{
-    switch (style)
-    {
-        case navigation::DriveStyle::DecideAction: return "decide_action";
-        case navigation::DriveStyle::SlowLeft: return "slow_left";
-        case navigation::DriveStyle::SlowRight: return "slow_right";
-        case navigation::DriveStyle::GradualSweep: return "gradual_sweep";
-        case navigation::DriveStyle::ManualByRemote: return "manual_by_remote";
-        case navigation::DriveStyle::GapCalibration: return "gap_calibration";
-        case navigation::DriveStyle::SpeedCalibration: return "speed_calibration";
-        case navigation::DriveStyle::Disabled: return "disabled";
-    }
-    return "invalid";
-}
 
 bool readDriveStyle(const cJSON* item, navigation::DriveStyle& style, ParseError& error) noexcept
 {
@@ -723,6 +710,16 @@ bool writeTelemetry(char* destination,
             || (cJSON_AddNumberToObject(root, "motor_temp_c", rounded(snapshot.motorTemperatureC)) != nullptr))
         && (!std::isfinite(snapshot.servoTemperatureC)
             || (cJSON_AddNumberToObject(root, "servo_temp_c", rounded(snapshot.servoTemperatureC)) != nullptr))
+        && ((snapshot.piLink == nullptr)
+            || (cJSON_AddStringToObject(root, "pi_link", snapshot.piLink) != nullptr))
+        && ((snapshot.piLink == nullptr)
+            || (cJSON_AddNumberToObject(root, "pi_link_dropped",
+                                        static_cast<double>(snapshot.piLinkDropped)) != nullptr))
+        && ((snapshot.motorFault < 0)
+            || (cJSON_AddBoolToObject(root, "motor_fault", snapshot.motorFault > 0) != nullptr))
+        && ((snapshot.motorFault < 0)
+            || (cJSON_AddNumberToObject(root, "motor_faults",
+                                        static_cast<double>(snapshot.motorFaultCount)) != nullptr))
         && (cJSON_AddStringToObject(root,
                                     "control_state",
                                     toString(snapshot.controlState))
@@ -858,11 +855,6 @@ const char* toString(runtime::CommandError error) noexcept
     return "unknown_error";
 }
 
-const char* toString(runtime::ControlState state) noexcept
-{
-    return state == runtime::ControlState::Armed ? "armed" : "disarmed";
-}
-
 const char* toString(runtime::MotionState state) noexcept
 {
     switch (state)
@@ -872,26 +864,6 @@ const char* toString(runtime::MotionState state) noexcept
         case runtime::MotionState::Inhibited: return "inhibited";
     }
     return "stopped";
-}
-
-const char* toString(runtime::StateReason reason) noexcept
-{
-    switch (reason)
-    {
-        case runtime::StateReason::ActuatorFault: return "actuator_fault";
-        case runtime::StateReason::Boot: return "boot";
-        case runtime::StateReason::OperatorStop: return "operator_stop";
-        case runtime::StateReason::Obstacle: return "obstacle";
-        case runtime::StateReason::SensorFault: return "sensor_fault";
-        case runtime::StateReason::HeartbeatTimeout: return "heartbeat_timeout";
-        case runtime::StateReason::MqttDisconnected: return "mqtt_disconnected";
-        case runtime::StateReason::MessageOverflow: return "message_overflow";
-        case runtime::StateReason::DriveTimeout: return "drive_timeout";
-        case runtime::StateReason::DriveStyleFinished: return "drive_style_finished";
-        case runtime::StateReason::Overheated: return "overheated";
-        case runtime::StateReason::None: return "none";
-    }
-    return "none";
 }
 
 } // namespace
@@ -1098,6 +1070,10 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.odometerPhaseLosses = snapshot.odometerPhaseLosses;
     wireSnapshot.motorTemperatureC = snapshot.motorTemperatureC;
     wireSnapshot.servoTemperatureC = snapshot.servoTemperatureC;
+    wireSnapshot.piLink = snapshot.piLink;
+    wireSnapshot.piLinkDropped = snapshot.piLinkDropped;
+    wireSnapshot.motorFault = snapshot.motorFault;
+    wireSnapshot.motorFaultCount = snapshot.motorFaultCount;
     wireSnapshot.calibrationPhase = snapshot.calibrationPhase;
     wireSnapshot.calibrationFailure = snapshot.calibrationFailure;
     wireSnapshot.calibrationDutyIndex = snapshot.calibrationDutyIndex;

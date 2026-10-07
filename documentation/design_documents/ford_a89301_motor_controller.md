@@ -38,7 +38,7 @@ with gains `PID_P` and `PID_I`. These parameters must fit the motor.
 | FG/SDA | A5 / GPIO12 | I2C SDA. The board has a pull-up to IOREF |
 | DIR | D4 / GPIO7 | High = forward in the test apps |
 | BRAKE | D2 / GPIO5 | High = brake. **12 kΩ pull-up to 2V8 (R1)**, see Safety |
-| FLT | not connected | Open drain, pulled up to IOREF |
+| FLT | D3 / GPIO6 | Open drain, pulled up to IOREF; low = fault. It flashes while the fault lasts, seen when the motor stalls. Wired 2026-10-07; reported as `motor_fault` in telemetry, not acted on |
 | – | D9 / GPIO18 | A3144 wheel odometer, 2 magnets on the right rear wheel |
 | – | A0 / GPIO1 | TMP36 on the motor can (ADC1) |
 
@@ -232,6 +232,33 @@ matched the odometer where the odometer was reliable.
 - **Stall protection:** the config app brakes if the chip reports spinning
   above 50 Hz but the wheel gives no odometer pulse for 1 s.
 
+## On the floor, loaded (2026-10-07)
+
+Ford with the Pi and power bank aboard, drive battery 7.9–8.0 V, PWM on SPD,
+measured by the odometer with `scripts/ai/raspberry-pi/creep_test.py` over the
+Pi's UART. The firmware maps speed commands below 1 below `StartDuty` for this
+(`dutyFor()` in `fordLogic.cpp`).
+
+| Demand (duty) | Speed | Notes |
+| --- | --- | --- |
+| 0.099 (command 3) | starts in about 1.5 s | Reliable start from standstill on the flat |
+| 0.072–0.089 | 0.48–0.6 m/s, flat | Typical; once 0.11 m/s at 0.087–0.089 after a fast ramp down |
+| 0.064 | 0.16 m/s | After a gentle ramp down from 0.099 at 0.006/s |
+| 0.056 | 0.11 m/s | The slowest held for a whole step |
+| 0.048 | stall | |
+| 0.068, in the air | 0.55 m/s, steady for 10 s | The same duty with no load: the motor is driven, faster |
+
+- **0.1–0.2 m/s is reachable on the flat**, but with almost no torque in reserve:
+  steering beyond about ±60 or the ramps stall it there.
+- **Come down gently.** A drop in demand of 0.02/s stalled it more often than
+  0.006/s.
+- **Speed jumps about near the bottom.** The same demand gave 0.11 m/s in one
+  run and 0.6 m/s in the next. The odometer's 53 mm pulses make single readings
+  coarse at these speeds (2 pulses a second at 0.11 m/s).
+- A PI loop on the odometer held 0.5 m/s through turns up to ±74 on the flat,
+  and boosting the demand when a pulse came late caught the slowdowns before a
+  ramp, but not the climb itself.
+
 ## Known issues and open items
 
 - **Load test (2026-10-07):** with the Pi and power bank aboard, the car
@@ -249,7 +276,16 @@ matched the odometer where the odometer was reliable.
 - **Odometer:** misses pulses above about 2.5 m/s with the current mounting.
 - **Speed plateau** above demand 0.40 in step tests is not explained. It does
   not matter at SLAM speeds.
-- **Slower than 0.5 m/s** needs closed loop speed control or other gearing.
+- **Slow driving on the floor is limited by torque, not speed.** The 0.5 m/s in
+  the table above is the motor with no load: the demand sets roughly a voltage,
+  not a speed, so the loaded car on the floor goes slower at the same demand.
+  See "On the floor, loaded" above. What it lacks down there is torque in reserve.
+- **Ramps stall it from standstill**, even at demand 1.0: the 4–5 cm, 35 cm long
+  bumps on the track (about 7°). Probably the 3.0 A `RATED_CURRENT` limit holding the motor
+  back during start-up, so the chip loses it, as in the load test above; not measured on
+  the ramp. FLT flashes. More current
+  (the motor's temperature reading is not trustworthy under load, so with care),
+  other gearing, or reaching the ramp already rolling are the ways over.
 - **Speed control in the final car:** PWM on SPD (D5) for now (ManualByRemote
   uses it). I2C readback of speed, current and state is a later step.
 

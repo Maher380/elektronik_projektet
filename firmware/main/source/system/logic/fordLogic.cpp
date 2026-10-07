@@ -25,9 +25,14 @@
 #include "driver/nvs/interface.h"
 #include "driver/odometer/gaps.h"
 #include "driver/odometer/store.h"
+#include "driver/serial/esp32s3.h"
 #include "driver/wifi/store.h"
+#include "system/communication/pi_link.h"
 #include "system/ford.h"
+#include "system/runtime/names.h"
 
+#include "driver/gpio.h"
+#include "driver/uart.h"
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "esp_log.h"
@@ -93,6 +98,16 @@ constexpr app::communication::NetworkSettings Network{
     "cnb-net", "cnbrules",
     "mqtt://192.168.137.1:1883", "cnb-ford", "cnb-ford", "cnb"};
 
+/** The UART to the Pi; see FordLogic::connectPiLink(). */
+constexpr uart_port_t PiUartPort{UART_NUM_1};
+
+/**
+ * @brief Patterns the serial driver can queue; Esp32s3's QueueDepth, which it does not export.
+ *
+ * Passed again when the pattern queue is reset after a flush.
+ */
+constexpr int PiPatternQueueDepth{10};
+
 /** USB serial console speed. The USB-JTAG link ignores it, but the factory asks for one. */
 constexpr std::uint32_t SerialBaudRate{115200U};
 
@@ -153,14 +168,22 @@ bool copyValue(char (&dst)[Size], const char* src) noexcept
 
 /**
  * @brief Turn a speed command into motor duty, skipping the duty band where the motor does not start.
+ *
+ * Commands below 1 go below ford::StartDuty in proportion, 0.5 to half of it. Nothing
+ * drives there in normal use - the page's slider moves in whole steps - but it lets a
+ * creep test on the floor find where a car that is already rolling finally stalls.
+ * Measured 2026-10-07: down to command 1.2 the loaded car held about 0.59 m/s.
+ *
  * @param speedCommand -100 full reverse, 0 no drive, +100 full forward.
- * @return 0 for no drive, otherwise ford::StartDuty to ford::TopSpeedDuty.
+ * @return 0 for no drive; below command 1, a share of ford::StartDuty; otherwise
+ *         ford::StartDuty to ford::TopSpeedDuty.
  * @todo Add host tests for the mapping and its clamping.
  */
 float dutyFor(float speedCommand) noexcept
 {
     const float magnitude = std::min(std::abs(speedCommand), 100.0F);
     if (magnitude <= 0.0F) { return 0.0F; }
+    if (magnitude < 1.0F) { return ford::StartDuty * magnitude; }
     return ford::StartDuty + (ford::TopSpeedDuty - ford::StartDuty) * (std::max(magnitude, 1.0F) - 1.0F) / 99.0F;
 }
 } // namespace
@@ -246,6 +269,16 @@ bool FordLogic::initializeDrivers() noexcept
     if (!myServoTemp || !myServoTempAdc->init() || !myServoTemp->isInitialized())
     { ESP_LOGW("FORD", "Servo temperature sensor failed; servo temperature not reported"); }
 
+    // The A89301's fault output is optional and only reported. The board pulls it up to
+    // IOREF, so a plain input: an internal pull-up would only fight a pin that is never
+    // left floating.
+    myMotorFaultGpio = myFactory.gpioInput(ford::pin::MotorFault);
+    if (!myMotorFaultGpio || !myMotorFaultGpio->isInitialized())
+    {
+        myMotorFaultGpio = nullptr;
+        ESP_LOGW("FORD", "A89301 FLT input failed; motor faults not reported");
+    }
+
     // The serial console is optional too; without it the car joins whatever network it has.
     mySerial = myFactory.serial(SerialBaudRate);
     if (!mySerial || !mySerial->connect())
@@ -254,11 +287,96 @@ bool FordLogic::initializeDrivers() noexcept
         ESP_LOGW("FORD", "Serial console failed; the Wi-Fi network cannot be changed over serial");
     }
     loadWifiNetwork();
+    connectPiLink();
 
     // Only now that the brake is on: the Manager's constructor allocates the Wi-Fi and
     // MQTT drivers, and the wheels must not be able to spin while those start.
     myCommunication = std::make_unique<app::communication::Manager>(myFactory, Topics, myNetwork);
     return myCommunication != nullptr;
+}
+
+void FordLogic::connectPiLink() noexcept
+{
+    // UART1, not UART0: the boot ROM and the log print on UART0, and the Pi must not
+    // receive either. The receive buffer must be larger than the 128-byte hardware FIFO.
+    myPiSerial = std::make_unique<driver::serial::Esp32s3>(driver::serial::Config{
+        .port = PiUartPort,
+        .txPin = ford::pin::PiUartTx,
+        .rxPin = ford::pin::PiUartRx,
+        .baudRate = static_cast<int>(ford::PiUartBaudRate),
+        .rxBufSize = 1024U,
+    });
+    if (!myPiSerial->connect())
+    {
+        myPiSerial = nullptr;
+        ESP_LOGW("FORD", "Pi UART failed; the car is driven over MQTT only");
+        return;
+    }
+    // A powered-off Pi leaves RX floating; the pull-up makes that read as an idle line, not noise.
+    gpio_pullup_en(static_cast<gpio_num_t>(ford::pin::PiUartRx));
+    ESP_LOGI("FORD", "Pi link: UART1 at %lu baud", static_cast<unsigned long>(ford::PiUartBaudRate));
+}
+
+void FordLogic::receivePiLines(const std::uint32_t nowMs) noexcept
+{
+    if (!myPiSerial) { return; }
+
+    // Bounded, so a flood on the wire cannot hold up the loop. The Pi sends one line per
+    // pi_link::PeriodMs, and the loop runs far faster than that.
+    constexpr int MaxLinesPerTick{8};
+    for (int count{0}; (count < MaxLinesPerTick) && myPiSerial->isDataAvailable(); ++count)
+    {
+        char line[app::pi_link::MaxLineLength + 2U]{};
+        if (myPiSerial->read(line, sizeof(line)) == 0U) { break; }
+
+        app::pi_link::PiLine parsed{};
+        if (!app::pi_link::parsePiLine(line, parsed))
+        {
+            ++myPiLink.dropped;
+            continue;
+        }
+        myPiLink.lastReceivedSequence = parsed.sequence;
+        (void)myControl.handlePiLine(parsed.state, parsed.steeringCommand, parsed.speedCommand, nowMs);
+    }
+
+    // Lines are only ever taken out at a newline. A Pi that is off or booting holds the
+    // line low, which arrives as bytes with no newline in them; they fill the receive
+    // buffer, and once it is full every later byte - the Pi's good lines too - is thrown
+    // away, for good. Seen on 2026-10-07 when the Pi's power was switched: the link stayed
+    // "gone" until the ESP was reset. So bytes with no line in them are flushed.
+    std::size_t buffered{0U};
+    if (!myPiSerial->isDataAvailable()
+        && (uart_get_buffered_data_len(PiUartPort, &buffered) == ESP_OK)
+        && (buffered > 2U * app::pi_link::MaxLineLength))
+    {
+        uart_flush_input(PiUartPort);
+        uart_pattern_queue_reset(PiUartPort, PiPatternQueueDepth);
+        // Counted, not logged: a Pi that stays off would refill it on every tick.
+        ++myPiLink.dropped;
+    }
+}
+
+void FordLogic::sendCarLine(const std::uint32_t nowMs) noexcept
+{
+    if (!myPiSerial || ((nowMs - myPiLink.lastSentMs) < app::pi_link::PeriodMs)) { return; }
+    myPiLink.lastSentMs = nowMs;
+
+    app::pi_link::CarLine line{};
+    line.sequence = ++myPiLink.sequence;
+    line.controlState = app::runtime::toString(myControl.controlState());
+    line.reason = app::runtime::toString(myControl.stateReason());
+    line.driveStyle = app::navigation::toString(myControl.configuration().driveStyle);
+    line.piLink = app::runtime::toString(myControl.piLink(nowMs));
+    // What publishState() just worked out the car applies, not what anyone asked for.
+    line.appliedSteering = mySnapshot.steeringDegrees;
+    line.appliedSpeed = mySnapshot.speedCommand;
+    line.odometerDistanceM = myOdometer ? myOdometer->distance() : std::numeric_limits<float>::quiet_NaN();
+    line.odometerSpeedMs = myOdometer ? myOdometer->speed() : std::numeric_limits<float>::quiet_NaN();
+    line.odometerSpeedSource = myOdometer ? speedSourceName(myOdometer->speedSource()) : "";
+    line.lastPiSequence = myPiLink.lastReceivedSequence;
+
+    char out[app::pi_link::MaxLineLength + 8U]{};
+    if (app::pi_link::formatCarLine(line, out, sizeof(out)) > 0U) { myPiSerial->write(out); }
 }
 
 void FordLogic::loadOdometerGaps() noexcept
@@ -481,6 +599,28 @@ void FordLogic::readSensors(const std::uint32_t nowMs) noexcept
         mySnapshot.motorTemperatureC = myMotorTemperatureC;
         myLastMotorTempReadMs = nowMs;
         myMotorTempRead = true;
+    }
+    // FLT flashes while a fault lasts, so it is read every tick and a low is held for
+    // MotorFaultHoldMs: one reading of the level would miss half of every fault.
+    if (myMotorFaultGpio)
+    {
+        if (!myMotorFaultGpio->read())
+        {
+            if (!myMotorFault)
+            {
+                ++myMotorFaultCount;
+                ESP_LOGW("FORD", "A89301 reports a fault (FLT low), %lu since start-up",
+                         static_cast<unsigned long>(myMotorFaultCount));
+            }
+            myMotorFault = true;
+            myLastMotorFaultMs = nowMs;
+        }
+        else if (myMotorFault && (nowMs - myLastMotorFaultMs) >= ford::MotorFaultHoldMs)
+        {
+            myMotorFault = false;
+        }
+        mySnapshot.motorFault = myMotorFault ? 1 : 0;
+        mySnapshot.motorFaultCount = myMotorFaultCount;
     }
     if (myServoTemp
         && (!myServoTempRead || (nowMs - myLastServoTempReadMs) >= ford::ServoTempReadIntervalMs))
@@ -1014,6 +1154,11 @@ void FordLogic::publishState(const std::uint32_t nowMs) noexcept
         mySnapshot.measuredSpeedSource = speedSourceName(myOdometer->speedSource());
         mySnapshot.odometerPhaseLosses = myOdometer->phaseLossCount();
     }
+    if (myPiSerial)
+    {
+        mySnapshot.piLink = app::runtime::toString(myControl.piLink(nowMs));
+        mySnapshot.piLinkDropped = myPiLink.dropped;
+    }
     publishCalibrationState();
     publishSpeedCalibrationState();
     if (myPreviousState != myControl.controlState() || myPreviousMotion != myControl.motionState()
@@ -1036,6 +1181,7 @@ void FordLogic::run(const std::atomic<bool>& stop) noexcept
         // Monotonic milliseconds; unsigned subtraction handles tick wraparound.
         const auto now = static_cast<std::uint32_t>(xTaskGetTickCount() * portTICK_PERIOD_MS);
         myCommunication->process(now, myControl);
+        receivePiLines(now);
         processSerialCommand();
 
         // Confirming a measured table is an operator action, not part of driving, so it is
@@ -1047,6 +1193,7 @@ void FordLogic::run(const std::atomic<bool>& stop) noexcept
         decideAction(now);
         executeAction(now);
         publishState(now);
+        sendCarLine(now);
 
         vTaskDelay(std::max<TickType_t>(1U, pdMS_TO_TICKS(10U)));
     }

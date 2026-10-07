@@ -10,6 +10,7 @@
 #include "test/gap_calibration.h"
 #include "test/nvs.h"
 #include "test/odometer_gaps.h"
+#include "test/pi_link.h"
 #include "test/pin_manager.h"
 #include "test/servo.h"
 #include "test/speed_calibration.h"
@@ -35,6 +36,7 @@ int main()
     if (!test::runServoTest()) { return -1; }
     if (!test::runA89301ProgrammerTest()) { return -1; }
     if (!test::runDriveStyleTest()) { return -1; }
+    if (!test::runPiLinkTest()) { return -1; }
     if (!test::runGapCalibrationTest()) { return -1; }
     if (!test::runSpeedCalibrationTest()) { return -1; }
     if (!test::runVoltageMeterTest()) { return -1; }

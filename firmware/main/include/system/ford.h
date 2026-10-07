@@ -38,6 +38,14 @@ namespace pin
 {
 /** D2 -> A89301 BRAKE, high = brake. Pulled up to 2V8 so a released pin brakes. */
 constexpr std::uint8_t Brake{5U};
+/**
+ * @brief D3 <- A89301 FLT, low = fault. Wired 2026-10-07; reported, not acted on.
+ *
+ * Open drain, pulled up to IOREF (3V3) on the A89301 board, so no pull-up is needed here.
+ * It flashes, rather than staying low, while the fault lasts - seen when the motor stalls -
+ * so a fault is "low at any time recently", not one reading of the level.
+ */
+constexpr std::uint8_t MotorFault{6U};
 /** D4 -> A89301 DIR. */
 constexpr std::uint8_t Direction{7U};
 /** D5 -> A89301 SPD, 20 kHz PWM. The PWM wiring only; see Scl. */
@@ -131,8 +139,16 @@ constexpr float TopSpeedDuty{1.0F};
 constexpr float StartDuty{0.08F};
 /** How long the car brakes before it drives in the other direction. */
 constexpr std::uint32_t DirectionChangeBrakeMs{300U};
+/**
+ * @brief A89301 FLT counts as a fault for this long after it was last seen low.
+ *
+ * FLT flashes while a fault lasts, so the level alone reads "no fault" half the time.
+ */
+constexpr std::uint32_t MotorFaultHoldMs{600U};
 /** No drive command for this long gives no drive; the car stays armed. */
 constexpr std::uint32_t DriveTimeoutMs{500U};
+/** The Pi link on UART1 (PiUartTx/PiUartRx), tested end to end at this rate. See ADR 0012. */
+constexpr std::uint32_t PiUartBaudRate{921600U};
 /** Battery read period; the meter averages its last 16 reads, so about 1.6 s. */
 constexpr std::uint32_t BatteryReadIntervalMs{100U};
 /** Motor temperature read period; the sensor averages its last 16 reads, so about 1.6 s. */
