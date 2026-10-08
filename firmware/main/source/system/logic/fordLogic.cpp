@@ -668,6 +668,11 @@ void FordLogic::connectDistanceSensors() noexcept
 
 void FordLogic::turnDistanceSensors(const std::uint32_t nowMs) noexcept
 {
+    // Slots of TelemetrySnapshot::distancesCm, which the serializer names left/center/right.
+    constexpr std::size_t Left{0U};
+    constexpr std::size_t Center{1U};
+    constexpr std::size_t Right{2U};
+
     if (!myDistanceBus) { return; }
 
     driver::distance_sensor::HcSr04Qwiic* const sensors[ford::distance_sensor::Count]{
@@ -700,10 +705,13 @@ void FordLogic::turnDistanceSensors(const std::uint32_t nowMs) noexcept
         }
     }
 
+    // distance_cm in telemetry is {left, center, right} and has been since Vagrant's IR
+    // sensors, so Ford's forward sensor is reported as "center" rather than inventing a
+    // second shape. The serializer turns a NaN into a null and works out "closest" itself.
     constexpr float None{std::numeric_limits<float>::quiet_NaN()};
-    mySnapshot.distanceForwardCm = myDistanceForward ? myDistanceForward->readDistance() : None;
-    mySnapshot.distanceLeftCm    = myDistanceLeft ? myDistanceLeft->readDistance() : None;
-    mySnapshot.distanceRightCm   = myDistanceRight ? myDistanceRight->readDistance() : None;
+    mySnapshot.distancesCm[Left]    = myDistanceLeft ? myDistanceLeft->readDistance() : None;
+    mySnapshot.distancesCm[Center]  = myDistanceForward ? myDistanceForward->readDistance() : None;
+    mySnapshot.distancesCm[Right]   = myDistanceRight ? myDistanceRight->readDistance() : None;
 }
 
 void FordLogic::checkSafeMode() noexcept

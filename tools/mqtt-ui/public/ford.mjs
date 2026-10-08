@@ -21,6 +21,9 @@ const batteryLabels = { ok: 'OK', low: 'LOW · stop soon', critical: 'CRITICAL �
 const MOTOR_WARM_C = 40, MOTOR_HOT_C = 45;
 // Steering servo case: a stalled servo heats up within seconds, so warn early.
 const SERVO_WARM_C = 40, SERVO_HOT_C = 50;
+// The three Qwiic HC-SR04s. NEAR is about a car length ahead at mapping speed; CLOSE is about
+// as late as the operator can still do anything about it. Neither is measured on the floor yet.
+const OBSTACLE_NEAR_CM = 30, OBSTACLE_CLOSE_CM = 15;
 const batteryPercent = volts => Math.min(100, Math.max(0, (volts - BATTERY_MIN_V) / (BATTERY_MAX_V - BATTERY_MIN_V) * 100));
 const slamLabels = { tracking: 'TRACKING', lost: 'TRACKING LOST', starting: 'STARTING' };
 // crypto.randomUUID() only exists on https and localhost; getRandomValues also works over plain http on the LAN.
@@ -212,6 +215,28 @@ function renderServoTemp(fresh, data) {
   renderTemp(fresh, data.servo_temp_c, 'servo-temp', SERVO_WARM_C, SERVO_HOT_C, 'Steering servo · OK',
     'WARM · avoid full lock');
 }
+// The three distance sensors in one tile: the nearest of them as the headline, all three
+// below it. distance_cm is {left, center, right} and has been since Vagrant's IR sensors, so
+// Ford's forward sensor arrives as "center". The car works out "closest" itself.
+function renderDistances(fresh, data) {
+  const read = key => {
+    const value = fresh ? data.distance_cm?.[key] : null;
+    return typeof value === 'number' && Number.isFinite(value) ? value : null;
+  };
+  const left = read('left'), center = read('center'), right = read('right');
+  const nearest = fresh && Number.isFinite(data.closest?.distance_cm) ? data.closest.distance_cm : null;
+  const level = nearest === null ? null
+    : nearest <= OBSTACLE_CLOSE_CM ? 'hot' : nearest <= OBSTACLE_NEAR_CM ? 'warm' : 'ok';
+  text('obstacle', nearest === null ? '—' : `${nearest.toFixed(0)} cm`);
+  $('obstacle').className = 'mono' + (level === 'hot' ? ' hot' : level === 'warm' ? ' alert' : '');
+  const cm = value => value === null ? '—' : value.toFixed(0);
+  // A sensor reads null when nothing echoed, when it is out of the HC-SR04's 2-400 cm range,
+  // and when it has stopped answering the bus. The tile cannot tell those apart; the car can.
+  text('obstacle-detail', !fresh ? 'Waiting for telemetry'
+    : left === null && center === null && right === null ? 'No sensor is reporting'
+    : `L ${cm(left)} · F ${cm(center)} · R ${cm(right)} cm`);
+  $('obstacle-detail').className = level === 'hot' ? 'hot' : level === 'warm' ? 'warm' : '';
+}
 const styleLabels = { manual_by_remote: 'ManualByRemote', gap_calibration: 'GapCalibration', speed_calibration: 'SpeedCalibration', disabled: 'DISABLED' };
 const disabledCauses = { motor_temp: 'Motor', servo_temp: 'Servo' };
 // Safe mode's reason, e.g. "Servo 40.3 °C · too hot".
@@ -374,6 +399,7 @@ function render() {
   renderBattery(fresh, data);
   renderMotorTemp(fresh, data);
   renderServoTemp(fresh, data);
+  renderDistances(fresh, data);
   renderOdometer(fresh, data);
   const seconds = Math.floor((data.uptime_ms || 0) / 1000);
   text('uptime', fresh ? `${String(Math.floor(seconds / 3600)).padStart(2, '0')}:${String(Math.floor(seconds / 60) % 60).padStart(2, '0')}:${String(seconds % 60).padStart(2, '0')}` : '—');

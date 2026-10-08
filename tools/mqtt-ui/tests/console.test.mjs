@@ -284,6 +284,31 @@ test('Ford demo reports a steering servo temperature', async () => {
   assert.ok(Number.isFinite(sample.data.servo_temp_c) && sample.data.servo_temp_c >= 20 && sample.data.servo_temp_c <= 60);
 });
 
+test('Ford demo reports the three distance sensors and which is nearest', async () => {
+  const demo = new FordDemoTransport(), seen = [];
+  demo.on('message', (topic, data) => seen.push({ topic, data }));
+  demo.start(); await new Promise(resolve => setTimeout(resolve, 300)); demo.close();
+  const sample = seen.find(m => m.topic === 'cnb/ford/telemetry');
+  assert.ok(sample);
+  const distances = sample.data.distance_cm;
+  assert.ok(distances);
+  // Every sensor reports a number inside the HC-SR04's range, or null when nothing echoed.
+  for (const key of ['left', 'center', 'right']) {
+    const value = distances[key];
+    assert.ok(value === null || (Number.isFinite(value) && value >= 2 && value <= 400),
+      `${key} should be null or in range, got ${value}`);
+  }
+  // closest names one of the three and agrees with the smallest one reporting.
+  const reporting = ['left', 'center', 'right'].filter(key => distances[key] !== null);
+  if (reporting.length === 0) {
+    assert.equal(sample.data.closest, null);
+  } else {
+    const smallest = Math.min(...reporting.map(key => distances[key]));
+    assert.ok(reporting.includes(sample.data.closest.sensor));
+    assert.equal(sample.data.closest.distance_cm, smallest);
+  }
+});
+
 test('Ford demo reports the odometer', async () => {
   const demo = new FordDemoTransport(), seen = [];
   demo.on('message', (topic, data) => seen.push({ topic, data }));

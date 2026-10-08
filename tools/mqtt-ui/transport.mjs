@@ -253,7 +253,7 @@ export class FordDemoTransport extends EventEmitter {
     }
     this.message('telemetry', {
       schema_version: 1, sequence: ++this.sequence, uptime_ms: Math.floor(now - this.born), system_test: false, servo_test: false,
-      distance_cm: { left: null, center: null, right: null }, adc_raw: { left: null, center: null, right: null }, closest: null,
+      ...this.distanceSample(now, steering), adc_raw: { left: null, center: null, right: null },
       drive_style: 'manual_by_remote', steering_deg: steering,
       motor: { speed_command: speed, forward_duty: speed > 0 ? duty : 0, backward_duty: speed < 0 ? duty : 0, state },
       control_state: this.state.control_state, motion_state: this.state.motion_state, reason: this.state.reason,
@@ -293,6 +293,26 @@ export class FordDemoTransport extends EventEmitter {
   servoTemp(now, steering) {
     const t = (now - this.born) / 1000;
     return Math.round((25 + 30 * (t % 120) / 120 + 3 * Math.abs(steering) / 90) * 10) / 10;
+  }
+  // Fake Qwiic HC-SR04s: the car creeps up on a wall ahead every 20 s and backs off again, and the
+  // side sensors open out as it steers away, so every colour of the obstacle tile appears. A reading
+  // out of the HC-SR04's 2-400 cm range is reported as null, exactly as the firmware reports it.
+  distanceSample(now, steering) {
+    const t = (now - this.born) / 1000;
+    const approach = Math.abs(((t % 20) / 20) * 2 - 1); // 1 -> 0 -> 1
+    const centre = 4 + 146 * approach;
+    const left = 30 + 60 * (1 + Math.sin(t / 7)) / 2 + (steering < 0 ? Math.abs(steering) : 0);
+    const right = 30 + 60 * (1 + Math.cos(t / 9)) / 2 + (steering > 0 ? steering : 0);
+    const inRange = value => (value >= 2 && value <= 400 ? Math.round(value * 10) / 10 : null);
+    const distances = { left: inRange(left), center: inRange(centre), right: inRange(right) };
+    const named = Object.entries(distances).filter(([, value]) => value !== null);
+    const nearest = named.length
+      ? named.reduce((best, entry) => (entry[1] < best[1] ? entry : best))
+      : null;
+    return {
+      distance_cm: distances,
+      closest: nearest ? { sensor: nearest[0], distance_cm: nearest[1] } : null,
+    };
   }
   async publish(topic, data) {
     if (data.command === 'heartbeat' || data.command === 'drive') {
