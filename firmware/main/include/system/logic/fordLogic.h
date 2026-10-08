@@ -11,7 +11,9 @@
 #include <memory>
 
 #include "driver/adc/interface.h"
+#include "driver/distance_sensor/hcsr04_qwiic.h"
 #include "driver/gpio/interface.h"
+#include "driver/i2c/interface.h"
 #include "driver/motor/interface.h"
 #include "driver/odometer/interface.h"
 #include "driver/pwm/interface.h"
@@ -165,6 +167,24 @@ private:
     void readSensors(std::uint32_t nowMs) noexcept;
 
     /**
+     * @brief Start the Qwiic bus and the three HC-SR04 adapters on it.
+     *
+     * Every part of this is optional: a bus that will not start, or a sensor that does not
+     * answer its address, leaves that sensor null and the car drives without it.
+     */
+    void connectDistanceSensors() noexcept;
+
+    /**
+     * @brief Hand the ping from one distance sensor to the next and collect what came back.
+     *
+     * Only one sensor pings at a time, because two that ping together hear each other's echo.
+     * Called from readSensors().
+     *
+     * @param[in] nowMs Monotonic milliseconds.
+     */
+    void turnDistanceSensors(std::uint32_t nowMs) noexcept;
+
+    /**
      * @brief Safe mode: brake and select Disabled if the motor or servo is too hot.
      *
      * Runs after readSensors() so it sees this tick's temperatures. See ford::SafeModeEnabled.
@@ -231,6 +251,12 @@ private:
     std::unique_ptr<driver::temperature_sensor::Interface> myServoTemp;
     /** A89301 FLT; optional, and only reported. See ford::pin::MotorFault. */
     std::unique_ptr<driver::gpio::Interface> myMotorFaultGpio;
+
+    /** The Qwiic bus the three HC-SR04 adapters share. Null if it would not start. */
+    std::unique_ptr<driver::i2c::Interface> myDistanceBus;
+    std::unique_ptr<driver::distance_sensor::HcSr04Qwiic> myDistanceForward;
+    std::unique_ptr<driver::distance_sensor::HcSr04Qwiic> myDistanceLeft;
+    std::unique_ptr<driver::distance_sensor::HcSr04Qwiic> myDistanceRight;
 
     /** USB serial console, for setting the Wi-Fi network. Optional: the car drives without it. */
     std::unique_ptr<driver::serial::Interface> mySerial;
@@ -370,6 +396,13 @@ private:
     std::uint32_t myLastMotorTempReadMs{0U};
     bool myServoTempRead{false};
     std::uint32_t myLastServoTempReadMs{0U};
+
+    /** Which of the three sensors currently holds the ping, 0 to Count - 1. */
+    std::uint8_t myDistanceTurn{0U};
+    /** Monotonic milliseconds the ping was last handed on. */
+    std::uint32_t myLastDistanceTurnMs{0U};
+    /** False until the first sensor has been triggered once. */
+    bool myDistanceStarted{false};
 
     /** A89301 FLT: whether it counts as a fault now, when it was last low, and how often. */
     bool myMotorFault{false};

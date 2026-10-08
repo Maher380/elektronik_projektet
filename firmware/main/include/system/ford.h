@@ -144,6 +144,48 @@ constexpr std::uint32_t SteeringPwmFrequencyHz{50U};
 constexpr float BatteryR1Ohm{101240.0F};
 constexpr float BatteryR2Ohm{32990.0F};
 
+/**
+ * @brief The three Qwiic HC-SR04 distance sensors.
+ *
+ * Each board carries an ATtiny404 that pings and times the echo itself and answers over I2C,
+ * so the three cost no GPIO pins between them - only pin::Sda and pin::Scl, which they share.
+ *
+ * @attention The bus is the one the A89301 is configured over, and on the A89301 the SCL pin
+ *            *is* the SPD pin that carries the 20 kHz speed PWM. The sensors must therefore be
+ *            wired to A5/A6 directly and never daisy chained into the A89301's Qwiic socket,
+ *            or driving the motor would clock the sensors and a sensor would answer onto the
+ *            motor's speed demand. Nothing in the firmware can detect that mistake.
+ *
+ * @note The addresses are set by three solder pads on each board, 0x30 to 0x37. The three
+ *       below are what the pads must be set to, not something the firmware can choose.
+ */
+namespace distance_sensor
+{
+
+/** Sensor looking ahead. No address pad bridged. */
+constexpr std::uint8_t ForwardAddress{0x30U};
+
+/** Sensor looking to the left. First address pad bridged. */
+constexpr std::uint8_t LeftAddress{0x31U};
+
+/** Sensor looking to the right. Second address pad bridged. */
+constexpr std::uint8_t RightAddress{0x32U};
+
+/** How many sensors are fitted. */
+constexpr std::uint8_t Count{3U};
+
+/**
+ * @brief Gap between handing the ping from one sensor to the next, in milliseconds.
+ *
+ * One sensor is triggered at a time, because two that ping together hear each other's echo.
+ * A full turn of the three therefore takes Count times this, so each sensor is refreshed
+ * about every 180 ms and the car moves about 12 cm between a sensor's own readings at
+ * 0.65 m/s.
+ */
+constexpr std::uint32_t TurnIntervalMs{60U};
+
+} // namespace distance_sensor
+
 // ---------------------------------------------------------------------------------
 // Settings: how Ford is driven. Compiled in until they move to NVS (nvs_usage.md).
 // ---------------------------------------------------------------------------------

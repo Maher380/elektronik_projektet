@@ -123,6 +123,26 @@ public:
     }
 
     /**
+     * @brief Set the pointer and read the register it names, as one simulated transaction.
+     *
+     * @param[in] address 7-bit device address.
+     * @param[in] writeData Bytes to write first, here the register pointer.
+     * @param[in] writeLength Must be 1.
+     * @param[out] readData Buffer for the 2 received bytes.
+     * @param[in] readLength Must be 2.
+     * @return True if the transaction was accepted, false otherwise.
+     */
+    bool writeRead(const std::uint8_t address,
+                   const std::uint8_t* writeData,
+                   const std::size_t writeLength,
+                   std::uint8_t* readData,
+                   const std::size_t readLength) noexcept override
+    {
+        if (!write(address, writeData, writeLength)) { return false; }
+        return read(address, readData, readLength);
+    }
+
+    /**
      * @brief Read a simulated register directly.
      *
      * @param[in] reg Register address.

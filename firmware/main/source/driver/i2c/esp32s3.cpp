@@ -113,6 +113,22 @@ bool Esp32s3::read(const std::uint8_t address, std::uint8_t* data, const std::si
     return i2c_master_receive(handle, data, length, TransferTimeoutMs) == ESP_OK;
 }
 
+bool Esp32s3::writeRead(const std::uint8_t address,
+                        const std::uint8_t* writeData,
+                        const std::size_t writeLength,
+                        std::uint8_t* readData,
+                        const std::size_t readLength) noexcept
+{
+    if ((writeData == nullptr) || (writeLength == 0U)) { return false; }
+    if ((readData == nullptr) || (readLength == 0U)) { return false; }
+
+    const auto handle{device(address)};
+    if (handle == nullptr) { return false; }
+
+    return i2c_master_transmit_receive(handle, writeData, writeLength, readData, readLength,
+                                       TransferTimeoutMs) == ESP_OK;
+}
+
 i2c_master_dev_handle_t Esp32s3::device(const std::uint8_t address) noexcept
 {
     if (!myIsInitialized) { return nullptr; }

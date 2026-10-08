@@ -15,6 +15,7 @@ idf_component_register(
         "source/driver/gpio/esp32s3.cpp"
         "source/driver/i2c/esp32s3.cpp"
         "source/driver/distance_sensor/gp2y0a21yk.cpp"
+        "source/driver/distance_sensor/hcsr04_qwiic.cpp"
         "source/driver/distance_sensor/srf05_esp32s3.cpp"
         "source/driver/motor/a89301.cpp"
         "source/driver/motor/a89301_programmer.cpp"

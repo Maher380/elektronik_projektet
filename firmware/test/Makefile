@@ -14,6 +14,7 @@ TEST_FILES := \
 	$(TEST_SRC_DIR)/test/a89301_programmer.cpp \
 	$(TEST_SRC_DIR)/test/drive_style.cpp \
 	$(TEST_SRC_DIR)/test/gap_calibration.cpp \
+	$(TEST_SRC_DIR)/test/hcsr04_qwiic.cpp \
 	$(TEST_SRC_DIR)/test/nvs.cpp \
 	$(TEST_SRC_DIR)/test/odometer_gaps.cpp \
 	$(TEST_SRC_DIR)/test/pi_link.cpp \
@@ -34,6 +35,7 @@ SOURCE_FILES := \
 	$(FIRMWARE_SRC_DIR)/driver/servo/ford.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/servo/mg90s.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/distance_sensor/gp2y0a21yk.cpp \
+	$(FIRMWARE_SRC_DIR)/driver/distance_sensor/hcsr04_qwiic.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/a89301_programmer.cpp \
 	$(FIRMWARE_SRC_DIR)/driver/motor/l298n.cpp \

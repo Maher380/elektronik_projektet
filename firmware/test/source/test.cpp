@@ -8,6 +8,7 @@
 #include "test/a89301_programmer.h"
 #include "test/drive_style.h"
 #include "test/gap_calibration.h"
+#include "test/hcsr04_qwiic.h"
 #include "test/nvs.h"
 #include "test/odometer_gaps.h"
 #include "test/pi_link.h"
@@ -38,6 +39,7 @@ int main()
     if (!test::runDriveStyleTest()) { return -1; }
     if (!test::runPiLinkTest()) { return -1; }
     if (!test::runGapCalibrationTest()) { return -1; }
+    if (!test::runHcSr04QwiicTest()) { return -1; }
     if (!test::runSpeedCalibrationTest()) { return -1; }
     if (!test::runVoltageMeterTest()) { return -1; }
     if (!test::runStartModuleTest()) { return -1; }

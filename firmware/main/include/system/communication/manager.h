@@ -124,6 +124,12 @@ struct TelemetrySnapshot
     float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     /** Ford: steering servo temperature in degrees Celsius; NaN leaves it out. */
     float servoTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+    /** Ford: Qwiic HC-SR04 looking ahead, in cm; NaN (no echo, out of range) leaves it out. */
+    float distanceForwardCm{std::numeric_limits<float>::quiet_NaN()};
+    /** Ford: Qwiic HC-SR04 looking left, in cm; NaN leaves it out. */
+    float distanceLeftCm{std::numeric_limits<float>::quiet_NaN()};
+    /** Ford: Qwiic HC-SR04 looking right, in cm; NaN leaves it out. */
+    float distanceRightCm{std::numeric_limits<float>::quiet_NaN()};
     /** Ford: the Pi as the car judges it over the UART, e.g. "driving"; nullptr leaves it out. */
     const char* piLink{nullptr};
     /** Ford: lines from the Pi dropped since start-up for a bad CRC or a bad field. */

@@ -73,6 +73,9 @@ struct WireTelemetrySnapshot
     std::uint32_t odometerPhaseLosses{0U};
     float motorTemperatureC{std::numeric_limits<float>::quiet_NaN()};
     float servoTemperatureC{std::numeric_limits<float>::quiet_NaN()};
+    float distanceForwardCm{std::numeric_limits<float>::quiet_NaN()};
+    float distanceLeftCm{std::numeric_limits<float>::quiet_NaN()};
+    float distanceRightCm{std::numeric_limits<float>::quiet_NaN()};
     const char* piLink{nullptr};
     std::uint32_t piLinkDropped{0U};
     std::int8_t motorFault{-1};
@@ -710,6 +713,16 @@ bool writeTelemetry(char* destination,
             || (cJSON_AddNumberToObject(root, "motor_temp_c", rounded(snapshot.motorTemperatureC)) != nullptr))
         && (!std::isfinite(snapshot.servoTemperatureC)
             || (cJSON_AddNumberToObject(root, "servo_temp_c", rounded(snapshot.servoTemperatureC)) != nullptr))
+        && (!std::isfinite(snapshot.distanceForwardCm)
+            || (cJSON_AddNumberToObject(root, "distance_forward_cm",
+                                        rounded(snapshot.distanceForwardCm))
+                != nullptr))
+        && (!std::isfinite(snapshot.distanceLeftCm)
+            || (cJSON_AddNumberToObject(root, "distance_left_cm", rounded(snapshot.distanceLeftCm))
+                != nullptr))
+        && (!std::isfinite(snapshot.distanceRightCm)
+            || (cJSON_AddNumberToObject(root, "distance_right_cm", rounded(snapshot.distanceRightCm))
+                != nullptr))
         && ((snapshot.piLink == nullptr)
             || (cJSON_AddStringToObject(root, "pi_link", snapshot.piLink) != nullptr))
         && ((snapshot.piLink == nullptr)
@@ -1070,6 +1083,9 @@ void Manager::publishTelemetry(std::uint32_t nowMs,
     wireSnapshot.odometerPhaseLosses = snapshot.odometerPhaseLosses;
     wireSnapshot.motorTemperatureC = snapshot.motorTemperatureC;
     wireSnapshot.servoTemperatureC = snapshot.servoTemperatureC;
+    wireSnapshot.distanceForwardCm = snapshot.distanceForwardCm;
+    wireSnapshot.distanceLeftCm = snapshot.distanceLeftCm;
+    wireSnapshot.distanceRightCm = snapshot.distanceRightCm;
     wireSnapshot.piLink = snapshot.piLink;
     wireSnapshot.piLinkDropped = snapshot.piLinkDropped;
     wireSnapshot.motorFault = snapshot.motorFault;

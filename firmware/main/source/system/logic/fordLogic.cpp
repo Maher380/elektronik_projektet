@@ -22,6 +22,7 @@
 #include <memory>
 
 #include "driver/factory/interface.h"
+#include "driver/i2c/esp32s3.h"
 #include "driver/nvs/interface.h"
 #include "driver/odometer/gaps.h"
 #include "driver/odometer/store.h"
@@ -278,6 +279,8 @@ bool FordLogic::initializeDrivers() noexcept
         myMotorFaultGpio = nullptr;
         ESP_LOGW("FORD", "A89301 FLT input failed; motor faults not reported");
     }
+
+    connectDistanceSensors();
 
     // The serial console is optional too; without it the car joins whatever network it has.
     mySerial = myFactory.serial(SerialBaudRate);
@@ -629,6 +632,78 @@ void FordLogic::readSensors(const std::uint32_t nowMs) noexcept
         myLastServoTempReadMs = nowMs;
         myServoTempRead = true;
     }
+    turnDistanceSensors(nowMs);
+}
+
+void FordLogic::connectDistanceSensors() noexcept
+{
+    myDistanceBus = std::make_unique<driver::i2c::Esp32s3>(driver::i2c::Config{
+        ford::pin::Sda, ford::pin::Scl, driver::i2c::DefaultFrequencyHz, true});
+    if (!myDistanceBus || !myDistanceBus->init())
+    {
+        myDistanceBus = nullptr;
+        ESP_LOGW("FORD", "Qwiic bus did not start; no distance sensors");
+        return;
+    }
+
+    const auto connect{[this](const std::uint8_t address, const char* const what)
+                       -> std::unique_ptr<driver::distance_sensor::HcSr04Qwiic> {
+        auto sensor{std::make_unique<driver::distance_sensor::HcSr04Qwiic>(*myDistanceBus, address)};
+        if (!sensor || !sensor->isInitialized())
+        {
+            ESP_LOGW("FORD", "No HC-SR04 answered 0x%02X; %s distance not reported",
+                     static_cast<unsigned>(address), what);
+            return nullptr;
+        }
+        return sensor;
+    }};
+
+    myDistanceForward = connect(ford::distance_sensor::ForwardAddress, "forward");
+    myDistanceLeft    = connect(ford::distance_sensor::LeftAddress, "left");
+    myDistanceRight   = connect(ford::distance_sensor::RightAddress, "right");
+
+    // One before the first, so the forward sensor is the one that gets the first ping.
+    myDistanceTurn = static_cast<std::uint8_t>(ford::distance_sensor::Count - 1U);
+}
+
+void FordLogic::turnDistanceSensors(const std::uint32_t nowMs) noexcept
+{
+    if (!myDistanceBus) { return; }
+
+    driver::distance_sensor::HcSr04Qwiic* const sensors[ford::distance_sensor::Count]{
+        myDistanceForward.get(), myDistanceLeft.get(), myDistanceRight.get()};
+
+    // Collect from whichever sensor holds the ping. poll() returns at once until its result
+    // is due, and drops a reading the car has outlived even when the sensor has gone quiet.
+    for (auto* const sensor : sensors)
+    {
+        if (sensor != nullptr) { (void)sensor->poll(nowMs); }
+    }
+
+    const bool turnDue{!myDistanceStarted
+                       || ((nowMs - myLastDistanceTurnMs) >= ford::distance_sensor::TurnIntervalMs)};
+    if (turnDue)
+    {
+        // Hand the ping on, stepping over sensors that are not fitted or did not answer. If
+        // none of them takes it the ring stops turning, which is what no sensors should do.
+        for (std::uint8_t step{0U}; step < ford::distance_sensor::Count; ++step)
+        {
+            myDistanceTurn =
+                static_cast<std::uint8_t>((myDistanceTurn + 1U) % ford::distance_sensor::Count);
+            auto* const next{sensors[myDistanceTurn]};
+            if ((next != nullptr) && next->trigger(nowMs))
+            {
+                myLastDistanceTurnMs = nowMs;
+                myDistanceStarted    = true;
+                break;
+            }
+        }
+    }
+
+    constexpr float None{std::numeric_limits<float>::quiet_NaN()};
+    mySnapshot.distanceForwardCm = myDistanceForward ? myDistanceForward->readDistance() : None;
+    mySnapshot.distanceLeftCm    = myDistanceLeft ? myDistanceLeft->readDistance() : None;
+    mySnapshot.distanceRightCm   = myDistanceRight ? myDistanceRight->readDistance() : None;
 }
 
 void FordLogic::checkSafeMode() noexcept
