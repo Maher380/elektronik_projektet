@@ -39,7 +39,7 @@ with gains `PID_P` and `PID_I`. These parameters must fit the motor.
 | DIR | D4 / GPIO7 | High = forward in the test apps |
 | BRAKE | D2 / GPIO5 | High = brake. **12 kΩ pull-up to 2V8 (R1)**, see Safety |
 | FLT | D3 / GPIO6 | Open drain, pulled up to IOREF; low = fault. It flashes while the fault lasts, seen when the motor stalls. Wired 2026-10-07; reported as `motor_fault` in telemetry, not acted on |
-| – | D9 / GPIO18 | A3144 wheel odometer, 2 magnets on the right rear wheel |
+| – | D9 / GPIO18 | A3144 wheel odometer, 4 magnets on the right rear wheel |
 | – | A0 / GPIO1 | TMP36 on the motor can (ADC1) |
 
 ### PWM wiring, used by the Ford car app and `MOTOR_TEST_MODE`
@@ -254,7 +254,9 @@ Pi's UART. The firmware maps speed commands below 1 below `StartDuty` for this
   0.006/s.
 - **Speed jumps about near the bottom.** The same demand gave 0.11 m/s in one
   run and 0.6 m/s in the next. The odometer's 53 mm pulses make single readings
-  coarse at these speeds (2 pulses a second at 0.11 m/s).
+  coarse at these speeds (2 pulses a second at 0.11 m/s). Measured on the
+  two-magnet wheel; since 2026-10-08 a pulse is 26.7 mm and the rate at 0.11 m/s
+  is 4 a second, so this is half as coarse but still coarse.
 - A PI loop on the odometer held 0.5 m/s through turns up to ±74 on the flat,
   and boosting the demand when a pulse came late caught the slowdowns before a
   ramp, but not the climb itself.

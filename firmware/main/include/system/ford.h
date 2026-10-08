@@ -88,12 +88,15 @@ constexpr std::uint8_t PiUartRx{17U};
  * the A3144, so the wheel carried two, set opposite each other. A third, smaller one was
  * added between them on 2026-10-08, to lift the pulse rate and to make the gaps uneven.
  *
- * A magnet the A3144 does not see every pass is worse than no third magnet at all: the
- * gaps then alternate between the three- and two-magnet patterns, the phase lock breaks,
- * and the distance is wrong as well as unsteady. Check `odometer_phase_losses` stays at 0
- * before trusting a run.
+ * A fourth followed the same day, set in the old half gap and off-centre towards one of
+ * its neighbours, so that all four gaps differ.
+ *
+ * A magnet the A3144 does not see every pass is worse than not having it at all: the gaps
+ * then alternate between patterns, the phase lock breaks, and the distance is wrong as
+ * well as unsteady. Check `odometer_phase_losses` stays at 0 before trusting a run. Four
+ * magnets are close to that limit - laps driven on 2026-10-08 measured about 25 % short,
+ * which is what missing roughly one pulse in four looks like.
  */
-// Four since 2026-10-08: a fourth magnet in the half gap, off-centre towards a neighbour.
 constexpr std::uint8_t OdometerMagnets{4U};
 
 /**
@@ -110,23 +113,25 @@ constexpr double WheelCircumferenceM{3.14159265 * WheelDiameterM};
 /**
  * @brief Ford's magnet gaps as the wheel was built, as fractions of a revolution.
  *
- * Two magnets opposite each other, with the third set between them: quarter, quarter,
- * half. These are the design figures, placed by eye; GapCalibration measures what the
- * wheel actually has, and its table supersedes this one.
+ * The first two are what GapCalibration measured on the three-magnet wheel (0.27, 0.25);
+ * the old half gap (0.48) is split by eye, about a third and two thirds. These are the
+ * design figures; GapCalibration measures what the wheel actually has, and its table
+ * supersedes this one. It measured 0.185 / 0.257 / 0.256 / 0.303 on two separate runs.
  *
- * Uneven at last, and that is the point. The three rotations of {0.25, 0.25, 0.5} are all
- * distinct, so the observed gaps match exactly one of them: the right rotation scores 0
- * against the other two's 0.5, a margin far above the 0.05 the matcher asks for. The
- * odometer can therefore phase-lock and time single gaps instead of whole revolutions,
- * which is what cuts the lag. See ADR 0008.
+ * Uneven, and that is the point. All four rotations of these gaps are distinct, so the
+ * observed gaps match exactly one of them and the odometer can phase-lock and time single
+ * gaps instead of whole revolutions, which is what cuts the lag. See ADR 0008.
+ *
+ * The margin that lock is won by has not been restated for four magnets. The three-magnet
+ * layout {0.25, 0.25, 0.5} scored 0 against the other rotations' 0.5; these four are
+ * closer together than that, so the margin is smaller, though still far above the 0.05
+ * `driver::odometer::gaps` asks for.
  *
  * Before 2026-10-08 the wheel had two even magnets, {0.5, 0.5}. Even gaps match every
  * rotation equally well, so the margin was 0, the odometer never locked, and
- * GapCalibration always failed. That is why it is worth having a third magnet even though
- * it is a smaller one.
+ * GapCalibration always failed. That is why the uneven extra magnets are worth having
+ * even though they are smaller ones.
  */
-// The first two measured on the three-magnet wheel (0.27, 0.25); the old half gap (0.48)
-// split by eye, about a third and two thirds. GapCalibration measures the real split.
 constexpr float DesignGapFractions[OdometerMagnets]{0.27F, 0.25F, 0.16F, 0.32F};
 
 /** True if DIR low drives the car forward with this motor's phase wiring. */

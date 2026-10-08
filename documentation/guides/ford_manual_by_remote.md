@@ -151,11 +151,12 @@ Run it with the car on the stand, wheels in the air, before driving on the floor
 
 ## 8. Measure the magnet gaps (GapCalibration)
 
-> **Skip this on Ford's current wheel.** Its two magnets are evenly spaced, so the
-> odometer is exact without a gap table and this run always fails, with "A gap
-> changed with speed" or "Too evenly spaced". See
-> [ford_odometer.md](../design_documents/ford_odometer.md). The steps below are for a
-> wheel with unevenly spaced magnets.
+> **Run this on Ford's current wheel.** Since 2026-10-08 it has four deliberately
+> uneven magnets, so a gap table is both measurable and needed, and the run is
+> expected to succeed. Until then it had two evenly spaced magnets, which no gap
+> table can help and which made this run fail with "A gap changed with speed" or
+> "Too evenly spaced"; if you still see either, the magnets are not all being seen
+> on every pass. See [ford_odometer.md](../design_documents/ford_odometer.md).
 
 The odometer's per-gap speed is only right if the firmware knows how far apart
 unevenly spaced magnets are, so this is measured rather than assumed. Until it has
