@@ -164,7 +164,10 @@ std::size_t formatCarLine(const CarLine& line, char* out, const std::size_t size
         && appendMeasured(out, size, used, line.odometerDistanceM, ",%.3f")
         && appendMeasured(out, size, used, line.odometerSpeedMs, ",%.3f")
         && append(out, size, used, ",%s,%lu", line.odometerSpeedSource,
-                  static_cast<unsigned long>(line.lastPiSequence));
+                  static_cast<unsigned long>(line.lastPiSequence))
+        && appendMeasured(out, size, used, line.distanceForwardCm, ",%.1f")
+        && appendMeasured(out, size, used, line.distanceLeftCm, ",%.1f")
+        && appendMeasured(out, size, used, line.distanceRightCm, ",%.1f");
     const std::uint16_t crc{ok ? crc16(out, used) : std::uint16_t{0U}};
     // The newline does not count towards MaxLineLength; everything before it does.
     if (!ok || !append(out, size, used, "*%04X\n", static_cast<unsigned>(crc))

@@ -75,7 +75,7 @@ bool theCrcIsCcittFalse() noexcept
     if (crc16("123456789", 9U) != 0x29B1U) { return fail("CRC-16/CCITT-FALSE check value"); }
     // The example lines in ADR 0012 must be ones a parser accepts.
     PiLine line{};
-    if (!parsePiLine("P,1,1234,driving,-12.5,35.0*71D3", line)
+    if (!parsePiLine("P,2,1234,driving,-12.5,35.0*BF0F", line)
         || (line.sequence != 1234U) || (line.state != PiState::Driving)
         || (line.steeringCommand != -12.5F) || (line.speedCommand != 35.0F))
     {
@@ -87,7 +87,7 @@ bool theCrcIsCcittFalse() noexcept
 bool aDamagedLineIsDroppedWhole() noexcept
 {
     char good[96]{};
-    piLineOf("P,1,7,driving,10.0,20.0", good, sizeof(good));
+    piLineOf("P,2,7,driving,10.0,20.0", good, sizeof(good));
     PiLine line{};
     if (!parsePiLine(good, line)) { return fail("a good line was dropped"); }
 
@@ -109,17 +109,17 @@ bool aDamagedLineIsDroppedWhole() noexcept
 
     // Valid CRCs on bodies that are wrong in some other way.
     const char* const wrong[]{
-        "P,2,7,driving,10.0,20.0",       // unknown version
-        "C,1,7,driving,10.0,20.0",       // not a Pi line
-        "P,1,7,racing,10.0,20.0",        // unknown state
-        "P,1,7,driving,91.0,20.0",       // steering out of range
-        "P,1,7,driving,10.0,-100.5",     // speed out of range
-        "P,1,7,driving,nan,20.0",        // not a number
-        "P,1,7,driving,10.0",            // a field missing
-        "P,1,7,driving,10.0,20.0,1",     // a field too many
-        "P,1,-7,driving,10.0,20.0",      // negative sequence
-        "P,1,7,driving,10.0x,20.0",      // trailing junk in a number
-        "P,1,7,driving,,20.0",           // empty number
+        "P,1,7,driving,10.0,20.0",       // version 1, before the distances: unknown now
+        "C,2,7,driving,10.0,20.0",       // not a Pi line
+        "P,2,7,racing,10.0,20.0",        // unknown state
+        "P,2,7,driving,91.0,20.0",       // steering out of range
+        "P,2,7,driving,10.0,-100.5",     // speed out of range
+        "P,2,7,driving,nan,20.0",        // not a number
+        "P,2,7,driving,10.0",            // a field missing
+        "P,2,7,driving,10.0,20.0,1",     // a field too many
+        "P,2,-7,driving,10.0,20.0",      // negative sequence
+        "P,2,7,driving,10.0x,20.0",      // trailing junk in a number
+        "P,2,7,driving,,20.0",           // empty number
     };
     for (const char* body : wrong)
     {
@@ -131,7 +131,7 @@ bool aDamagedLineIsDroppedWhole() noexcept
             return fail("a line with a valid CRC but a wrong body was accepted");
         }
     }
-    if (parsePiLine("P,1,7,driving,10.0,20.0", line)) { return fail("a line without a CRC was accepted"); }
+    if (parsePiLine("P,2,7,driving,10.0,20.0", line)) { return fail("a line without a CRC was accepted"); }
     return true;
 }
 
@@ -150,10 +150,14 @@ bool theCarLineCarriesACheckedCrc() noexcept
     car.odometerSpeedMs = 1.18F;
     car.odometerSpeedSource = "per_gap";
     car.lastPiSequence = 1234U;
+    car.distanceForwardCm = 62.5F;
+    car.distanceLeftCm = 38.1F;
+    car.distanceRightCm = 41.7F;
 
     char out[200]{};
     const std::size_t written{formatCarLine(car, out, sizeof(out))};
-    const char* body{"C,1,5678,armed,none,manual_by_remote,0,none,driving,-12.5,35.0,3.412,1.180,per_gap,1234"};
+    const char* body{"C,2,5678,armed,none,manual_by_remote,0,none,driving,-12.5,35.0,3.412,1.180,per_gap,1234,"
+                     "62.5,38.1,41.7"};
     char expected[200]{};
     std::snprintf(expected, sizeof(expected), "%s*%04X\n", body,
                   static_cast<unsigned>(crc16(body, std::strlen(body))));
@@ -168,7 +172,32 @@ bool theCarLineCarriesACheckedCrc() noexcept
     car.odometerSpeedMs = std::numeric_limits<float>::quiet_NaN();
     car.odometerSpeedSource = "";
     (void)formatCarLine(car, out, sizeof(out));
-    if (std::strstr(out, ",35.0,,,,1234*") == nullptr) { return fail("missing odometer fields should be empty"); }
+    if (std::strstr(out, ",35.0,,,,1234,") == nullptr) { return fail("missing odometer fields should be empty"); }
+
+    // A sensor with nothing to report is an empty field too, never 0 cm: 0 would read as
+    // something touching the bumper.
+    car.distanceLeftCm = std::numeric_limits<float>::quiet_NaN();
+    (void)formatCarLine(car, out, sizeof(out));
+    if (std::strstr(out, ",1234,62.5,,41.7*") == nullptr) { return fail("a missing distance should be empty"); }
+
+    // The longest line the car can send still fits: every field at its widest.
+    CarLine widest{car};
+    widest.sequence = 4294967295U;
+    widest.controlState = "disarmed";
+    widest.reason = "drive_style_finished";
+    widest.driveStyle = "speed_calibration";
+    widest.startModule = "stopped";
+    widest.piLink = "waiting";
+    widest.appliedSteering = -90.0F;
+    widest.appliedSpeed = -100.0F;
+    widest.odometerDistanceM = 9999.999F;
+    widest.odometerSpeedMs = 99.999F;
+    widest.odometerSpeedSource = "revolution";
+    widest.lastPiSequence = 4294967295U;
+    widest.distanceForwardCm = 400.0F;
+    widest.distanceLeftCm = 400.0F;
+    widest.distanceRightCm = 400.0F;
+    if (formatCarLine(widest, out, sizeof(out)) == 0U) { return fail("the widest car line does not fit"); }
 
     // Too small a buffer writes nothing rather than half a line.
     char tiny[20]{};

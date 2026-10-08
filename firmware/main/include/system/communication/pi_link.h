@@ -6,7 +6,7 @@
  * fields in a fixed order, then '*' and a CRC-16/CCITT-FALSE of everything before it as
  * four hex digits.
  *
- *     P,1,1234,driving,-12.5,35.0*71D3
+ *     P,2,1234,driving,-12.5,35.0*BF0F
  *
  * A line with a bad CRC, the wrong field count, an unknown version or a value out of range
  * is dropped whole, never partly applied. Nothing here touches hardware, so it is tested on
@@ -23,8 +23,12 @@
 namespace app::pi_link
 {
 
-/** The version both ends must send; a line with any other is dropped. */
-inline constexpr std::uint32_t ProtocolVersion{1U};
+/**
+ * @brief The version both ends must send; a line with any other is dropped.
+ *
+ * 2 since 2026-10-08: the car line gained the three distance sensors.
+ */
+inline constexpr std::uint32_t ProtocolVersion{2U};
 /** Each side sends one line this often, on its own timer, never as a reply. */
 inline constexpr std::uint32_t PeriodMs{50U};
 /** Longest line either side sends, without the newline. A longer one is dropped. */
@@ -84,6 +88,12 @@ struct CarLine
     const char* odometerSpeedSource{""};
     /** Sequence of the last valid line received from the Pi. */
     std::uint32_t lastPiSequence{0U};
+    /** Centimetres to whatever is ahead; NaN, sent as an empty field, without a reading. */
+    float distanceForwardCm{0.0F};
+    /** Centimetres to whatever is on the left; NaN without a reading. */
+    float distanceLeftCm{0.0F};
+    /** Centimetres to whatever is on the right; NaN without a reading. */
+    float distanceRightCm{0.0F};
 };
 
 /**

@@ -377,6 +377,13 @@ void FordLogic::sendCarLine(const std::uint32_t nowMs) noexcept
     line.odometerSpeedMs = myOdometer ? myOdometer->speed() : std::numeric_limits<float>::quiet_NaN();
     line.odometerSpeedSource = myOdometer ? speedSourceName(myOdometer->speedSource()) : "";
     line.lastPiSequence = myPiLink.lastReceivedSequence;
+    // What turnDistanceSensors() stored this tick: NaN, an empty field, without a reading.
+    line.distanceForwardCm = myDistanceForward ? myDistanceForward->readDistance()
+                                               : std::numeric_limits<float>::quiet_NaN();
+    line.distanceLeftCm = myDistanceLeft ? myDistanceLeft->readDistance()
+                                         : std::numeric_limits<float>::quiet_NaN();
+    line.distanceRightCm = myDistanceRight ? myDistanceRight->readDistance()
+                                           : std::numeric_limits<float>::quiet_NaN();
 
     char out[app::pi_link::MaxLineLength + 8U]{};
     if (app::pi_link::formatCarLine(line, out, sizeof(out)) > 0U) { myPiSerial->write(out); }
