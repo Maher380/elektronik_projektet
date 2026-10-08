@@ -82,7 +82,8 @@ the value is a number or `null`:
   at about 80–85 °C).
 - **Steering card:** the SLAM wheel angle beside the steering command converted to
   degrees with the Ford's full-lock angle (`FULL_LOCK_DEG` in `public/ford.mjs`,
-  a placeholder of 25° until measured). A difference above 5° is flagged.
+  11.6°, estimated from full-lock circles of about 118 cm diameter on 2026-10-08).
+  A difference above 2° is flagged.
 - **Speed card:** the SLAM measured speed beside the speed command, not converted:
   without a speed loop a speed command has no fixed m/s.
 - **Charts:** the last 30 seconds of command and measured, for steering and speed.

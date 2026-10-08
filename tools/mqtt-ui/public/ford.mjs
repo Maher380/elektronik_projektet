@@ -6,10 +6,10 @@ import { FordChart, WINDOW_MS } from '/fordcharts.mjs';
 const $ = id => document.getElementById(id);
 // The Ford's real wheel angle at full lock, so a steering command (a share of full lock) can be
 // shown in degrees beside the wheel angle the Pi measures.
-// @todo Measure the Ford's full-lock wheel angle; 25 is a placeholder.
-const FULL_LOCK_DEG = 25;
+// @todo Measure the Ford's full-lock wheel angle; 11.6 is estimated from 118 cm full-lock circles.
+const FULL_LOCK_DEG = 11.6;
 // A wheel angle further than this from the command is flagged.
-const WHEEL_DIFFERS_DEG = 5;
+const WHEEL_DIFFERS_DEG = 2;
 const PI_INTERVAL_MS = 200;
 // Drive battery, a 2S LiPo. The bar spans BATTERY_MIN_V to BATTERY_MAX_V.
 const BATTERY_MIN_V = 5, BATTERY_MAX_V = 9, BATTERY_CELLS = 2;
