@@ -142,7 +142,7 @@ public:
     std::uint8_t dutyIndex() const noexcept { return myDutyIndex; }
 
     /** Revolutions averaged at the current duty so far. */
-    std::uint8_t samples() const noexcept { return mySamples; }
+    std::uint16_t samples() const noexcept { return mySamples; }
 
     /** One sampled revolution, kept so the caller can log the raw data behind a result. */
     struct Sample
@@ -202,13 +202,16 @@ private:
     double mySums[driver::odometer::MaxPulsesPerRevolution]{};
 
     /** Whole revolutions averaged into mySums so far. */
-    std::uint8_t mySamples{0U};
+    std::uint16_t mySamples{0U};
 
     /** Pulse count at the last sample, to spot a whole revolution having passed. */
     std::uint32_t myLastPulses{0U};
 
     /** When the last revolution was sampled, for the stall timer. */
     std::uint32_t myLastSampleMs{0U};
+
+    /** When the current duty began measuring, for the measuring timer. */
+    std::uint32_t mySamplingStartMs{0U};
 
     /** The latest sampled revolution, for logging. */
     Sample myLastSample{};

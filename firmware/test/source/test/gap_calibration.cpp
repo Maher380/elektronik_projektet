@@ -65,19 +65,37 @@ void revolution(Stub& odometer, const float* gaps) noexcept
     (void)odometer.simulateObservedGaps(gaps, Magnets);
 }
 
-/** Feed whole revolutions until the current duty is averaged. */
+/** How long one simulated revolution takes: about Ford's wheel at duty 0.10. */
+constexpr std::uint32_t RevolutionMs{150U};
+
+/**
+ * Feed whole revolutions until the current duty is averaged: a duty measures for
+ * cal::MeasureMs, so this runs until the run moves on, not for a fixed count.
+ * @p slipAfter turns the reported gaps by one magnet after that many revolutions, as a
+ * missed or doubled pulse does to the driver's slots; 0 never slips.
+ */
 bool sampleOneDuty(GapCalibration& calibration,
                    Stub& odometer,
                    const float* gaps,
-                   std::uint32_t& nowMs) noexcept
+                   std::uint32_t& nowMs,
+                   std::uint32_t slipAfter = 0U) noexcept
 {
-    for (std::uint8_t turn{0U}; turn < cal::Revolutions; ++turn)
+    float slipped[driver::odometer::MaxPulsesPerRevolution]{};
+    for (std::uint8_t gap{0U}; gap < Magnets; ++gap) { slipped[gap] = gaps[(gap + 1U) % Magnets]; }
+
+    const auto duty = calibration.dutyIndex();
+    const std::uint32_t limit{(cal::MeasureMs / RevolutionMs) * 2U + 10U};
+    for (std::uint32_t turn{0U}; turn < limit; ++turn)
     {
-        revolution(odometer, gaps);
-        nowMs += 10U;
+        if ((calibration.phase() != GapCalibration::Phase::Sampling) || (calibration.dutyIndex() != duty))
+        {
+            return true;
+        }
+        revolution(odometer, ((slipAfter != 0U) && (turn >= slipAfter)) ? slipped : gaps);
+        nowMs += RevolutionMs;
         calibration.update(nowMs, true, NoSensor, &odometer);
     }
-    return true;
+    return false;
 }
 
 /**
@@ -224,14 +242,18 @@ bool disarmingMidRunLeavesNothing() noexcept
     calibration.start(nowMs, Magnets);
     if (!settle(calibration, odometer, nowMs)) { return fail("the run never left settling"); }
 
-    // Two whole duties' worth of good revolutions would still not be a calibration.
-    for (std::uint8_t turn{0U}; turn < cal::Revolutions; ++turn)
+    // Half a duty's worth of good revolutions, more than cal::Revolutions of them, is
+    // still not a calibration.
+    for (std::uint32_t turn{0U}; turn < (cal::MeasureMs / RevolutionMs) / 2U; ++turn)
     {
         revolution(odometer, Wheel);
-        nowMs += 10U;
+        nowMs += RevolutionMs;
         calibration.update(nowMs, true, NoSensor, &odometer);
     }
-    if (calibration.dutyIndex() == 0U) { return fail("a finished duty should advance the index"); }
+    if (calibration.phase() != GapCalibration::Phase::Sampling)
+    {
+        return fail("half the measuring time should still be sampling");
+    }
 
     nowMs += 10U;
     if (calibration.update(nowMs, false, NoSensor, &odometer) != 0.0F)
@@ -259,6 +281,11 @@ bool disarmingMidRunLeavesNothing() noexcept
  */
 bool gapsThatMoveWithSpeedAreRefused() noexcept
 {
+    // Since 2026-10-08 the recipe measures at one duty, because the wheel pulsed at the
+    // higher ones (ford.h). With one speed there is nothing to compare; this check comes
+    // back by itself if the recipe gets two or more.
+    if (cal::DutyCount < 2U) { return true; }
+
     auto odometer = makeOdometer();
     if (!odometer.init()) { return fail("could not start the stub odometer"); }
 
@@ -367,9 +394,43 @@ bool theDesignGapsDescribeAWholeWheel() noexcept
         sum += ford::DesignGapFractions[gap];
     }
     if (std::fabs(sum - 1.0F) > 1e-6F) { return fail("the design gaps should sum to one"); }
-    if (cal::DutyCount < 2U)
+    if (cal::DutyCount < 1U) { return fail("the recipe needs at least one speed"); }
+    return true;
+}
+
+/**
+ * @brief A pulse missed halfway through turns the reported gaps by one magnet; the table
+ * must still be the wheel's.
+ *
+ * Seen on Ford, 2026-10-08: one slip in a run, and an unaligned average mixed two orders of
+ * the same gaps into a table that matched no wheel. Each revolution is now turned to fit
+ * what was measured before it.
+ */
+bool aSlippedPulseDoesNotSpoilTheTable() noexcept
+{
+    auto odometer = makeOdometer();
+    if (!odometer.init()) { return fail("could not start the stub odometer"); }
+
+    GapCalibration calibration{};
+    std::uint32_t nowMs{1000U};
+    calibration.start(nowMs, Magnets);
+    for (std::uint8_t duty{0U}; duty < cal::DutyCount; ++duty)
     {
-        return fail("the recipe needs at least two speeds to tell geometry from ripple");
+        if (!settle(calibration, odometer, nowMs)) { return fail("the run never left settling"); }
+        const std::uint32_t half{(cal::MeasureMs / RevolutionMs) / 2U};
+        if (!sampleOneDuty(calibration, odometer, Wheel, nowMs, half))
+        {
+            return fail("sampling with a slip never finished");
+        }
+    }
+    if (!calibration.hasTable()) { return fail("a run with one slip should still measure"); }
+    const auto& table = calibration.result().table;
+    for (std::uint8_t gap{0U}; gap < Magnets; ++gap)
+    {
+        if (std::fabs(table.fraction[gap] - Wheel[gap]) > 0.0005F)
+        {
+            return fail("a slip halfway should not change the measured table");
+        }
     }
     return true;
 }
@@ -387,6 +448,7 @@ bool runGapCalibrationTest() noexcept
     if (!gapsThatMoveWithSpeedAreRefused()) { return false; }
     if (!startingARunClearsThePendingTable()) { return false; }
     if (!withoutAnOdometerThereIsNothingToMeasure()) { return false; }
+    if (!aSlippedPulseDoesNotSpoilTheTable()) { return false; }
 
     std::printf("Gap calibration test succeeded!\n");
     return true;

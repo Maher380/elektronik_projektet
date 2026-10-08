@@ -144,7 +144,7 @@ struct TelemetrySnapshot
     std::uint8_t calibrationDutyIndex{0U};
     std::uint8_t calibrationDutyCount{0U};
     /** Revolutions averaged at this duty so far, and how many are wanted. */
-    std::uint8_t calibrationSamples{0U};
+    std::uint16_t calibrationSamples{0U};
     std::uint8_t calibrationRevolutions{0U};
     /** Measured gap fractions, or nullptr when no table is waiting to be confirmed. */
     const float* calibrationGaps{nullptr};

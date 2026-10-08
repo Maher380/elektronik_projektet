@@ -19,6 +19,7 @@ namespace
 {
 namespace cal = app::ford::calibration;
 namespace ford = app::ford;
+namespace odo = driver::odometer;
 } // namespace
 
 void GapCalibration::start(const std::uint32_t nowMs, const std::uint8_t magnets) noexcept
@@ -94,6 +95,7 @@ float GapCalibration::update(const std::uint32_t nowMs,
             myPhase = Phase::Sampling;
             myLastPulses = odometer->pulseCount();
             myLastSampleMs = nowMs;
+            mySamplingStartMs = nowMs;
         }
         return cal::Duties[myDutyIndex];
     }
@@ -114,9 +116,35 @@ float GapCalibration::update(const std::uint32_t nowMs,
         float gaps[driver::odometer::MaxPulsesPerRevolution]{};
         if (odometer->observedGaps(gaps, myMagnets))
         {
+            // A pulse missed or doubled shifts every later revolution by one magnet, and
+            // averaging across that shift smears the table. So each revolution is turned
+            // to fit what has been measured so far: this duty's running mean, or for a
+            // later duty's first revolution the first duty's table, so all duties share
+            // one order and can be compared gap by gap.
+            odo::GapTable reference{};
+            if (mySamples > 0U)
+            {
+                reference.count = myMagnets;
+                for (std::uint8_t gap{0U}; gap < myMagnets; ++gap)
+                {
+                    reference.fraction[gap] = static_cast<float>(mySums[gap] / mySamples);
+                }
+            }
+            else if (myDutyIndex > 0U) { reference = myMeasured[0]; }
+
+            float aligned[driver::odometer::MaxPulsesPerRevolution]{};
+            float margin{0.0F};
+            const int rotation{(reference.count == myMagnets) ? odo::bestRotation(gaps, reference, margin) : -1};
             for (std::uint8_t gap{0U}; gap < myMagnets; ++gap)
             {
-                mySums[gap] += static_cast<double>(gaps[gap]);
+                const std::uint8_t to{(rotation > 0) ? static_cast<std::uint8_t>((gap + rotation) % myMagnets) : gap};
+                aligned[to] = gaps[gap];
+            }
+
+            for (std::uint8_t gap{0U}; gap < myMagnets; ++gap)
+            {
+                mySums[gap] += static_cast<double>(aligned[gap]);
+                // Logged as the driver saw it, so a slip still shows in the CAL lines.
                 myLastSample.gaps[gap] = gaps[gap];
             }
             ++mySamples;
@@ -131,7 +159,9 @@ float GapCalibration::update(const std::uint32_t nowMs,
         myLastSampleMs = nowMs;
     }
 
-    if (mySamples >= cal::Revolutions)
+    // Measure for a fixed time, and only finish once it gave enough revolutions; a wheel
+    // too slow for that keeps measuring, and the stall timer still ends a stopped one.
+    if (((nowMs - mySamplingStartMs) >= cal::MeasureMs) && (mySamples >= cal::Revolutions))
     {
         finishDuty(nowMs);
         return isRunning() ? cal::Duties[myDutyIndex] : 0.0F;
@@ -164,7 +194,9 @@ void GapCalibration::concludeRun() noexcept
 
     std::uint8_t worstGap{0U};
     float worstSpread{0.0F};
-    if (!odo::tablesAgree(myMeasured, cal::DutyCount, cal::Tolerance, worstGap, worstSpread))
+    // One duty has nothing to agree with, so there is no cross-speed check (see ford.h).
+    if ((cal::DutyCount >= 2U)
+        && !odo::tablesAgree(myMeasured, cal::DutyCount, cal::Tolerance, worstGap, worstSpread))
     {
         // A gap that changes with speed is the motor, not the wheel.
         myResult.worstGap = worstGap;

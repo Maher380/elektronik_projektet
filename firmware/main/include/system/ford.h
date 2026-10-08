@@ -93,7 +93,8 @@ constexpr std::uint8_t PiUartRx{17U};
  * and the distance is wrong as well as unsteady. Check `odometer_phase_losses` stays at 0
  * before trusting a run.
  */
-constexpr std::uint8_t OdometerMagnets{3U};
+// Four since 2026-10-08: a fourth magnet in the half gap, off-centre towards a neighbour.
+constexpr std::uint8_t OdometerMagnets{4U};
 
 /**
  * @brief Rear wheel diameter in metres, 34 mm from ford-build.md.
@@ -124,7 +125,9 @@ constexpr double WheelCircumferenceM{3.14159265 * WheelDiameterM};
  * GapCalibration always failed. That is why it is worth having a third magnet even though
  * it is a smaller one.
  */
-constexpr float DesignGapFractions[OdometerMagnets]{0.25F, 0.25F, 0.5F};
+// The first two measured on the three-magnet wheel (0.27, 0.25); the old half gap (0.48)
+// split by eye, about a third and two thirds. GapCalibration measures the real split.
+constexpr float DesignGapFractions[OdometerMagnets]{0.27F, 0.25F, 0.16F, 0.32F};
 
 /** True if DIR low drives the car forward with this motor's phase wiring. */
 constexpr bool InvertMotorDirection{false};
@@ -198,13 +201,21 @@ constexpr float SafeModeMaxTempC{40.0F};
 /** The magnet gap calibration recipe. See ADR 0008 for why each value is what it is. */
 namespace calibration
 {
-/** Duties the wheel is driven at, one measurement each. Three speeds, so they can disagree. */
-constexpr float Duties[]{0.10F, 0.15F, 0.20F};
+/**
+ * Duties the wheel is driven at, one measurement each. One speed for now, 0.10: the
+ * only one at which the lifted wheel turned smoothly on 2026-10-08. At StartDuty (0.08) it
+ * stuttered throughout, and at 0.15 and 0.20 it pulsed
+ * (2026-10-08), which spoiled the gaps. With a single duty the cross-speed check of ADR
+ * 0008 is skipped, so torque ripple is not guarded against.
+ */
+constexpr float Duties[]{0.10F};
 /** How many duties the recipe uses. */
 constexpr std::uint8_t DutyCount{static_cast<std::uint8_t>(sizeof(Duties) / sizeof(Duties[0]))};
 /** Let the speed steady before measuring. */
-constexpr std::uint32_t SettleMs{2000U};
-/** Revolutions averaged per duty. */
+constexpr std::uint32_t SettleMs{10000U};
+/** How long to measure each duty, once settled. */
+constexpr std::uint32_t MeasureMs{20000U};
+/** Fewest revolutions a duty must give in MeasureMs to count. */
 constexpr std::uint8_t Revolutions{20U};
 /** No new revolution for this long means the wheel is not turning; give up. */
 constexpr std::uint32_t StallMs{4000U};

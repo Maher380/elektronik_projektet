@@ -82,7 +82,7 @@ struct WireTelemetrySnapshot
     const char* calibrationFailure{nullptr};
     std::uint8_t calibrationDutyIndex{0U};
     std::uint8_t calibrationDutyCount{0U};
-    std::uint8_t calibrationSamples{0U};
+    std::uint16_t calibrationSamples{0U};
     std::uint8_t calibrationRevolutions{0U};
     const float* calibrationGaps{nullptr};
     std::uint8_t calibrationGapCount{0U};
