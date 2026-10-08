@@ -1,17 +1,17 @@
 # Ford: Odometer
 
 The Ford counts wheel rotation with an A3144 Hall-effect sensor on `D9` (GPIO18)
-and **two magnets** on the **right rear** wheel — the only wheel measured; a
+and **three magnets** on the **right rear** wheel — the only wheel measured; a
 second sensor on the left rear is wanted but not fitted. The firmware sends `measured_speed_ms` and
 `odometer_distance_m` in `cnb/ford/telemetry`.
 
 | Property | Value | From |
 | --- | --- | --- |
 | Sensor pin | `D9` / GPIO18, input with internal pull-up | [pin_mapping.md](pin_mapping.md) |
-| Magnets | 2, set opposite each other | Refitted 2026-10-05; see History |
+| Magnets | 3: two opposite each other, a smaller third between them | Third added 2026-10-08; see History |
 | Wheel diameter | 34 mm | `ford-build.md` in the host repo |
 | Circumference | 106.81 mm | pi x 34 mm |
-| Nominal distance per pulse | 53.41 mm | circumference / 2 |
+| Nominal distance per pulse | 35.60 mm | circumference / 3 |
 | Measured gaps | 0.49 and 0.51 of a turn | Calibration log, 2026-10-05 |
 
 The A3144 output is open-collector and active low: it pulls low while a magnet's
@@ -27,13 +27,20 @@ firmware can tell; see History.
 
 ## The layout
 
-The two magnets are opposite each other, so the gaps are equal halves to within
-about 1.4 %. `app::ford::DesignGapFractions` is `{0.5, 0.5}`.
+Two magnets are opposite each other, with a smaller third between them, so the gaps
+are a quarter, a quarter and a half. `app::ford::DesignGapFractions` is
+`{0.25, 0.25, 0.5}` — the design figures, placed by eye; GapCalibration measures what
+the wheel actually has.
 
-Even spacing has one consequence: the two magnets cannot be told apart from their
-timing, so the driver never knows which gap the wheel is in. It does not need to.
-It measures over whole revolutions (below), which is exact however the magnets sit,
-and even halves make the single-gap fallback accurate too.
+Uneven spacing is the point of the third magnet. The three rotations of
+`{0.25, 0.25, 0.5}` are all distinct, so observed gaps match exactly one: checked
+against `bestRotation` itself, the right rotation scores 0 and the runner-up 0.5, a
+**margin of 0.500 against the 0.05 required**, from every starting rotation. The driver
+can therefore phase-lock and time single gaps instead of whole revolutions.
+
+Before 2026-10-08 the wheel had two even magnets, `{0.5, 0.5}`. Even gaps match every
+rotation equally well, so the margin was 0, the driver never phased, and it measured
+over whole revolutions throughout — exact, but slow to react.
 
 ## Speed
 
@@ -52,20 +59,26 @@ spacing, which on this wheel is right to about 1.4 %.
 
 ### What it costs
 
-| | at 0.5 m/s | at 0.72 m/s (duty 0.08, lifted) |
-| --- | --- | --- |
-| Revolution | 213.6 ms | 148 ms |
-| Pulse rate | 9.4 Hz | 13.5 Hz |
-| Lag of the revolution window | about 107 ms | about 74 ms |
+With three magnets the driver can phase-lock and time single gaps, so the lag is half a
+gap rather than half a revolution. The quarter gaps are the quick ones; the half gap is no
+worse than the old whole-revolution window.
+
+| | at 0.3 m/s | at 0.5 m/s | at 0.8 m/s |
+| --- | --- | --- | --- |
+| Revolution | 356 ms | 214 ms | 134 ms |
+| Pulse rate, 3 magnets | 8.4 Hz | 14.0 Hz | 22.4 Hz |
+| Lag, phase-locked, quarter gap | about 44 ms | about 27 ms | about 17 ms |
+| Lag, phase-locked, half gap | about 89 ms | about 53 ms | about 33 ms |
+| Lag before, 2 even magnets | about 178 ms | about 107 ms | about 67 ms |
 
 The 0.72 m/s column was measured with the wheel lifted: about 150 ms per revolution
 at duty 0.08.
 
-Two magnets give fewer pulses than the six this wheel once had, and the pulse rate
-is below the 20 Hz floor ADR 0006 asked for a speed loop. Per-gap correction cannot
-cut the lag either, because it needs magnets that can be told apart. A speed loop on
-this odometer has to be slow, or the wheel needs more magnets, all of them detected
-and unevenly spaced.
+Three magnets still give fewer pulses than the six this wheel once had, and below
+0.7 m/s the pulse rate is **under the 20 Hz floor ADR 0006 asked for a speed loop**.
+Per-gap correction now cuts the lag, because the gaps are uneven and can be told apart,
+but it does not lift the pulse rate. A speed loop on this odometer still has to be slow
+at crawling speeds, and more magnets — all of them detected — would be the next gain.
 
 ### Per-gap correction and the gap calibration
 
@@ -74,12 +87,15 @@ measured gap table, it matches the gaps it observes against every rotation of th
 table, and once one rotation clearly wins it times single gaps and scales each by
 its own fraction. ADR 0008 explains the method, and the code still supports it.
 
-On the current wheel it never engages. Even magnets match every rotation equally
-well (a phase margin of 0, against the 0.05 required), so the driver stays on the
-revolution window, which is exact. For the same reason the gap calibration — the
-GapCalibration drive style, or `cal` in the A89301 configuration app — always fails
-on this wheel, reporting that the speeds disagree or that the magnets are too evenly
-spaced. That is expected: this wheel needs no calibration.
+On the three-magnet wheel it engages. The gaps are uneven, so one rotation wins
+clearly, and the GapCalibration drive style — or `cal` in the A89301 configuration app —
+is now **expected to succeed** and to produce the table the driver phases with.
+
+That makes the calibration a test as well as a measurement. **Run it after any change to
+the magnets, before trusting a drive.** If it still reports the magnets as too evenly
+spaced, the third magnet is not being seen on every pass and the wheel is behaving as a
+two-magnet one; if it reports that the speeds disagree, the magnet is seen only
+sometimes, which is the worse case — see the note on `OdometerMagnets` in `ford.h`.
 
 Each GapCalibration run logs every sampled revolution over serial on lines tagged
 `CAL`, with the pulses counted, the time taken and the gaps. That log is how the
@@ -87,10 +103,13 @@ problems in History were found.
 
 ## Distance
 
-Distance uses the nominal 53.41 mm per pulse. Over whole revolutions this is exact
-however the magnets sit, because two nominal pulses are one real circumference. A
-half-revolution reading is off by about 1 mm (0.01 of a turn), and the error does
-not accumulate: it returns to exact at every full turn.
+Distance uses the nominal 35.60 mm per pulse — a circumference split three ways. Over
+whole revolutions this is exact however the magnets sit, because three nominal pulses are
+one real circumference. Between them it is only nominal, and on this deliberately uneven
+wheel that matters more than it did: a quarter gap really covers 26.7 mm and the half gap
+53.4 mm, so a single-pulse reading can be out by about 18 mm. The error does not
+accumulate — it returns to exact at every full turn — and once GapCalibration has
+measured the table the driver scales each gap by its own fraction.
 
 An Odometer measures the wheel and not the ground, so a wheel that slips or locks
 reads wrong and nothing here can tell that it has.
@@ -98,13 +117,22 @@ reads wrong and nothing here can tell that it has.
 ## Limits
 
 **Noise filter.** Pulses closer together than 1 ms are discarded as contact noise.
-The gaps are 53 mm, which takes 1 ms only at 53 m/s, so the filter cannot discard a
-real pulse anywhere in this car's speed range.
+The smallest gap is now a quarter turn, 26.7 mm, which takes 1 ms only at 26.7 m/s, so
+the filter still cannot discard a real pulse anywhere in this car's speed range.
 
 **Missed pulses at speed** were reported above about 2.5 m/s with the six-magnet
-mounting. That has not been re-measured with two magnets.
+mounting. That has not been re-measured since, with either two magnets or three.
 
 ## History
+
+**2026-10-08: a third magnet, and the gaps are uneven again.** A smaller magnet was glued
+midway between the two, giving quarter, quarter, half. The point was the speed loop: at
+0.3 m/s two magnets fed it at 5.6 Hz with about 178 ms of lag, which is far below the
+20 Hz ADR 0006 asked for, and the crawl band is where the duty-to-speed gain is steepest
+(0.16 m/s at duty 0.064, 0.5 m/s at 0.072) — a slow loop against a steep plant, which
+hunts. Three uneven magnets lift the rate to 8.4 Hz and, once phased, cut the lag to
+44–89 ms. `OdometerMagnets` and `DesignGapFractions` were changed to match; leaving them
+at two would have made the distance read 1.5 times too high.
 
 The wheel was first fitted with six magnets, deliberately uneven (gaps of 1/8, 1/8,
 1/4, 1/4, 1/8, 1/8), so that per-gap correction could phase it. The gap calibration

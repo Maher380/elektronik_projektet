@@ -85,9 +85,15 @@ constexpr std::uint8_t PiUartRx{17U};
  * @brief Magnets the Hall sensor sees on the measured wheel.
  *
  * A calibration log showed that of five glued on, only two passed close enough to trigger
- * the A3144, so the wheel now carries two, set opposite each other.
+ * the A3144, so the wheel carried two, set opposite each other. A third, smaller one was
+ * added between them on 2026-10-08, to lift the pulse rate and to make the gaps uneven.
+ *
+ * A magnet the A3144 does not see every pass is worse than no third magnet at all: the
+ * gaps then alternate between the three- and two-magnet patterns, the phase lock breaks,
+ * and the distance is wrong as well as unsteady. Check `odometer_phase_losses` stays at 0
+ * before trusting a run.
  */
-constexpr std::uint8_t OdometerMagnets{2U};
+constexpr std::uint8_t OdometerMagnets{3U};
 
 /**
  * @brief Rear wheel diameter in metres, 34 mm from ford-build.md.
@@ -103,13 +109,22 @@ constexpr double WheelCircumferenceM{3.14159265 * WheelDiameterM};
 /**
  * @brief Ford's magnet gaps as the wheel was built, as fractions of a revolution.
  *
- * Two magnets set opposite each other; a calibration log measured them at 0.49 and 0.51,
- * so equal halves are right to about 1.4 %. Being even, the magnets cannot be told apart:
- * the odometer never phase-locks and measures speed over whole revolutions, and the gap
- * calibration always fails on this wheel (it disagrees or reports a thin margin). That is
- * expected; this wheel needs no calibration. See ADR 0008.
+ * Two magnets opposite each other, with the third set between them: quarter, quarter,
+ * half. These are the design figures, placed by eye; GapCalibration measures what the
+ * wheel actually has, and its table supersedes this one.
+ *
+ * Uneven at last, and that is the point. The three rotations of {0.25, 0.25, 0.5} are all
+ * distinct, so the observed gaps match exactly one of them: the right rotation scores 0
+ * against the other two's 0.5, a margin far above the 0.05 the matcher asks for. The
+ * odometer can therefore phase-lock and time single gaps instead of whole revolutions,
+ * which is what cuts the lag. See ADR 0008.
+ *
+ * Before 2026-10-08 the wheel had two even magnets, {0.5, 0.5}. Even gaps match every
+ * rotation equally well, so the margin was 0, the odometer never locked, and
+ * GapCalibration always failed. That is why it is worth having a third magnet even though
+ * it is a smaller one.
  */
-constexpr float DesignGapFractions[OdometerMagnets]{0.5F, 0.5F};
+constexpr float DesignGapFractions[OdometerMagnets]{0.25F, 0.25F, 0.5F};
 
 /** True if DIR low drives the car forward with this motor's phase wiring. */
 constexpr bool InvertMotorDirection{false};
