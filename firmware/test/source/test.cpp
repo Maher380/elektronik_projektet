@@ -6,12 +6,14 @@
 
 #include "system/pin_manager/esp32s3.h"
 #include "system/logic/reverse_controller.h"
+#include "system/logic/motor_kickstart.h"
 #include "test/a89301_programmer.h"
 #include "test/pin_manager.h"
 
 #include "driver/adc/stub.h"
 #include "driver/factory/stub.h"
 #include "driver/gpio/stub.h"
+#include "driver/start_module/gpio.h"
 #include "driver/distance_sensor/gp2y0a21yk.h"
 #include "driver/motor/a89301.h"
 #include "driver/motor/l298n.h"
@@ -20,19 +22,80 @@
 
 int main()
 {
+    using Direction = driver::motor::Direction;
+    app::logic::MotorKickstart kickstart;
+    if (kickstart.apply(10U, .44F, Direction::Forward, true) != 1.0F
+        || kickstart.apply(109U, .44F, Direction::Forward, true) != 1.0F
+        || kickstart.apply(110U, .44F, Direction::Forward, true) != .44F
+        || kickstart.apply(120U, .5F, Direction::Forward, true) != .5F
+        || kickstart.apply(130U, 0.0F, Direction::Forward, true) != 0.0F
+        || kickstart.apply(140U, .44F, Direction::Forward, true) != .44F
+        || kickstart.apply(150U, .4F, Direction::Backward, true) != .4F
+        || kickstart.apply(160U, 0.0F, Direction::Backward, false) != 0.0F
+        || kickstart.apply(170U, .2F, Direction::Backward, false) != .2F)
+    {
+        std::printf("Motor kickstart timing, stop, direction or manual bypass failed\n");
+        return -1;
+    }
+    kickstart.arm();
+    if (kickstart.apply(0xfffffff0U, .44F, Direction::Forward, true) != 1.0F
+        || kickstart.apply(83U, .44F, Direction::Forward, true) != 1.0F
+        || kickstart.apply(84U, .44F, Direction::Forward, true) != .44F)
+    {
+        std::printf("Motor kickstart timing, stop, direction or manual bypass failed\n");
+        return -1;
+    }
+    using StartState = driver::start_module::State;
+    driver::gpio::Stub startPin;
+    driver::start_module::Gpio startModule{startPin};
+    startPin.write(true);
+    startModule.update(0U);
+    startModule.update(100U);
+    if (startModule.state() != StartState::Waiting) { return -1; }
+    startPin.write(false);
+    startModule.update(110U);
+    startPin.write(true);
+    startModule.update(120U);
+    startModule.update(139U);
+    if (startModule.state() != StartState::Waiting) { return -1; }
+    startPin.write(false);
+    startModule.update(140U);
+    startPin.write(true);
+    startModule.update(150U);
+    startModule.update(170U);
+    if (startModule.state() != StartState::Started) { return -1; }
+    startPin.write(false);
+    startModule.update(171U);
+    startPin.write(true);
+    startModule.update(200U);
+    if (startModule.state() != StartState::Stopped) { return -1; }
+    driver::start_module::Gpio wrapStart{startPin};
+    startPin.write(false);
+    wrapStart.update(0xfffffff0U);
+    startPin.write(true);
+    wrapStart.update(0xfffffff8U);
+    wrapStart.update(12U);
+    if (wrapStart.state() != StartState::Started) { return -1; }
+
     using Phase = app::logic::ReverseController::Phase;
     app::logic::ReverseController reverse;
     if (reverse.update(0U, 1U, true, false) != Phase::Braking
         || reverse.update(79U, 1U, true, false) != Phase::Braking
         || reverse.update(80U, 1U, true, false) != Phase::Settling
         || reverse.update(180U, 1U, true, false) != Phase::Reversing
+        || std::fabs(reverse.reverseDuty(180U) - 0.4F) > 0.0001F
+        || std::fabs(reverse.reverseDuty(230U) - 0.7F) > 0.0001F
+        || reverse.reverseDuty(280U) != 1.0F
+        || reverse.reverseDuty(380U) != 1.0F
+        || reverse.reverseDuty(479U) != 1.0F
         || reverse.update(480U, 1U, true, false) != Phase::Recovering
+        || reverse.reverseDuty(480U) != 0.0F
         || reverse.update(580U, 1U, true, false) != Phase::Holding
         || reverse.update(600U, 2U, true, false) != Phase::Holding
-        || reverse.update(610U, 2U, true, false) != Phase::Holding
         || reverse.update(620U, 3U, true, false) != Phase::Braking
         || reverse.update(700U, 3U, true, false) != Phase::Settling
         || reverse.update(800U, 3U, true, false) != Phase::Reversing
+        || std::fabs(reverse.reverseDuty(800U) - 0.4F) > 0.0001F
         || reverse.update(1100U, 3U, true, false) != Phase::Recovering
         || reverse.update(1200U, 3U, true, false) != Phase::Holding
         || reverse.update(1220U, 4U, true, false) != Phase::Holding
@@ -40,9 +103,54 @@ int main()
         || reverse.update(1260U, 6U, true, false) != Phase::Holding
         || reverse.update(1280U, 7U, false, true) != Phase::Holding
         || reverse.update(1300U, 8U, false, true) != Phase::Ready
-        || reverse.update(1320U, 9U, true, false) != Phase::Braking)
+        || reverse.update(1320U, 9U, true, false) != Phase::Holding
+        || reverse.update(1340U, 10U, false, true) != Phase::Holding
+        || reverse.update(1360U, 11U, false, true) != Phase::Ready)
     {
-        std::printf("Reverse retry sequence failed\n");
+        std::printf("Reverse retry or cancellation failed\n");
+        return -1;
+    }
+    reverse.reset();
+    if (reverse.update(0U, 1U, true, false) != Phase::Braking
+        || reverse.update(80U, 2U, true, false) != Phase::Settling
+        || reverse.update(180U, 3U, true, false) != Phase::Reversing
+        || reverse.update(200U, 4U, false, true) != Phase::Reversing
+        || reverse.update(220U, 5U, false, true) != Phase::Reversing
+        || reverse.update(300U, 6U, false, false) != Phase::Reversing
+        || reverse.update(380U, 7U, false, true) != Phase::Reversing
+        || reverse.update(400U, 8U, false, true) != Phase::Recovering
+        || reverse.update(500U, 9U, false, true) != Phase::Holding
+        || reverse.update(500U, 9U, false, true) != Phase::Holding
+        || reverse.update(520U, 10U, false, true) != Phase::Holding
+        || reverse.update(540U, 11U, false, true) != Phase::Ready)
+    {
+        std::printf("Reverse clearance confirmation failed\n");
+        return -1;
+    }
+
+    reverse.reset();
+    if (reverse.update(0U, 1U, true, false, false) != Phase::Braking
+        || reverse.update(80U, 2U, true, false, false) != Phase::Settling
+        || reverse.update(500U, 3U, true, false, false) != Phase::Settling
+        || reverse.update(510U, 4U, true, false, true) != Phase::Reversing
+        || std::fabs(reverse.reverseDuty(510U) - 0.4F) > 0.0001F
+        || reverse.update(809U, 5U, true, false, true) != Phase::Reversing
+        || reverse.update(810U, 6U, true, false, true) != Phase::Recovering)
+    {
+        std::printf("Reverse steering preparation must not consume the pulse\n");
+        return -1;
+    }
+
+    reverse.reset();
+    reverse.update(0U, 1U, true, false);
+    reverse.update(80U, 2U, true, false);
+    reverse.update(180U, 3U, true, false);
+    reverse.update(480U, 4U, true, false);
+    reverse.update(580U, 5U, false, false);
+    if (reverse.update(600U, 6U, false, false) != Phase::Holding
+        || reverse.update(620U, 7U, false, false) != Phase::Braking)
+    {
+        std::printf("Intermediate clearance must not deadlock reverse recovery\n");
         return -1;
     }
 

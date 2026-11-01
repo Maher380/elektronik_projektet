@@ -135,14 +135,15 @@ struct Factory final : driver::factory::Interface {
             driver::mqtt::Qos::AtLeastOnce, true), "queue config");
     }
     void output(float f, float b, bool enabled, unsigned servoHz) {
-        if (pwms[5]->duty() != f || pwms[6]->duty() != b || sleep->read() != enabled) {
+        if (std::fabs(pwms[5]->duty() - f) >= 0.0001F
+            || std::fabs(pwms[6]->duty() - b) >= 0.0001F || sleep->read() != enabled) {
             std::fprintf(stderr, "Expected PWM %.2f/%.2f sleep %d; actual %.2f/%.2f sleep %d at tick %u\n",
                 static_cast<double>(f), static_cast<double>(b), enabled,
                 static_cast<double>(pwms[5]->duty()), static_cast<double>(pwms[6]->duty()),
                 sleep->read(), static_cast<unsigned>(host::ticks));
         }
-        check(pwms[5]->duty() == f, "forward PWM");
-        check(pwms[6]->duty() == b, "backward PWM");
+        check(std::fabs(pwms[5]->duty() - f) < 0.0001F, "forward PWM");
+        check(std::fabs(pwms[6]->duty() - b) < 0.0001F, "backward PWM");
         check(sleep->read() == enabled, "sleep enable");
         if (pwms[9]->frequencyHz() != servoHz) {
             std::fprintf(stderr, "Servo expected %u Hz; actual %u Hz\n", servoHz, pwms[9]->frequencyHz());
@@ -187,23 +188,107 @@ int main() {
         check(!motor.stop(), "zero cached duty cannot hide an unavailable PWM driver");
     }
     check(Configuration{}.loopIntervalMs == 20U, "default sensor loop is 20 ms");
-    struct Row { std::array<float, 3> distances; float angle; bool blocked; unsigned hz; };
+    struct Row { std::array<float, 3> distances; float angle; bool blocked; unsigned hz; bool valid{true}; };
     const Row cases[]{
-        {{60,60,60},0,false,330}, {{60,20,15},-90,false,500}, {{15,20,60},90,false,215},
-        {{20,10,20},0,true,330}, {{30,30,30},0,true,330}, {{31,20,10},-90,false,500},
-        {{40,20,40},0,false,330}, {{40,40,10},-30,false,386}, {{10,40,40},30,false,291},
-        {{nan,nan,nan},0,false,330}, {{nan,20,15},-90,false,500}, {{15,nan,20},4,false,324},
-        {{-1,0,20},0,true,330}, {{31,39,32},0,false,330}, {{39,38,32},-90,false,500},
-        {{70,60,15},-24,false,375}, {{15,60,70},24,false,299},
+        {{60,60,60},0,false,330}, {{60,35,15},-90,false,500}, {{15,35,60},90,false,215},
+        {{20,10,20},0,true,330}, {{30,30,30},0,true,330}, {{31,35,10},-90,false,500},
+        {{40,35,40},-90,false,500}, {{40,40,10},-28.9F,false,386}, {{10,40,40},28.9F,false,291},
+        {{60,20,60},0,true,330},
+        {{nan,nan,nan},0,true,330,false}, {{nan,20,15},0,true,330,false}, {{15,nan,20},0,true,330,false},
+        {{-1,0,20},0,true,330,false}, {{31,39,32},90,false,215}, {{39,38,32},-90,false,500},
+        {{70,60,15},-20.4F,false,375}, {{15,60,70},20.4F,false,299},
         {{40,40,30},0,false,330}, {{40,40,27},0,false,330},
-        {{40,40,26},-2,false,333}, {{26,40,40},2,false,327},
+        {{40,40,26},-1.7F,false,333}, {{26,40,40},1.7F,false,327},
         {{15,40,15},0,false,330}, {{20,40,18},0,false,330},
         {{40,40,0},-30,false,386}};
     for (const auto& row : cases) {
-        WallPid wallPid{};
-        const auto decision = decide(row.distances, Configuration{}, wallPid, 20U);
-        check(decision.angle == row.angle && decision.blocked == row.blocked,
-              "route and proportional wall correction");
+        NavigationState navigation{};
+        const auto decision = decide(row.distances, Configuration{}, navigation, 20U);
+        if (std::fabs(decision.angle - row.angle) >= 0.001F
+            || decision.blocked != row.blocked || decision.valid != row.valid) {
+            std::fprintf(stderr, "Decision %.1f/%.1f/%.1f: angle %.1f expected %.1f, blocked %d expected %d, valid %d expected %d\n",
+                row.distances[0], row.distances[1], row.distances[2], decision.angle, row.angle,
+                decision.blocked, row.blocked, decision.valid, row.valid);
+        }
+        check(std::fabs(decision.angle - row.angle) < 0.001F && decision.blocked == row.blocked
+              && decision.valid == row.valid, "route, wall correction and sensor validity");
+    }
+    {
+        Configuration tuned{};
+        tuned.stopDistanceCm = 45.0F;
+        tuned.reactionDistanceCm = 52.0F;
+        NavigationState navigation{};
+        check(decide({52, 52, 52}, tuned, navigation, 20U).angle == 0, "clear forward path");
+        check(decide({51, 51, 51}, tuned, navigation, 20U).angle == -90, "equal sides choose a turn");
+        check(decide({49, 50, 51}, tuned, navigation, 20U).angle == -90, "small difference keeps turn");
+        check(decide({46, 50, 52}, tuned, navigation, 20U).angle == 90, "larger opening changes turn");
+        check(decide({60, 50, 100}, tuned, navigation, 20U).angle == 90,
+              "turn toward actual right clearance beyond telemetry cap");
+        check(decide({100, 50, 60}, tuned, navigation, 20U).angle == -90,
+              "turn toward actual left clearance beyond telemetry cap");
+        check(std::fabs(decide({60, 48.5F, 100}, tuned, navigation, 20U).dutyScale - 0.825F) < 0.001F,
+              "approach duty scales between reaction and stop distance");
+        check(decide({60, 45, 100}, tuned, navigation, 20U).escapeRequired,
+              "close front triggers escape even with open sides");
+        check(decide({60, 46, 100}, tuned, navigation, 20U).blocked,
+              "front stop remains latched near its threshold");
+        check(!decide({60, 49, 100}, tuned, navigation, 20U).blocked,
+              "front stop releases after measurable clearance");
+        check(decide({45, 50, 45}, tuned, navigation, 20U).blocked, "no safe side stops early");
+        navigation = {};
+        check(std::fabs(decide({40, 52, 52}, tuned, navigation, 20U).angle - 3.4F) < 0.001F, "proportional wall correction");
+        const float filteredAngle = decide({39, 52, 52}, tuned, navigation, 20U).angle;
+        check(filteredAngle > 3.4F && filteredAngle < 5.1F, "side noise is smoothed");
+        check(decide({60, 44, 60}, tuned, navigation, 20U).blocked, "front stop bypasses wall filtering");
+        navigation = {};
+        check(decide({60, 50, 70}, tuned, navigation, 20U).angle == 90, "choose obstacle route");
+        check(decide({60, 52, 70}, tuned, navigation, 20U).angle == 90, "reaction threshold noise keeps turn");
+        for (unsigned sample = 0; sample < 3; ++sample)
+            check(decide({60, 60, 70}, tuned, navigation, 20U).angle == 90, "brief forward clearance keeps turn");
+        check(decide({60, 60, 70}, tuned, navigation, 20U).angle == 0, "stable forward clearance releases turn");
+        check(decide({60, 50, 70}, tuned, navigation, 1000U).angle == 90, "slow sampling enters avoidance");
+        check(decide({60, 60, 70}, tuned, navigation, 1000U).angle == 90, "one slow sample cannot release turn");
+        check(decide({60, 60, 70}, tuned, navigation, 1000U).angle == 0, "second slow clear sample releases turn");
+    }
+    {
+        Factory approach; std::atomic<bool> done{false}; host::ticks = 0;
+        unsigned tick = 0;
+        auto configureDuty = [&](unsigned revision, float duty) {
+            char payload[256];
+            std::snprintf(payload, sizeof(payload),
+                "{\"schema_version\":1,\"revision\":%u,\"stop_distance_cm\":45,\"reaction_distance_cm\":52,\"loop_interval_ms\":20,\"drive_duty\":%.2f,\"telemetry_interval_ms\":200}",
+                revision, static_cast<double>(duty));
+            check(approach.broker->simulateIncoming("cnb/vagrant/config/set", payload), "queue approach settings");
+        };
+        host::afterTick = [&] {
+            switch (tick) {
+            case 0:
+                approach.distances(60, 48.5F, 70);
+                configureDuty(1U, .44F);
+                approach.start();
+                break;
+            case 1:
+                approach.output(.39F, 0, true, 215);
+                approach.distances(60, 51, 70);
+                break;
+            case 3:
+                approach.output(.418F, 0, true, 215);
+                configureDuty(2U, .2F);
+                break;
+            case 4:
+                approach.output(.2F, 0, true, 215);
+                configureDuty(3U, 0);
+                break;
+            case 5:
+                approach.output(0, 0, false, 330);
+                approach.stop();
+                break;
+            case 6: approach.output(0, 0, false, 330); done.store(true); break;
+            }
+            ++tick;
+        };
+        app::logic::VagrantLogic{approach}.run(done); host::afterTick = {};
+        check(tick == 7, "approach floor preserves lower configured duty and stop");
     }
     // Exercise the real output sequence with fake hardware and time.
     {
@@ -217,19 +302,77 @@ int main() {
                     R"({"schema_version":1,"revision":1,"stop_distance_cm":30,"reaction_distance_cm":40,"loop_interval_ms":20,"drive_duty":0.5,"telemetry_interval_ms":200})"), "queue navigation settings");
                 navigation.start();
                 break;
-            case 1: navigation.output(1, 0, true, 330); break;
-            case 18: navigation.output(1, 0, true, 330); break;
-            case 19: navigation.output(.5F, 0, true, 330); navigation.distances(20, 10, 20); break;
+            case 1: navigation.output(.5F, 0, true, 330); break;
+            case 6: navigation.output(.5F, 0, true, 330); break;
+            case 19: navigation.distances(20, 10, 20); break;
             case 21: navigation.output(1, 1, true, 330); break;
             case 29: navigation.output(0, 0, false, 330); break;
-            case 39: navigation.output(0, 1, true, 330); break;
-            case 69: navigation.output(0, 0, false, 330); navigation.distances(60, 60, 60); break;
-            case 83: navigation.output(1, 0, true, 330); done.store(true); break;
+            case 39: navigation.output(0, .4F, true, 330); break;
+            case 44: navigation.output(0, .7F, true, 330); break;
+            case 49: navigation.output(0, 1, true, 330); break;
+            case 50: navigation.distances(60, 20, 15); break;
+            case 53: navigation.output(0, 1, true, 330); break;
+            case 55: navigation.distances(60, 36, 15); break;
+            case 59: navigation.output(0, 0, false, 330); break;
+            case 69: navigation.output(0, 0, false, 330); break;
+            case 73: navigation.output(.43F, 0, true, 500); break;
+            case 74:
+                navigation.distances(60, 10, 60);
+                check(navigation.broker->simulateIncoming("cnb/vagrant/config/set",
+                    R"({"schema_version":1,"revision":2,"stop_distance_cm":30,"reaction_distance_cm":40,"loop_interval_ms":20,"drive_duty":0,"telemetry_interval_ms":200})"), "queue zero drive duty");
+                break;
+            case 76: navigation.output(0, 0, false, 330); break;
+            case 100: navigation.output(0, 0, false, 330); done.store(true); break;
             }
             ++tick;
         };
         app::logic::VagrantLogic{navigation}.run(done); host::afterTick = {};
-        check(tick == 84, "navigation timing exercised");
+        check(tick == 101, "navigation timing and zero-duty inhibition exercised");
+    }
+    {
+        Factory narrow; std::atomic<bool> done{false}; host::ticks = 0;
+        unsigned tick = 0;
+        host::afterTick = [&] {
+            switch (tick) {
+            case 0: narrow.distances(20, 35, 20); narrow.start(); break;
+            case 1: narrow.output(1, 1, true, 330); break;
+            case 9: narrow.output(0, 0, false, 330); break;
+            case 40: narrow.output(0, 0, false, 330); done.store(true); break;
+            }
+            ++tick;
+        };
+        app::logic::VagrantLogic{narrow}.run(done); host::afterTick = {};
+        check(tick == 41, "narrow route stops without reversing");
+    }
+    for (unsigned cancellation = 0; cancellation < 4; ++cancellation) {
+        Factory escape; std::atomic<bool> done{false}; host::ticks = 0;
+        unsigned tick = 0;
+        host::afterTick = [&] {
+            switch (tick) {
+            case 0: escape.distances(60, 10, 60); escape.start(); break;
+            case 20:
+                escape.output(0, .46F, true, 330);
+                if (cancellation == 0) { escape.stop(); }
+                else if (cancellation == 1) { escape.distances(nan, nan, nan); }
+                else if (cancellation == 2) {
+                    check(escape.broker->simulateIncoming("cnb/vagrant/config/set",
+                        R"({"schema_version":1,"revision":1,"stop_distance_cm":30,"reaction_distance_cm":40,"loop_interval_ms":20,"drive_duty":0,"telemetry_interval_ms":200})"), "cancel reverse with zero duty");
+                }
+                else { escape.distances(60, 60, 60); }
+                break;
+            case 21:
+                if (cancellation == 3) { escape.output(0, .52F, true, 330); }
+                else { escape.output(0, 0, false, 330); }
+                break;
+            case 28: if (cancellation == 3) { escape.output(0, .94F, true, 330); } break;
+            case 30: if (cancellation == 3) { escape.output(0, 1, true, 330); } break;
+            case 39: escape.output(0, 0, false, 330); break;
+            case 40: escape.output(0, 0, false, 330); done.store(true); break;
+            }
+            ++tick;
+        };
+        app::logic::VagrantLogic{escape}.run(done); host::afterTick = {};
+        check(tick == 41, "active reverse cancellation exercised");
     }
     Control runtime{true};
     ConfigurationRequest request{}; request.revision = 1;
@@ -256,31 +399,31 @@ int main() {
     host::afterTick = [&] {
         switch (ticks) {
         case 0:
-            f.output(0,0,false,330); f.distances(60,20,15);
+            f.output(0,0,false,330); f.distances(60,35,15);
             config(R"({"schema_version":1,"revision":1,"stop_distance_cm":30,"reaction_distance_cm":40,"loop_interval_ms":1000,"drive_duty":0.5,"telemetry_interval_ms":200})");
             f.start(1); break;
         case 1:
-            f.output(1,0,true,500);
+            f.output(.4125F,0,true,500);
             command(R"({"schema_version":1,"request_id":2,"session_id":"test","command":"servo","angle_deg":30})"); break;
         case 2:
             f.output(0,0,false,291);
             command(R"({"schema_version":1,"request_id":3,"session_id":"test","command":"start"})", true); break;
-        case 3: f.output(0,0,false,291); f.distances(15,20,60); f.start(3); break;
-        case 4: f.output(1,0,true,215); break;
+        case 3: f.output(0,0,false,291); f.distances(15,35,60); f.start(3); break;
+        case 4: f.output(.4125F,0,true,215); break;
         case 5:
             config(R"({"schema_version":1,"revision":2,"stop_distance_cm":25,"reaction_distance_cm":50,"loop_interval_ms":20,"drive_duty":1,"telemetry_interval_ms":200})"); break;
-        case 6: f.output(1,0,true,215); f.distances(20,10,20); break;
+        case 6: f.output(.79F,0,true,215); f.distances(20,10,20); break;
         case 8: f.output(1,1,true,330); break;
         case 9: f.distances(nan,nan,nan); break;
-        case 10: f.output(1,1,true,330); break; // finish the brake phase before moving again
+        case 10: f.output(0,0,false,330); break; // sensor failure cancels the escape immediately
         case 11:
             config(R"({"schema_version":1,"revision":3,"stop_distance_cm":25,"reaction_distance_cm":50,"loop_interval_ms":1000,"drive_duty":0.7,"telemetry_interval_ms":200})"); break;
         case 12:
-            f.output(1,1,true,330);
+            f.output(0,0,false,330);
             command(R"({"schema_version":1,"request_id":4,"session_id":"test","command":"stop"})"); break;
         case 13: f.output(0,0,false,330); break; // stop is not delayed by the 1000ms sensor interval
-        case 14: f.start(5); break;
-        case 15: f.output(1,0,true,330); break;
+        case 14: f.distances(60,60,60); f.start(5); break;
+        case 15: f.output(.7F,0,true,330); break;
         case 315: f.output(0,0,false,330); break; // heartbeat expired
         case 316: f.start(4); break; // replay must not rearm
         case 317: f.output(0,0,false,330); stop.store(true); break;
@@ -291,7 +434,7 @@ int main() {
             check(cJSON_IsTrue(cJSON_GetObjectItem(json, "system_test")), "system-test capability");
             check(cJSON_GetObjectItem(json, "decision_distance_cm") != nullptr, "decision distances are published");
             check(cJSON_GetObjectItem(json, "adc_raw") != nullptr, "raw ADC is published");
-            if (ticks >= 20) check(cJSON_IsNull(cJSON_GetObjectItem(cJSON_GetObjectItem(json, "distance_cm"), "left")), "NaN stays null in measured log");
+            if (ticks >= 20) check(cJSON_IsNumber(cJSON_GetObjectItem(cJSON_GetObjectItem(json, "distance_cm"), "left")), "fresh sensor reading is published");
             cJSON_Delete(json); ++telemetryCount;
         }
         ++ticks;
@@ -299,5 +442,5 @@ int main() {
     app::logic::VagrantLogic{f}.run(stop);
     host::afterTick = {};
     check(ticks == 318 && telemetryCount > 0, "complete main loop exercised");
-    std::puts("PASS: 24 decision cases including wall correction, configuration bounds, real main loop with MQTT start/servo/replay/stop, braking/recovery, telemetry and heartbeat expiry");
+    std::puts("PASS: route selection, sensor validity, reverse and cancellation, MQTT commands, telemetry and heartbeat expiry");
 }

@@ -38,3 +38,10 @@ run:
 
 clean:
 	@rm -rf build
+
+.PHONY: navigation
+navigation:
+	@mkdir -p build
+	@$(CC) -c ../managed_components/espressif__cjson/cJSON/cJSON.c -o build/navigation_cjson.o
+	@$(CXX) -std=c++17 -Wall -Wextra -Werror -Wno-unused-const-variable -Wno-return-type -I../../tests/include -I$(FIRMWARE_INC_DIR) -I../managed_components/espressif__cjson/cJSON navigation_regression.cpp $(FIRMWARE_SRC_DIR)/system/communication/manager.cpp $(FIRMWARE_SRC_DIR)/system/runtime/control.cpp $(FIRMWARE_SRC_DIR)/driver/motor/mp6550.cpp $(FIRMWARE_SRC_DIR)/driver/servo/vagrant.cpp $(FIRMWARE_SRC_DIR)/driver/serial/stub.cpp build/navigation_cjson.o -o build/navigation_tests
+	@./build/navigation_tests

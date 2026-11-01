@@ -17,10 +17,38 @@ menu "Target car"
 
 endmenu
 
+menu "Run mode"
+    choice CNB_RUN_MODE
+        prompt "Operating mode"
+        default CNB_MODE_TEST
+        config CNB_MODE_TEST
+            bool "Test: WiFi/MQTT control"
+        config CNB_MODE_COMPETITION
+            bool "Competition: D10 start module, no network"
+            depends on CNB_CAR_VAGRANT
+    endchoice
+
+    if CNB_MODE_COMPETITION
+        config CNB_COMPETITION_DUTY_PERCENT
+            int "Drive duty percent"
+            range 0 100
+            default 44
+        config CNB_COMPETITION_STOP_CM
+            int "Stop distance in cm"
+            range 1 79
+            default 45
+        config CNB_COMPETITION_REACTION_CM
+            int "Reaction distance in cm (must exceed stop distance)"
+            range 2 80
+            default 52
+    endif
+endmenu
+
 menu "Autonomous car network configuration"
 
     config CNB_ENABLE_WIFI
         bool "Enable WiFi"
+        depends on CNB_MODE_TEST
         default y
         help
             Enable WiFi support for the ESP32-S3 application.
@@ -45,7 +73,7 @@ menu "Autonomous car network configuration"
             Enable Mosquitto communication for telemetry, configuration,
             and start/stop control.
 
-    if CNB_ENABLE_MQTT
+    # Keep credentials available even when competition mode disables networking.
 
         config CNB_MQTT_BROKER_URI
             string "MQTT broker URI"
@@ -78,7 +106,5 @@ menu "Autonomous car network configuration"
             help
                 Broker keepalive interval. Runtime motion uses a separate
                 three-second operator heartbeat timeout.
-
-    endif
 
 endmenu

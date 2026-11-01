@@ -6,10 +6,11 @@
 #include <cmath>
 #include <limits>
 #include "system/logic/vagrantLogic.h"
-#include "system/logic/reverse_controller.h"
+#include "system/logic/motor_kickstart.h"
 #include "driver/factory/interface.h"
 #include "driver/adc/interface.h"
 #include "driver/gpio/interface.h"
+#include "driver/start_module/gpio.h"
 #include "driver/distance_sensor/interface.h"
 #include "driver/motor/interface.h"
 #include "driver/pwm/interface.h"
@@ -28,40 +29,40 @@ driver::motor::Direction toMotorDirection(app::runtime::MotorTestDirection direc
         : driver::motor::Direction::Forward;
 }
 
-// Proven on-car MQTT settings (reference only, not firmware defaults):
-// drive_duty=0.44, stop_distance_cm=45, reaction_distance_cm=52,
-// loop_interval_ms=20, telemetry_interval_ms=200. Apply through MQTT/web UI.
-// Wall correction applies only with a clear forward view. Tune these separately
-// from the full steering commands used to choose a route around an obstacle.
-constexpr float WallPidKp{2.0F}; // steering command degrees per cm
-constexpr float WallPidKi{0.0F}; // keep integral disabled until the car is proven stable
-constexpr float WallPidKd{0.4F}; // damps quick left/right sensor changes
-constexpr float WallIntegralLimitCmMs{250.0F};
-constexpr float WallDeadbandCm{3.0F}; // ignore small side-proximity differences
-constexpr float MaxWallSteeringDegrees{30.0F}; // limit gentle wall correction
-constexpr float ReverseDuty{1.0F}; // short kick pulse; the car needs high duty to move
-constexpr std::uint32_t KickStartMs{180U}; // overcome static friction before returning to drive_duty
-// Publication and command channels shared with the operator tools.
+// All navigation uses capped distances. Raw readings are telemetry only.
+constexpr float WallTargetDistanceCm{30.0F};
+constexpr float WallDeadbandCm{3.0F};
+constexpr float WallKp{2.4F};
+constexpr float MaxWallSteeringDegrees{45.0F};
+constexpr float WallFilterMs{60.0F};
+constexpr float ObstacleSteeringDegrees{90.0F};
+constexpr float ReverseSteeringDegrees{60.0F};
+constexpr float FullSteeringDegrees{90.0F};
+constexpr float SteeringRateDegreesPerSecond{480.0F};
+constexpr std::uint32_t SteeringSettleMs{80U};
 constexpr app::communication::Topics Topics{
     {"cnb/vagrant/telemetry", "cnb/vagrant/config/state", "cnb/vagrant/command/state", "cnb/vagrant/status"},
     {"cnb/vagrant/config/set", "cnb/vagrant/command"}};
-/** One navigation result, independent of MQTT authorization. */
+
 struct Decision
 {
-    std::array<float, 3U> distances{}; ///< Capped left/front/right distances in cm.
-    float angle{0.0F}; ///< Steering command: negative left, positive right.
-    bool blocked{false}; ///< All three directions are within the stop threshold.
+    std::array<float, 3U> distances{};
+    float angle{0.0F};
+    float escapeAngle{-ObstacleSteeringDegrees};
+    float dutyScale{1.0F};
+    bool blocked{false};
+    bool escapeRequired{false};
+    bool valid{true};
 };
 
-/** Memory for the wall-following PID correction. */
-struct WallPid
+struct NavigationState
 {
-    float previousError{0.0F};
-    float integral{0.0F};
-    bool hasPrevious{false};
+    float filteredError{0.0F};
+    float preferredTurnAngle{0.0F};
+    bool hasError{false};
+    bool routeBlocked{false};
 };
 
-/** Complete actuator intent after safety and escape handling. */
 struct DrivePlan
 {
     driver::motor::Direction direction{driver::motor::Direction::Forward};
@@ -73,67 +74,104 @@ struct DrivePlan
 bool timeBefore(std::uint32_t nowMs, std::uint32_t deadlineMs) noexcept
 {
     const std::uint32_t remaining = deadlineMs - nowMs;
-    return remaining > 0U
-        && remaining < (std::numeric_limits<std::uint32_t>::max() / 2U);
+    return remaining > 0U && remaining < (std::numeric_limits<std::uint32_t>::max() / 2U);
 }
-// Raw readings stay separate. NaN deliberately means the reaction cap in this
-// experiment, so an unavailable distance does NOT cause a sensor-fault stop.
-/**
- * @brief Select a route or proportional wall correction from one sensor sample.
- * @param measured Raw left/front/right distances, including invalid readings.
- * @param config Active distance thresholds received from runtime configuration.
- * @return Capped distances, steering command and obstacle-brake request.
- */
+
 Decision decide(const std::array<float, 3U>& measured, const app::runtime::Configuration& config,
-                WallPid& wallPid, std::uint32_t elapsedMs)
+                NavigationState& state, std::uint32_t elapsedMs)
 {
-    Decision result{}; // Defaults to centered steering without an obstacle stop.
+    Decision result{};
     for (std::size_t i = 0; i < measured.size(); ++i)
     {
-        result.distances[i] = !std::isfinite(measured[i]) ? config.reactionDistanceCm
-            : std::clamp(measured[i], 0.0F, config.reactionDistanceCm);
+        const bool valid = std::isfinite(measured[i]) && measured[i] >= 0.0F;
+        result.valid = result.valid && valid;
+        result.distances[i] = valid ? std::clamp(measured[i], 0.0F, config.reactionDistanceCm) : 0.0F;
     }
-    const auto& d = result.distances; // left, forward, right
-    result.blocked = d[0] <= config.stopDistanceCm && d[1] <= config.stopDistanceCm && d[2] <= config.stopDistanceCm;
-    if (!result.blocked)
+    if (!result.valid)
     {
-        if (d[1] >= config.reactionDistanceCm)
-        {
-            // Use the stop distance as the side-clearance target. Far-away
-            // readings exert no pull; equal proximity on both sides cancels.
-            const float leftProximity = std::max(0.0F, config.stopDistanceCm - d[0]);
-            const float rightProximity = std::max(0.0F, config.stopDistanceCm - d[2]);
-            // Positive error means the left wall is closer: steer right.
-            const float error = leftProximity - rightProximity;
-            // Subtract the deadband so steering starts smoothly at its boundary.
-            const float correction = std::max(0.0F, std::abs(error) - WallDeadbandCm);
-            const float pidError = std::copysign(correction, error);
-            const float dtMs = static_cast<float>(std::max<std::uint32_t>(1U, elapsedMs));
-            wallPid.integral = std::clamp(wallPid.integral + pidError * dtMs,
-                                          -WallIntegralLimitCmMs,
-                                          WallIntegralLimitCmMs);
-            const float derivative = wallPid.hasPrevious
-                ? (pidError - wallPid.previousError) / dtMs
-                : 0.0F;
-            const float command = (WallPidKp * pidError)
-                + (WallPidKi * wallPid.integral)
-                + (WallPidKd * derivative * 100.0F);
-            result.angle = std::clamp(command, -MaxWallSteeringDegrees,
-                                      MaxWallSteeringDegrees);
-            wallPid.previousError = pidError;
-            wallPid.hasPrevious = true;
-        }
-        // With a forward obstacle, preserve the tested route selection.
-        else
-        {
-            wallPid = {};
-            if (d[0] > d[1] && d[0] > d[2]) { result.angle = -90.0F; }
-            else if (d[2] > d[0] && d[2] > d[1]) { result.angle = 90.0F; }
-        }
+        result.blocked = true;
+        state = {};
+        return result;
     }
-    else { wallPid = {}; }
+    const auto& d = result.distances;
+    // Equal capped side distances carry no evidence that either side is freer.
+    const float sideAngle = d[0] > d[2] ? -ObstacleSteeringDegrees
+        : d[2] > d[0] ? ObstacleSteeringDegrees
+        : state.preferredTurnAngle != 0.0F ? state.preferredTurnAngle : -ObstacleSteeringDegrees;
+    result.escapeAngle = sideAngle;
+    const float releaseMargin = std::min(3.0F,
+        (config.reactionDistanceCm - config.stopDistanceCm) * 0.5F);
+    const float bestClearance = std::max({d[0], d[1], d[2]});
+    if (bestClearance <= config.stopDistanceCm) { state.routeBlocked = true; }
+    else if (bestClearance >= config.stopDistanceCm + releaseMargin) { state.routeBlocked = false; }
+    result.blocked = state.routeBlocked;
+    result.escapeRequired = result.blocked;
+
+    if (d[1] >= d[0] && d[1] >= d[2])
+    {
+        // With an equally good forward route, avoid turning into a side wall.
+        const float wallTarget = std::min(WallTargetDistanceCm, config.reactionDistanceCm);
+        const float error = std::max(0.0F, wallTarget - d[0]) - std::max(0.0F, wallTarget - d[2]);
+        const float dt = static_cast<float>(std::min<std::uint32_t>(std::max<std::uint32_t>(1U, elapsedMs), 100U));
+        const float alpha = dt / (WallFilterMs + dt);
+        // Never retain a correction toward a newly closer wall.
+        if (!state.hasError || error == 0.0F || error * state.filteredError <= 0.0F)
+        { state.filteredError = error; }
+        else { state.filteredError += alpha * (error - state.filteredError); }
+        state.hasError = true;
+        const float correction = std::copysign(std::max(0.0F, std::abs(state.filteredError) - WallDeadbandCm),
+                                               state.filteredError);
+        result.angle = std::clamp(WallKp * correction, -MaxWallSteeringDegrees, MaxWallSteeringDegrees);
+    }
+    else
+    {
+        state.hasError = false;
+        state.preferredTurnAngle = sideAngle;
+        // Small side advantages produce small turns; large differences reach full steering.
+        const float advantage = std::max(d[0], d[2]) - d[1];
+        const float strength = std::clamp(advantage
+            / std::max(1.0F, config.reactionDistanceCm - config.stopDistanceCm), 0.0F, 1.0F);
+        result.angle = std::copysign(ObstacleSteeringDegrees * strength, sideAngle);
+    }
     return result;
 }
+
+// Lock steering only during the reverse pulse; resume using the latest route.
+class ReverseManeuver
+{
+public:
+    enum class Phase { Ready, Braking, Preparing, Reversing, Settling };
+    float reverseAngle() const noexcept { return -std::copysign(myReverseSteering, myExitAngle); }
+    void reset() noexcept
+    { myPhase = Phase::Ready; myHasReversed = false; myReverseSteering = ReverseSteeringDegrees; }
+    Phase update(std::uint32_t now, bool blocked, float exitAngle,
+                 bool reverseSteeringReady, bool forwardSteeringReady) noexcept
+    {
+        if (myPhase == Phase::Ready && !blocked) { myHasReversed = false; }
+        if (myPhase == Phase::Ready && blocked)
+        {
+            myReverseSteering = myHasReversed ? FullSteeringDegrees : ReverseSteeringDegrees;
+            myExitAngle = exitAngle;
+            myPhase = Phase::Braking;
+            myDeadline = now + 80U;
+        }
+        else if (myPhase == Phase::Braking && !timeBefore(now, myDeadline))
+        { myPhase = Phase::Preparing; myDeadline = now + 100U; }
+        else if (myPhase == Phase::Preparing && !timeBefore(now, myDeadline) && reverseSteeringReady)
+        { myPhase = Phase::Reversing; myDeadline = now + 300U; }
+        else if (myPhase == Phase::Reversing && !timeBefore(now, myDeadline))
+        { myHasReversed = true; myPhase = Phase::Settling; myDeadline = now + 100U; }
+        else if (myPhase == Phase::Settling && !timeBefore(now, myDeadline) && forwardSteeringReady)
+        { myPhase = Phase::Ready; }
+        return myPhase;
+    }
+private:
+    Phase myPhase{Phase::Ready};
+    std::uint32_t myDeadline{0U};
+    float myExitAngle{-ObstacleSteeringDegrees};
+    float myReverseSteering{ReverseSteeringDegrees};
+    bool myHasReversed{false};
+};
 // The factory only constructs drivers. Host tests run this same loop with fake hardware and time.
 /**
  * @brief Run the integrated sensor, actuator and MQTT loop until stop is set.
@@ -168,13 +206,28 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
         || !motor->setDirection(driver::motor::Direction::Forward))
     { ESP_LOGE("SYSTEM", "Initialization failed; motor remains asleep"); return; }
     app::runtime::Control control{true}; // Enable system-test MQTT config and servo commands.
-    app::communication::Manager communication{factory, Topics}; // Wi-Fi/MQTT lifecycle.
+    std::unique_ptr<app::communication::Manager> communication;
+#if CONFIG_CNB_MODE_COMPETITION
+    auto startInput = factory.gpioInput(21U); // Nano ESP32 D10.
+    if (!startInput || !startInput->isInitialized())
+    { ESP_LOGE("SYSTEM", "Start GPIO failed; motor remains asleep"); return; }
+    driver::start_module::Gpio startModule{*startInput};
+    app::runtime::ConfigurationRequest competitionConfig{};
+    competitionConfig.revision = 1U;
+    competitionConfig.values.driveDuty = CONFIG_CNB_COMPETITION_DUTY_PERCENT / 100.0F;
+    competitionConfig.values.stopDistanceCm = CONFIG_CNB_COMPETITION_STOP_CM;
+    competitionConfig.values.reactionDistanceCm = CONFIG_CNB_COMPETITION_REACTION_CM;
+    if (control.applyConfiguration(competitionConfig) != app::runtime::ConfigurationResult::Applied)
+    { ESP_LOGE("SYSTEM", "Invalid competition configuration; motor remains asleep"); return; }
+#else
+    communication = std::make_unique<app::communication::Manager>(factory, Topics);
+#endif
     app::communication::TelemetrySnapshot snapshot{}; // Latest measurements and outputs.
     Decision decision{}; // Last navigation decision, held between sensor samples.
-    WallPid wallPid{}; // PID memory for gentle wall correction.
+    NavigationState navigation{};
     bool sampled{false}; // Force an initial sample before planning motion.
     // Sample timestamp and config revision trigger timed/immediate resampling.
-    std::uint32_t lastSampleMs{0U}, sampledRevision{0U}, sampleSequence{0U};
+    std::uint32_t lastSampleMs{0U}, sampledRevision{0U};
     // Last published state: report transitions without waiting for telemetry.
     auto previousState = control.controlState();
     auto previousMotion = control.motionState();
@@ -184,14 +237,34 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
     driver::motor::Direction lastDirection{driver::motor::Direction::Forward};
     bool lastBrake{false}; // Previous requested electrical braking mode.
     bool actuatorFault{false}; // Latched output failure; restart required to drive again.
-    app::logic::ReverseController reverse;
-    std::uint32_t kickStartUntilMs{0U};
-    ESP_LOGI("SYSTEM", "Ready: longest clearance with PID wall correction; waiting for MQTT Start");
+    ReverseManeuver reverse;
+    app::logic::MotorKickstart kickstart;
+    float steeringCommand{0.0F}, previousTargetAngle{0.0F};
+    std::uint32_t steeringSettledAtMs{0U}, lastPlanMs{0U};
+    bool steeringPending{false};
+    bool wasEnabled{false};
+#if CONFIG_CNB_MODE_COMPETITION
+    ESP_LOGI("SYSTEM", "Competition: waiting for D10 low then high; network disabled");
+#else
+    ESP_LOGI("SYSTEM", "Test: waiting for MQTT Start");
+#endif
     while (!stop.load())
     {
         // Monotonic milliseconds; unsigned subtraction handles tick wraparound.
         const auto now = static_cast<std::uint32_t>(xTaskGetTickCount() * portTICK_PERIOD_MS);
-        communication.process(now, control);
+        const std::uint32_t elapsedLoopMs = now - lastPlanMs;
+        const std::uint32_t steeringElapsedMs = std::min<std::uint32_t>(elapsedLoopMs, 40U);
+        lastPlanMs = now;
+        if (communication) { communication->process(now, control); }
+#if CONFIG_CNB_MODE_COMPETITION
+        startModule.update(now);
+        const bool enabled = startModule.state() == driver::start_module::State::Started;
+#else
+        const bool enabled = control.controlState() == app::runtime::ControlState::Armed;
+#endif
+        if (enabled && !wasEnabled)
+        { sampled = false; navigation = {}; reverse.reset(); kickstart.arm(); }
+        wasEnabled = enabled;
         const auto& config = control.configuration();
         if (!sampled || now - lastSampleMs >= config.loopIntervalMs
             || sampledRevision != control.configurationRevision() || previousState != control.controlState())
@@ -199,78 +272,71 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
             snapshot.distancesCm = {left->readDistance(), center->readDistance(), right->readDistance()};
             snapshot.adcRaw = {leftAdc->lastRaw(), centerAdc->lastRaw(), rightAdc->lastRaw()};
             const std::uint32_t elapsedMs = sampled ? now - lastSampleMs : config.loopIntervalMs;
-            decision = decide(snapshot.distancesCm, config, wallPid, elapsedMs);
+            if (sampledRevision != control.configurationRevision())
+            { navigation = {}; reverse.reset(); }
+            decision = decide(snapshot.distancesCm, config, navigation, elapsedMs);
             snapshot.decisionDistancesCm = decision.distances;
             lastSampleMs = now;
-            ++sampleSequence;
             sampledRevision = control.configurationRevision();
             sampled = true;
-            ESP_LOGI("IR", "cm L/C/R %.2f / %.2f / %.2f | ADC %ld / %ld / %ld | decision %.2f / %.2f / %.2f",
-                static_cast<double>(snapshot.distancesCm[0]), static_cast<double>(snapshot.distancesCm[1]),
-                static_cast<double>(snapshot.distancesCm[2]), static_cast<long>(snapshot.adcRaw[0]),
-                static_cast<long>(snapshot.adcRaw[1]), static_cast<long>(snapshot.adcRaw[2]),
-                static_cast<double>(decision.distances[0]), static_cast<double>(decision.distances[1]),
-                static_cast<double>(decision.distances[2]));
+
         }
         // Route demand is separate from authorization and actual output commands.
-        const float plannedDuty = decision.blocked ? 0.0F : config.driveDuty;
-        // true declares the capped sample usable under the tested NaN policy.
-        const bool authorized = control.authorizeAction(now, true, plannedDuty, decision.blocked);
+        [[maybe_unused]] const float plannedDuty = decision.blocked ? 0.0F : config.driveDuty;
+#if CONFIG_CNB_MODE_COMPETITION
+        const bool authorized = startModule.state() == driver::start_module::State::Started;
+#else
+        const bool authorized = control.authorizeAction(now, decision.valid, plannedDuty, decision.blocked);
+#endif
         const bool motorTest = control.updateMotorTest(now);
         DrivePlan plan{};
         if (motorTest && !actuatorFault)
         {
             plan.direction = toMotorDirection(control.motorTestDirection());
             plan.duty = control.motorTestDuty();
-            plan.angle = 0.0F;
-            kickStartUntilMs = 0U;
             reverse.reset();
+            navigation = {};
         }
-        else if (authorized && !actuatorFault)
+        else if (authorized && !actuatorFault && decision.valid && config.driveDuty > 0.0F)
         {
-            // No rear sensor: one retry is allowed, then hold until forward
-            // clearance is confirmed by two new measurements.
-            const auto phase = reverse.update(now, sampleSequence, decision.blocked,
-                                              decision.distances[1] >= config.reactionDistanceCm);
-            if (phase == app::logic::ReverseController::Phase::Braking)
+            using Phase = ReverseManeuver::Phase;
+            const bool reverseReady = !steeringPending
+                && std::abs(steeringCommand - reverse.reverseAngle()) <= 1.0F;
+            const bool forwardReady = !steeringPending && std::abs(steeringCommand - decision.angle) <= 1.0F;
+            const auto phase = reverse.update(now, decision.blocked, decision.escapeAngle, reverseReady, forwardReady);
+            if (phase == Phase::Braking || phase == Phase::Preparing || phase == Phase::Reversing)
             {
-                plan.brake = true;
+                plan.angle = reverse.reverseAngle();
+                plan.brake = phase == Phase::Braking;
+                if (phase == Phase::Reversing)
+                { plan.direction = driver::motor::Direction::Backward; plan.duty = 1.0F; }
             }
-            else if (phase == app::logic::ReverseController::Phase::Reversing)
+            else if (phase == Phase::Settling)
             {
-                plan.direction = driver::motor::Direction::Backward;
-                plan.duty = ReverseDuty;
-            }
-            else if (phase == app::logic::ReverseController::Phase::Ready && !decision.blocked)
-            {
-                plan.duty = plannedDuty;
                 plan.angle = decision.angle;
             }
-        }
-        else { reverse.reset(); }
-        // A disarm or latched actuator failure suppresses motor drive and arms a
-        // fresh kickstart for the next forward start.
-        if (!motorTest && plan.direction == driver::motor::Direction::Forward && plan.duty > 0.0F
-            && (lastDuty <= 0.0F || lastDirection != driver::motor::Direction::Forward)
-            && kickStartUntilMs == 0U)
-        {
-            kickStartUntilMs = now + KickStartMs;
-        }
-        if (!motorTest && plan.direction == driver::motor::Direction::Forward && plan.duty > 0.0F
-            && kickStartUntilMs != 0U)
-        {
-            if (timeBefore(now, kickStartUntilMs))
+            else
             {
-                plan.duty = 1.0F;
+                // Once the reverse pulse ends, choose again using current capped readings.
+                plan.angle = decision.angle;
+                if (phase == Phase::Ready && !decision.blocked) { plan.duty = config.driveDuty; }
             }
-            else { kickStartUntilMs = 0U; }
         }
-        if (plan.direction != driver::motor::Direction::Forward || plan.duty <= 0.0F)
-        {
-            kickStartUntilMs = 0U;
-        }
+        else { reverse.reset(); navigation = {}; }
         // Manual servo testing takes priority while runtime keeps the motor stopped.
-        const float angle = control.isServoTest() ? control.servoAngleDegrees() : plan.angle;
+        const float targetAngle = plan.angle;
+        if (std::abs(targetAngle - previousTargetAngle) >= 20.0F)
+        { steeringPending = true; steeringSettledAtMs = now + SteeringSettleMs; }
+        previousTargetAngle = targetAngle;
+        const float step = SteeringRateDegreesPerSecond * static_cast<float>(steeringElapsedMs) / 1000.0F;
+        steeringCommand += std::clamp(targetAngle - steeringCommand, -step, step);
+        if (std::abs(targetAngle - steeringCommand) > 1.0F)
+        { steeringSettledAtMs = now + SteeringSettleMs; }
+        if (steeringPending && !timeBefore(now, steeringSettledAtMs)) { steeringPending = false; }
+        // Apply only after authorization, obstacle handling and steering preparation.
+        plan.duty = kickstart.apply(now, plan.duty, plan.direction,
+            !motorTest && authorized && decision.valid && !actuatorFault && !plan.brake);
+        const float angle = control.isServoTest() ? control.servoAngleDegrees() : steeringCommand;
         // MQTT stop/lease checks run every tick even with a long sensor interval.
         // Avoid resetting the servo PWM frequency when its angle has not changed.
         bool outputOk{!actuatorFault}; // Accumulate motor/PWM/servo write results.
@@ -313,16 +379,17 @@ void runSystemTest(driver::factory::Interface& factory, const std::atomic<bool>&
         snapshot.forwardDuty = forwardPwm->duty();
         snapshot.backwardDuty = backwardPwm->duty();
         if (previousState != control.controlState() || previousMotion != control.motionState()
-            || previousReason != control.stateReason()) { communication.notifyControlStateChanged(); }
+            || previousReason != control.stateReason())
+        { if (communication) { communication->notifyControlStateChanged(); } }
         previousState = control.controlState();
         previousMotion = control.motionState();
         previousReason = control.stateReason();
-        communication.publishTelemetry(now, snapshot, control);
+        if (communication) { communication->publishTelemetry(now, snapshot, control); }
         vTaskDelay(std::max<TickType_t>(1U, pdMS_TO_TICKS(10U)));
     }
     sleep->write(false);
     motor->stop(driver::motor::StopMode::Coast);
-    communication.disconnect();
+    if (communication) { communication->disconnect(); }
 }
 } // namespace
 
